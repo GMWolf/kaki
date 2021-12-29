@@ -8,6 +8,8 @@
     </sourceRoots>
     <libraryRoots>
       <file path="$PROJECT_DIR$/external/flecs" />
+      <file path="$PROJECT_DIR$/external/glfw" />
+      <file path="$PROJECT_DIR$/external/vk-bootstrap" />
     </libraryRoots>
   </component>
 </project>

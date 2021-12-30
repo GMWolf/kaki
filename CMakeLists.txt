@@ -15,5 +15,6 @@ add_subdirectory(external/vk-bootstrap)
 
 add_subdirectory(kaki)
 
-add_executable(test main.cpp)
+add_executable(test main.cpp kaki/gfx.h kaki/gfx.cpp kaki/vk.h)
+target_link_libraries(test PRIVATE kaki-gfx)
 target_link_libraries(test PRIVATE flecs glfw vk-bootstrap vulkan)

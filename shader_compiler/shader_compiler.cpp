@@ -53,8 +53,18 @@ int main(int argc, char* argv[])
 
     auto preprocessed = compiler.PreprocessGlsl(source, shaderKind, sourcePath, options);
 
+    if (preprocessed.GetCompilationStatus() != shaderc_compilation_status_success) {
+        fprintf(stderr, "%s", preprocessed.GetErrorMessage().c_str());
+        return -1;
+    }
+
     auto compiled = compiler.CompileGlslToSpv({preprocessed.cbegin(), preprocessed.cend()},
                                               shaderKind, sourcePath, options);
+
+    if (compiled.GetCompilationStatus() != shaderc_compilation_status_success) {
+        fprintf(stderr, "%s", compiled.GetErrorMessage().c_str());
+        return -1;
+    }
 
     auto compiledWords = std::span(compiled.cbegin(), compiled.cend());
 

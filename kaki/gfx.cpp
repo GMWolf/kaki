@@ -243,6 +243,24 @@ static VkPipeline createPipeline(VkDevice device, VkRenderPass renderPass, VkPip
 }
 
 
+VkFramebuffer createFrameBuffer(VkDevice device, VkRenderPass pass, VkImageView image, uint32_t width, uint32_t height) {
+
+    VkFramebufferCreateInfo createInfo {
+        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+        .renderPass = pass,
+        .attachmentCount = 1,
+        .pAttachments = &image,
+        .width = width,
+        .height = height,
+        .layers = 1,
+    };
+
+    VkFramebuffer framebuffer;
+    vkCreateFramebuffer(device, &createInfo, nullptr, &framebuffer);
+    return framebuffer;
+}
+
+
 static bool createGlobals(flecs::world& world) {
     vkb::InstanceBuilder builder;
     auto inst_ret = builder.set_app_name("Kaki application")
@@ -293,6 +311,7 @@ static bool createGlobals(flecs::world& world) {
     vkb::SwapchainBuilder swapchainBuilder { vkbDevice };
     auto swap_ret = swapchainBuilder
             .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+            .set_image_usage_flags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
             .build();
 
     if (!swap_ret) {
@@ -350,6 +369,10 @@ static bool createGlobals(flecs::world& world) {
     vk.pipelineLayout = createPipelineLayout(vk.device);
     vk.pipeline = createPipeline(vk.device, vk.renderPass, vk.pipelineLayout);
 
+    for(int i = 0; i < vk.swapchain.image_count; i++) {
+        vk.framebuffer[i] = createFrameBuffer(vk.device, vk.renderPass, vk.swapchain.get_image_views()->at(i), vk.swapchain.extent.width, vk.swapchain.extent.height);
+    }
+
     world.set<kaki::VkGlobals>(vk);
 
     return true;
@@ -388,10 +411,47 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
     vkResetCommandBuffer(vk.cmd[vk.currentFrame], 0);
     vkBeginCommandBuffer(vk.cmd[vk.currentFrame], &beginInfo);
-    vkCmdClearColorImage(vk.cmd[vk.currentFrame], vk.swapchain.get_images()->at(imageIndex), VK_IMAGE_LAYOUT_GENERAL, &clearColor, 1, &imageRange);
+
+
+    //vkCmdClearColorImage(vk.cmd[vk.currentFrame], vk.swapchain.get_images()->at(imageIndex), VK_IMAGE_LAYOUT_GENERAL, &clearColor, 1, &imageRange);
+    VkRenderPassBeginInfo renderPassBeginInfo {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        .renderPass = vk.renderPass,
+        .framebuffer = vk.framebuffer[imageIndex],
+        .renderArea = {
+                .offset = {
+                        .x = 0,
+                        .y = 0,
+                },
+                .extent = {
+                        .width = vk.swapchain.extent.width,
+                        .height = vk.swapchain.extent.height,
+                }
+        }
+    };
+
+    vkCmdBeginRenderPass(vk.cmd[vk.currentFrame], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBindPipeline(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipeline);
+    VkViewport viewport {
+        .x = 0,
+        .y = 0,
+        .width = (float)vk.swapchain.extent.width,
+        .height = (float)vk.swapchain.extent.height,
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f,
+    };
+
+    VkRect2D scissor {
+            .offset = {0, 0},
+            .extent = vk.swapchain.extent
+    };
+    vkCmdSetViewport(vk.cmd[vk.currentFrame], 0, 1, &viewport);
+    vkCmdSetScissor(vk.cmd[vk.currentFrame], 0, 1, &scissor);
+    vkCmdDraw(vk.cmd[vk.currentFrame], 3, 1, 0, 0);
+    vkCmdEndRenderPass(vk.cmd[vk.currentFrame]);
+
     vkEndCommandBuffer(vk.cmd[vk.currentFrame]);
 
-    // clear
     VkPipelineStageFlags waitStages[] = {
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
     };

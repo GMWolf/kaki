@@ -31,6 +31,7 @@ namespace kaki {
         VkPipelineLayout pipelineLayout {};
         VkPipeline pipeline {};
         VkRenderPass renderPass {};
+        VkFramebuffer framebuffer[10] {};
     };
 
 }

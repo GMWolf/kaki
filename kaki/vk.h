@@ -20,13 +20,17 @@ namespace kaki {
 
         static const size_t framesInFlight = 2;
         uint32_t currentFrame = 0;
-        VkSemaphore imageAvailableSemaphore[framesInFlight];
-        VkSemaphore renderCompleteSemaphores[framesInFlight];
+        VkSemaphore imageAvailableSemaphore[framesInFlight] {};
+        VkSemaphore renderCompleteSemaphores[framesInFlight] {};
 
-        VkFence cmdBufFence[framesInFlight];
-        VkCommandPool cmdPool;
-        VkCommandBuffer cmd[framesInFlight];
+        VkFence cmdBufFence[framesInFlight] {};
+        VkCommandPool cmdPool {};
+        VkCommandBuffer cmd[framesInFlight] {};
 
+
+        VkPipelineLayout pipelineLayout {};
+        VkPipeline pipeline {};
+        VkRenderPass renderPass {};
     };
 
 }

@@ -33,6 +33,9 @@ add_subdirectory(external/shaderc)
 add_subdirectory(kaki)
 add_subdirectory(shader_compiler)
 
-add_executable(test main.cpp kaki/gfx.h kaki/gfx.cpp kaki/vk.h)
+add_executable(test main.cpp)
 target_link_libraries(test PRIVATE kaki-gfx)
-target_link_libraries(test PRIVATE flecs glfw vk-bootstrap vulkan)
+target_link_libraries(test PRIVATE flecs)
+
+compile_shader(test-shader SOURCES shader.vert shader.frag)
+add_dependencies(test test-shader)

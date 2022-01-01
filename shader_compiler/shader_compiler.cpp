@@ -27,9 +27,9 @@ int main(int argc, char* argv[])
 
     shaderc_shader_kind shaderKind;
 
-    if (strcmp(ext, "vert")) {
+    if (strcmp(ext, "vert") == 0) {
         shaderKind = shaderc_vertex_shader;
-    } else if (strcmp(ext, "frag")) {
+    } else if (strcmp(ext, "frag") == 0) {
         shaderKind = shaderc_fragment_shader;
     } else {
         fprintf(stderr, "Unknown shader extension .%s\n", ext);
@@ -51,10 +51,10 @@ int main(int argc, char* argv[])
     shaderc::CompileOptions options;
     options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
 
-    auto preprocessed = compiler.PreprocessGlsl(source, shaderc_vertex_shader, sourcePath, options);
+    auto preprocessed = compiler.PreprocessGlsl(source, shaderKind, sourcePath, options);
 
     auto compiled = compiler.CompileGlslToSpv({preprocessed.cbegin(), preprocessed.cend()},
-                                              shaderc_vertex_shader, sourcePath, options);
+                                              shaderKind, sourcePath, options);
 
     auto compiledWords = std::span(compiled.cbegin(), compiled.cend());
 

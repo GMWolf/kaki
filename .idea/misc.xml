@@ -7,8 +7,13 @@
       <file path="$PROJECT_DIR$/kaki/core/src" />
     </sourceRoots>
     <libraryRoots>
+      <file path="$PROJECT_DIR$/external/SPIRV-Headers" />
+      <file path="$PROJECT_DIR$/external/SPIRV-Tools" />
       <file path="$PROJECT_DIR$/external/flecs" />
       <file path="$PROJECT_DIR$/external/glfw" />
+      <file path="$PROJECT_DIR$/external/glslang" />
+      <file path="$PROJECT_DIR$/external/rapidjson" />
+      <file path="$PROJECT_DIR$/external/shaderc" />
       <file path="$PROJECT_DIR$/external/vk-bootstrap" />
     </libraryRoots>
   </component>

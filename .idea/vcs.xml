@@ -4,6 +4,7 @@
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/flecs" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/glfw" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/rapidjson" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/vk-bootstrap" vcs="Git" />
   </component>
 </project>

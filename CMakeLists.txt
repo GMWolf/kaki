@@ -13,7 +13,25 @@ add_subdirectory(external/glfw)
 
 add_subdirectory(external/vk-bootstrap)
 
+add_subdirectory(external/SPIRV-Headers)
+
+set(SPIRV_SKIP_EXECUTABLES ON)
+set(SPIRV_WERROR OFF)
+add_subdirectory(external/SPIRV-Tools)
+
+
+set(ENABLE_SPVREMAPPER OFF)
+set(ENABLE_GLSLANG_BINARIES OFF)
+set(ENABLE_GLSLANG_JS OFF)
+set(ENABLE_OPT OFF)
+set(ENABLE_CTEST OFF)
+add_subdirectory(external/glslang)
+
+set(SHADERC_SKIP_TESTS ON CACHE BOOL "" FORCE)
+add_subdirectory(external/shaderc)
+
 add_subdirectory(kaki)
+add_subdirectory(shader_compiler)
 
 add_executable(test main.cpp kaki/gfx.h kaki/gfx.cpp kaki/vk.h)
 target_link_libraries(test PRIVATE kaki-gfx)

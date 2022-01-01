@@ -2,9 +2,6 @@
 
 #include "kaki/gfx.h"
 #include "kaki/window.h"
-#include "GLFW/glfw3.h"
-
-static const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
 int main() {
 
@@ -18,11 +15,10 @@ int main() {
     world.import<kaki::gfx>();
 
     auto window = world.get<kaki::Window>();
-
-    double lastFrameTime = glfwGetTime();
+    double lastFrameTime = kaki::getTime();
 
     while(!window->shouldClose()) {
-        double currentFrameTime = glfwGetTime();
+        double currentFrameTime = kaki::getTime();
         double deltaTime = currentFrameTime - lastFrameTime;
         lastFrameTime = currentFrameTime;
 

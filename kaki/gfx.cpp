@@ -28,7 +28,7 @@ static bool createGlobals(flecs::world& world) {
 
     vkb::PhysicalDeviceSelector selector{ vkb_inst };
     auto phys_ret = selector.set_surface(surface)
-            .set_minimum_version(1,0)
+            .set_minimum_version(1,2)
             .prefer_gpu_device_type(vkb::PreferredDeviceType::integrated)
             .select();
 

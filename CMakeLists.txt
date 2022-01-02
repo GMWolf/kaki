@@ -30,12 +30,22 @@ add_subdirectory(external/glslang)
 set(SHADERC_SKIP_TESTS ON CACHE BOOL "" FORCE)
 add_subdirectory(external/shaderc)
 
+add_library(spirv-reflect external/SPIRV-Reflect/spirv_reflect.h external/SPIRV-Reflect/spirv_reflect.c)
+target_include_directories(spirv-reflect PUBLIC external/SPIRV-Reflect)
+
+add_library(rapidjson INTERFACE)
+target_include_directories(rapidjson INTERFACE external/rapidjson/include)
+
+add_library(cereal INTERFACE)
+target_include_directories(cereal INTERFACE external/cereal/include)
+
 add_subdirectory(kaki)
 add_subdirectory(shader_compiler)
 
 add_executable(test main.cpp)
 target_link_libraries(test PRIVATE kaki-gfx)
 target_link_libraries(test PRIVATE flecs)
+
 
 compile_shader(test-shader SOURCES shader.vert shader.frag)
 add_dependencies(test test-shader)

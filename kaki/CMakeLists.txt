@@ -3,8 +3,8 @@ add_library(kaki-gfx
         gfx.cpp
         vk.h
         window.h
-        window.cpp)
+        window.cpp
+        shader.h)
 
-target_link_libraries(kaki-gfx PUBLIC flecs)
+target_link_libraries(kaki-gfx PUBLIC flecs cereal)
 target_link_libraries(kaki-gfx PRIVATE vulkan vk-bootstrap glfw)
-

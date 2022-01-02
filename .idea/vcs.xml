@@ -3,7 +3,9 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/SPIRV-Headers" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/SPIRV-Reflect" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/SPIRV-Tools" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/cereal" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/flecs" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/glfw" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/glslang" vcs="Git" />

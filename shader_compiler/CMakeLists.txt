@@ -1,5 +1,5 @@
 add_executable(shader_compiler shader_compiler.cpp)
-target_link_libraries(shader_compiler PRIVATE shaderc)
+target_link_libraries(shader_compiler PRIVATE shaderc spirv-reflect vulkan cereal)
 
 function(compile_shader targetName)
     set(flags)
@@ -9,13 +9,13 @@ function(compile_shader targetName)
 
     foreach(source IN ITEMS ${arg_SOURCES})
     add_custom_command(
-            OUTPUT ${source}.spv
-            COMMAND shader_compiler ARGS ${CMAKE_CURRENT_LIST_DIR}/${source} ${source}.spv
+            OUTPUT ${source}.shd
+            COMMAND shader_compiler ARGS ${CMAKE_CURRENT_LIST_DIR}/${source} ${source}.shd
             DEPENDS "${source}" shader_compiler
             DEPFILE ${source}.d
             USES_TERMINAL
     )
-    list(APPEND outputFiles ${source}.spv)
+    list(APPEND outputFiles ${source}.shd)
     endforeach()
 
     add_custom_target(${targetName} DEPENDS ${outputFiles})

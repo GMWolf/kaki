@@ -10,8 +10,6 @@
 
 namespace kaki {
 
-
-
     struct VkGlobals {
         VkInstance instance{};
         vkb::Device device{};

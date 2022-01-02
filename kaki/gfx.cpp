@@ -12,6 +12,9 @@
 #include <cstdio>
 #include <vector>
 #include <span>
+#include <fstream>
+#include "shader.h"
+#include <cereal/archives/binary.hpp>
 
 template<class T>
 std::vector<T> loadBytes(const char* path)
@@ -29,7 +32,7 @@ std::vector<T> loadBytes(const char* path)
 
 VkShaderModule createModule(VkDevice device, std::span<uint32_t> code)
 {
-    VkShaderModuleCreateInfo createInfo{
+    VkShaderModuleCreateInfo createInfo {
             .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
             .codeSize = code.size_bytes(),
             .pCode = code.data(),
@@ -95,22 +98,38 @@ static VkPipelineLayout createPipelineLayout(VkDevice device)
     return layout;
 }
 
+static kaki::ShaderModule loadShaderModule(VkDevice device, const char* path) {
+    std::ifstream is(path);
+    cereal::BinaryInputArchive archive(is);
+
+    kaki::ShaderModule module;
+    archive(module);
+
+    module.module = createModule(device, module.code);
+
+    // we no longer need to keep the code around
+    module.code.clear();
+    module.code.shrink_to_fit();
+
+    return module;
+}
+
 
 static VkPipeline createPipeline(VkDevice device, VkRenderPass renderPass, VkPipelineLayout pipelineLayout) {
-    auto vertexSource = loadBytes<uint32_t>("shader.vert.spv");
-    auto fragmentSource = loadBytes<uint32_t>("shader.frag.spv");
+    auto vertexModule = loadShaderModule(device, "shader.vert.shd");
+    auto fragmentModule = loadShaderModule(device, "shader.frag.shd");
 
     VkPipelineShaderStageCreateInfo shaderStageCreateInfo[] {
             {
                 .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                 .stage = VK_SHADER_STAGE_VERTEX_BIT,
-                .module = createModule(device, vertexSource),
+                .module = vertexModule.module,
                 .pName = "main"
             },
             {
                 .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                 .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-                .module = createModule(device, fragmentSource),
+                .module = fragmentModule.module,
                 .pName = "main"
             }
     };

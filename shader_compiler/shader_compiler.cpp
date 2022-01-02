@@ -6,6 +6,11 @@
 #include <shaderc/shaderc.hpp>
 #include <span>
 #include <cstring>
+#include <spirv_reflect.h>
+#include <vector>
+#include "../kaki/shader.h"
+#include <cereal/archives/binary.hpp>
+#include <fstream>
 
 const char *get_filename_ext(const char *filename) {
     const char *dot = strrchr(filename, '.');
@@ -21,6 +26,7 @@ int main(int argc, char* argv[])
     }
 
     auto sourcePath = argv[1];
+    fprintf(stdout, "Compiling %s\n", sourcePath);
     auto targetPath = argv[2];
 
     auto ext = get_filename_ext(sourcePath);
@@ -68,10 +74,48 @@ int main(int argc, char* argv[])
 
     auto compiledWords = std::span(compiled.cbegin(), compiled.cend());
 
+    // do reflection
     {
-        FILE* outFile = fopen(targetPath, "wb");
-        fwrite(compiledWords.data(), 4, compiledWords.size(), outFile);
-        fclose(outFile);
+        kaki::ShaderModule kakiModule;
+
+        SpvReflectShaderModule module;
+        SpvReflectResult result = spvReflectCreateShaderModule(compiledWords.size_bytes(), compiledWords.data(), &module);
+        if (result != SPV_REFLECT_RESULT_SUCCESS) {
+            fprintf(stderr, "Failed to reflect shader");
+            return 1;
+        }
+
+        uint32_t descriptorSetCount;
+        spvReflectEnumerateDescriptorSets(&module, &descriptorSetCount, nullptr);
+        std::vector<SpvReflectDescriptorSet*> sets(descriptorSetCount);
+        spvReflectEnumerateDescriptorSets(&module, &descriptorSetCount, sets.data());
+
+        for(SpvReflectDescriptorSet* set : sets) {
+            for(SpvReflectDescriptorBinding* binding : std::span(set->bindings, set->binding_count)) {
+
+            }
+        }
+
+
+        uint32_t pushConstantCount;
+        spvReflectEnumeratePushConstantBlocks(&module, &pushConstantCount, nullptr);
+        std::vector<SpvReflectBlockVariable*> pushConstants(pushConstantCount);
+        spvReflectEnumeratePushConstantBlocks(&module, &pushConstantCount, pushConstants.data());
+
+
+        for(SpvReflectBlockVariable* block : pushConstants) {
+            kakiModule.pushConstantRanges.push_back(VkPushConstantRange {
+                .stageFlags = module.shader_stage,
+                .offset = block->offset,
+                .size = block->size,
+            });
+        }
+
+        kakiModule.code.assign(compiledWords.begin(), compiledWords.end());
+
+        std::ofstream os(std::string(targetPath), std::ios::binary);
+        cereal::BinaryOutputArchive archive( os );
+        archive( kakiModule );
     }
 
     return 0;

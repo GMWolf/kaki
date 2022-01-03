@@ -15,36 +15,7 @@
 #include <fstream>
 #include "shader.h"
 #include <cereal/archives/binary.hpp>
-
-template<class T>
-std::vector<T> loadBytes(const char* path)
-{
-    std::vector<T> ret;
-    FILE* file = fopen(path, "rb");
-    fseek(file, 0, SEEK_END);
-    size_t numBytes = ftell(file);
-    size_t numElements = numBytes / sizeof(T);
-    fseek(file, 0, SEEK_SET);
-    ret.resize(numElements);
-    fread(ret.data(), sizeof(T), numElements, file);
-    return ret;
-}
-
-VkShaderModule createModule(VkDevice device, std::span<uint32_t> code)
-{
-    VkShaderModuleCreateInfo createInfo {
-            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            .codeSize = code.size_bytes(),
-            .pCode = code.data(),
-    };
-
-    VkShaderModule shader_module;
-    if(vkCreateShaderModule(device, &createInfo, nullptr, &shader_module) != VK_SUCCESS){
-        return VK_NULL_HANDLE;
-    }
-
-    return shader_module;
-}
+#include "pipeline.h"
 
 static VkRenderPass createRenderPass(VkDevice device, VkFormat format) {
 
@@ -85,182 +56,6 @@ static VkRenderPass createRenderPass(VkDevice device, VkFormat format) {
     vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &renderPass);
     return renderPass;
 }
-
-
-static VkPipelineLayout createPipelineLayout(VkDevice device)
-{
-    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-    };
-
-    VkPipelineLayout layout;
-    vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &layout);
-    return layout;
-}
-
-static kaki::ShaderModule loadShaderModule(VkDevice device, const char* path) {
-    std::ifstream is(path);
-    cereal::BinaryInputArchive archive(is);
-
-    kaki::ShaderModule module;
-    archive(module);
-
-    module.module = createModule(device, module.code);
-
-    // we no longer need to keep the code around
-    module.code.clear();
-    module.code.shrink_to_fit();
-
-    return module;
-}
-
-
-static VkPipeline createPipeline(VkDevice device, VkRenderPass renderPass, VkPipelineLayout pipelineLayout) {
-    auto vertexModule = loadShaderModule(device, "shader.vert.shd");
-    auto fragmentModule = loadShaderModule(device, "shader.frag.shd");
-
-    VkPipelineShaderStageCreateInfo shaderStageCreateInfo[] {
-            {
-                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                .stage = VK_SHADER_STAGE_VERTEX_BIT,
-                .module = vertexModule.module,
-                .pName = "main"
-            },
-            {
-                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-                .module = fragmentModule.module,
-                .pName = "main"
-            }
-    };
-
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo{
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-            .vertexBindingDescriptionCount = 0,
-            .pVertexBindingDescriptions = nullptr,
-            .vertexAttributeDescriptionCount = 0,
-            .pVertexAttributeDescriptions = nullptr,
-    };
-
-    VkPipelineInputAssemblyStateCreateInfo inputAssembly{
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-            .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-            .primitiveRestartEnable = false};
-
-    // A dummy viewport and scissor. this needs to get set by cmd buffer
-    VkViewport viewport{
-            .x = 0.0f,
-            .y = 0.0f,
-            .width = 1.0f,
-            .height = 1.0f,
-            .minDepth = 0.0f,
-            .maxDepth = 1.0f,
-    };
-
-    VkRect2D scissor{
-            .offset = {0, 0},
-            .extent = {1, 1},
-    };
-
-    VkPipelineViewportStateCreateInfo viewportState{
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-            .viewportCount = 1,
-            .pViewports = &viewport,
-            .scissorCount = 1,
-            .pScissors = &scissor,
-    };
-
-    VkPipelineRasterizationStateCreateInfo rasterizer{
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-            .depthClampEnable = false,
-            .rasterizerDiscardEnable = false,
-            .polygonMode = VK_POLYGON_MODE_FILL,
-            .cullMode = VK_CULL_MODE_BACK_BIT,
-            .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
-            .depthBiasEnable = false,
-            .depthBiasConstantFactor = 0.0f,
-            .depthBiasClamp = 0.0f,
-            .depthBiasSlopeFactor = 0.0f,
-            .lineWidth = 1.0f,
-    };
-
-    VkPipelineMultisampleStateCreateInfo multisampling{
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-            .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-            .sampleShadingEnable = false,
-            .minSampleShading = 1.0f,
-            .pSampleMask = nullptr,
-            .alphaToCoverageEnable = false,
-            .alphaToOneEnable = false,
-    };
-
-
-    VkPipelineColorBlendAttachmentState blendAttachment {
-            .blendEnable = true,
-            .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
-            .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
-            .colorBlendOp = VK_BLEND_OP_ADD,
-            .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-            .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-            .alphaBlendOp = VK_BLEND_OP_ADD,
-            .colorWriteMask = VK_COLOR_COMPONENT_A_BIT | VK_COLOR_COMPONENT_R_BIT |
-                              VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT,
-    };
-
-    VkPipelineColorBlendStateCreateInfo colorBlending {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-            .logicOpEnable = false,
-            .logicOp = VK_LOGIC_OP_COPY,
-            .attachmentCount = 1,
-            .pAttachments = &blendAttachment,
-    };
-
-    VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
-
-    VkPipelineDynamicStateCreateInfo dynamicState{
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-            .dynamicStateCount = 2,
-            .pDynamicStates = dynamicStates,
-    };
-
-    VkPipelineDepthStencilStateCreateInfo depthStencil {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-            .depthTestEnable = VK_FALSE,
-            .depthWriteEnable = VK_FALSE,
-            .depthCompareOp = VK_COMPARE_OP_ALWAYS,
-            .depthBoundsTestEnable = VK_FALSE,
-            .stencilTestEnable = VK_FALSE,
-            .front = {},
-            .back = {},
-            .minDepthBounds = 0.0f,
-            .maxDepthBounds = 1.0f,
-    };
-
-    VkGraphicsPipelineCreateInfo pipelineInfo{
-            .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-            .stageCount = 2,
-            .pStages = shaderStageCreateInfo,
-            .pVertexInputState = &vertexInputInfo,
-            .pInputAssemblyState = &inputAssembly,
-            .pViewportState = &viewportState,
-            .pRasterizationState = &rasterizer,
-            .pMultisampleState = &multisampling,
-            .pDepthStencilState = &depthStencil,
-            .pColorBlendState = &colorBlending,
-            .pDynamicState = &dynamicState,
-            .layout = pipelineLayout,
-            .renderPass = renderPass,
-            .subpass = 0,
-            .basePipelineHandle = {},
-            .basePipelineIndex = -1,
-    };
-
-
-    VkPipeline pipeline;
-    vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineInfo, nullptr, &pipeline);
-    return pipeline;
-}
-
 
 VkFramebuffer createFrameBuffer(VkDevice device, VkRenderPass pass, VkImageView image, uint32_t width, uint32_t height) {
 
@@ -381,12 +176,10 @@ static bool createGlobals(flecs::world& world) {
             .commandBufferCount = static_cast<uint32_t>(kaki::VkGlobals::framesInFlight),
     };
 
-
     vkAllocateCommandBuffers(vk.device, &cmdAllocInfo, vk.cmd);
 
     vk.renderPass = createRenderPass(vk.device, vk.swapchain.image_format);
-    vk.pipelineLayout = createPipelineLayout(vk.device);
-    vk.pipeline = createPipeline(vk.device, vk.renderPass, vk.pipelineLayout);
+    vk.pipeline = kaki::createPipeline(vk.device, vk.renderPass, "shader.vert.shd", "shader.frag.shd");
 
     for(int i = 0; i < vk.swapchain.image_count; i++) {
         vk.framebuffer[i] = createFrameBuffer(vk.device, vk.renderPass, vk.swapchain.get_image_views()->at(i), vk.swapchain.extent.width, vk.swapchain.extent.height);
@@ -450,7 +243,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     };
 
     vkCmdBeginRenderPass(vk.cmd[vk.currentFrame], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipeline);
+    vkCmdBindPipeline(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipeline.pipeline);
     VkViewport viewport {
         .x = 0,
         .y = 0,
@@ -466,6 +259,9 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     };
     vkCmdSetViewport(vk.cmd[vk.currentFrame], 0, 1, &viewport);
     vkCmdSetScissor(vk.cmd[vk.currentFrame], 0, 1, &scissor);
+    static float f = 0;
+    f += entity.world().delta_time();
+    vkCmdPushConstants(vk.cmd[vk.currentFrame], vk.pipeline.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, &f);
     vkCmdDraw(vk.cmd[vk.currentFrame], 3, 1, 0, 0);
     vkCmdEndRenderPass(vk.cmd[vk.currentFrame]);
 

@@ -21,6 +21,8 @@ namespace kaki {
     void serialize(Archive& archive, ShaderModule& module) {
         archive(module.code, module.pushConstantRanges);
     }
+
+    kaki::ShaderModule loadShaderModule(VkDevice device, const char* path);
 }
 
 template<class Archive>

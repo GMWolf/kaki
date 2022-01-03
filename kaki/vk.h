@@ -7,6 +7,7 @@
 
 #include <VkBootstrap.h>
 #include <vulkan/vulkan.h>
+#include "pipeline.h"
 
 namespace kaki {
 
@@ -25,9 +26,7 @@ namespace kaki {
         VkCommandPool cmdPool {};
         VkCommandBuffer cmd[framesInFlight] {};
 
-
-        VkPipelineLayout pipelineLayout {};
-        VkPipeline pipeline {};
+        Pipeline pipeline {};
         VkRenderPass renderPass {};
         VkFramebuffer framebuffer[10] {};
     };

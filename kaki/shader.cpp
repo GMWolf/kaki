@@ -32,7 +32,7 @@ kaki::ShaderModule kaki::loadShaderModule(VkDevice device, const char* path) {
 
     module.module = createModule(device, module.code);
 
-    // we no longer need to keep the code around
+    // Free the code
     module.code.clear();
     module.code.shrink_to_fit();
 

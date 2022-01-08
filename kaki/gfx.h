@@ -6,11 +6,22 @@
 #define KAKI_GFX_H
 
 #include <flecs.h>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 
 namespace kaki {
 
+    struct Camera {
+        float x, y , width, height;
+    };
+
+    struct Rectangle {
+        glm::vec2 pos;
+        glm::vec3 color;
+    };
+
     struct gfx {
-        gfx(flecs::world& world);
+        explicit gfx(flecs::world& world);
     };
 
 }

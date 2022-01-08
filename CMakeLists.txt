@@ -39,6 +39,7 @@ target_include_directories(rapidjson INTERFACE external/rapidjson/include)
 add_library(cereal INTERFACE)
 target_include_directories(cereal INTERFACE external/cereal/include)
 
+add_subdirectory(external/glm)
 add_subdirectory(kaki)
 add_subdirectory(shader_compiler)
 

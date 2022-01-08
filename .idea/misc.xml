@@ -13,6 +13,7 @@
       <file path="$PROJECT_DIR$/external/cereal" />
       <file path="$PROJECT_DIR$/external/flecs" />
       <file path="$PROJECT_DIR$/external/glfw" />
+      <file path="$PROJECT_DIR$/external/glm" />
       <file path="$PROJECT_DIR$/external/glslang" />
       <file path="$PROJECT_DIR$/external/rapidjson" />
       <file path="$PROJECT_DIR$/external/shaderc" />

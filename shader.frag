@@ -3,11 +3,14 @@
 layout(location = 0) in vec2 UV;
 
 layout(push_constant) uniform constants {
-    float time;
+    mat4 proj;
+    vec2 pos;
+    vec2 pad;
+    vec3 color;
 };
 
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    outColor = vec4(UV, sin(time) * 0.5 + 0.5, 1.0);
+    outColor = vec4(pow(color, vec3(2.2)), 1.0);
 }

@@ -4,21 +4,16 @@
 
 #include "gfx.h"
 
-
 #include <VkBootstrap.h>
 #include <vulkan/vulkan.h>
 #include "vk.h"
 #include "window.h"
 #include <cstdio>
-#include <vector>
-#include <span>
-#include <fstream>
-#include "shader.h"
-#include <cereal/archives/binary.hpp>
 #include "pipeline.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 static VkRenderPass createRenderPass(VkDevice device, VkFormat format) {
-
     VkAttachmentDescription attachment {
         .flags = 0,
         .format = format,
@@ -259,10 +254,18 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     };
     vkCmdSetViewport(vk.cmd[vk.currentFrame], 0, 1, &viewport);
     vkCmdSetScissor(vk.cmd[vk.currentFrame], 0, 1, &scissor);
-    static float f = 0;
-    f += entity.world().delta_time();
-    vkCmdPushConstants(vk.cmd[vk.currentFrame], vk.pipeline.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, &f);
-    vkCmdDraw(vk.cmd[vk.currentFrame], 3, 1, 0, 0);
+
+    entity.world().each([&](const kaki::Camera& camera) {
+        glm::mat4 proj = glm::ortho(camera.x, camera.x + camera.width, camera.y, camera.y + camera.height);
+        vkCmdPushConstants(vk.cmd[vk.currentFrame], vk.pipeline.pipelineLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(proj), &proj);
+
+        entity.world().each([&](const kaki::Rectangle& rect) {
+            vkCmdPushConstants(vk.cmd[vk.currentFrame], vk.pipeline.pipelineLayout,VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(proj), sizeof(rect.pos), &rect.pos);
+            vkCmdPushConstants(vk.cmd[vk.currentFrame], vk.pipeline.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj) + sizeof(rect.pos) + sizeof(glm::vec2), sizeof(rect.color), &rect.color);
+            vkCmdDraw(vk.cmd[vk.currentFrame], 6, 1, 0, 0);
+        });
+    });
+
     vkCmdEndRenderPass(vk.cmd[vk.currentFrame]);
 
     vkEndCommandBuffer(vk.cmd[vk.currentFrame]);

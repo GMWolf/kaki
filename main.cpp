@@ -14,6 +14,7 @@ int main() {
         .width = 640,
         .height = 480,
     });
+    world.set<kaki::Input>({});
     world.import<kaki::gfx>();
 
     auto camera = world.entity("camera");
@@ -32,6 +33,15 @@ int main() {
     world.entity().set<kaki::Rectangle>(kaki::Rectangle{
             .pos = {10, 4},
             .color = {1, 1, 1},
+    });
+
+    world.system<kaki::Rectangle>().each([](flecs::entity entity, kaki::Rectangle& rect) {
+        auto* input = entity.world().get<kaki::Input>();
+
+        if (input->keyDown('d')) {
+            rect.pos.x += entity.delta_time() * 10;
+        }
+
     });
 
     auto window = world.get<kaki::Window>();

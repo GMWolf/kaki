@@ -18,26 +18,54 @@ bool kaki::Window::shouldClose() const{
     return glfwWindowShouldClose((GLFWwindow*)handle);
 }
 
-static void createWindow(flecs::iter it, kaki::Window* window) {
-    assert(it.count() == 1);
+struct WindowWorldRef {
+    flecs::world_t* world;
+    flecs::entity_t e;
+};
 
+static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+    WindowWorldRef* e = static_cast<WindowWorldRef*>(glfwGetWindowUserPointer(window));
+
+    flecs::entity entity(e->world, e->e);
+    assert(entity.has<kaki::Window>());
+
+    if (entity.has<kaki::Input>()) {
+        kaki::Input *input = entity.get_mut<kaki::Input>();
+
+        switch (action) {
+            case GLFW_PRESS:
+                input->keyPressedFrame[key] = input->frame;
+                break;
+            case GLFW_RELEASE:
+                input->keyReleasedFrame[key] = input->frame;
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+static void createWindow(flecs::entity e, kaki::Window& window) {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* handle = glfwCreateWindow(window->width, window->height, "window", nullptr, nullptr);
+    GLFWwindow* handle = glfwCreateWindow(window.width, window.height, "window", nullptr, nullptr);
 
-
-
-    if (!window) {
+    if (!handle) {
         fprintf(stderr, "Failed to create glfw window.\n");
         exit(1);
     }
 
-    window[0].handle = handle;
+    window.handle = handle;
+    glfwSetWindowUserPointer(handle, new WindowWorldRef{
+        .world = e.world().c_ptr(),
+        .e = e.id(),
+    });
+
+    glfwSetKeyCallback(handle, key_callback);
 }
 
-static void destroyWindow(flecs::iter it, kaki::Window* window) {
-    assert(it.count() == 1);
-
-    glfwDestroyWindow((GLFWwindow*)window->handle);
+static void destroyWindow(flecs::entity entity, kaki::Window& window) {
+    delete static_cast<WindowWorldRef*>(glfwGetWindowUserPointer((GLFWwindow*)window.handle));
+    glfwDestroyWindow((GLFWwindow*)window.handle);
 }
 
 kaki::windowing::windowing(flecs::world &world) {
@@ -52,8 +80,12 @@ kaki::windowing::windowing(flecs::world &world) {
         exit(1);
     }
 
-    world.trigger<Window>().event(flecs::OnSet).iter(createWindow);
-    world.trigger<Window>().event(flecs::OnRemove).iter(destroyWindow);
+    world.system<Input>().kind(flecs::OnLoad).each([](flecs::entity entity, Input& input) {
+        input.frame++;
+    });
+
+    world.trigger<Window>().event(flecs::OnSet).each(createWindow);
+    world.trigger<Window>().event(flecs::OnRemove).each(destroyWindow);
 
     world.atfini([](ecs_world_t* world, void*){
         glfwTerminate();

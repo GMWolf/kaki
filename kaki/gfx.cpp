@@ -14,6 +14,8 @@
 #include "asset.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <rapidjson/document.h>
+#include <fstream>
 
 
 static VkRenderPass createRenderPass(VkDevice device, VkFormat format) {
@@ -322,10 +324,17 @@ void handleShaderModuleLoads(flecs::iter iter, kaki::Asset* assets, kaki::asset:
 void handlePipelineLoads(flecs::iter iter, kaki::Asset* assets, kaki::asset::Pipeline*) {
     auto vk = iter.world().get<kaki::VkGlobals>();
 
-    auto vertexModule = iter.world().lookup("vertex_shader").get<kaki::ShaderModule>();
-    auto fragmentModule = iter.world().lookup("fragment_shader").get<kaki::ShaderModule>();
-
     for(auto i : iter) {
+
+        rapidjson::Document doc;
+        std::ifstream t(assets->path);
+        std::string str((std::istreambuf_iterator<char>(t)),
+                        std::istreambuf_iterator<char>());
+        doc.ParseInsitu(str.data());
+
+        auto vertexModule = iter.world().lookup(doc["vertex"].GetString()).get<kaki::ShaderModule>();
+        auto fragmentModule = iter.world().lookup(doc["fragment"].GetString()).get<kaki::ShaderModule>();
+
         iter.entity(i).set<kaki::Pipeline>(kaki::createPipeline(vk->device, vk->renderPass, vertexModule, fragmentModule));
     }
 }

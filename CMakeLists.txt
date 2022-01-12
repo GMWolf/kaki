@@ -52,3 +52,4 @@ target_link_libraries(test PRIVATE flecs)
 
 compile_shader(test-shader SOURCES shader.vert shader.frag)
 add_dependencies(test test-shader)
+configure_file(pipeline.json pipeline.json COPYONLY)

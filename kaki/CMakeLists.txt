@@ -7,4 +7,4 @@ add_library(kaki-gfx
         shader.h shader.cpp pipeline.h pipeline.cpp image.h image.cpp asset.h asset.cpp)
 
 target_link_libraries(kaki-gfx PUBLIC flecs cereal glm)
-target_link_libraries(kaki-gfx PRIVATE vulkan vk-bootstrap glfw VulkanMemoryAllocator)
+target_link_libraries(kaki-gfx PRIVATE vulkan vk-bootstrap glfw VulkanMemoryAllocator rapidjson)

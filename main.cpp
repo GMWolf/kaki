@@ -23,7 +23,7 @@ int main() {
     world.entity("vertex_shader").set<kaki::Asset>({"shader.vert.shd"}).add<kaki::asset::Shader>();
     world.entity("fragment_shader").set<kaki::Asset>({"shader.frag.shd"}).add<kaki::asset::Shader>();
 
-    world.entity("pipeline").set<kaki::Asset>({nullptr}).add<kaki::asset::Pipeline>();
+    world.entity("pipeline").set<kaki::Asset>({"pipeline.json"}).add<kaki::asset::Pipeline>();
 
 
     auto camera = world.entity("camera");

@@ -89,7 +89,7 @@ static bool createGlobals(flecs::world& world) {
 
     vkb::Instance vkb_inst = inst_ret.value();
 
-    VkSurfaceKHR surface = world.get<kaki::Window>()->createSurface(vkb_inst);
+    VkSurfaceKHR surface = world.lookup("window").get<kaki::Window>()->createSurface(vkb_inst);
 
     vkb::PhysicalDeviceSelector selector{ vkb_inst };
     auto phys_ret = selector.set_surface(surface)
@@ -205,9 +205,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     static float time = 0;
     time += entity.world().delta_time();
 
-    float clearColorV = time / (10.0f);
-
-    VkClearColorValue clearColor = { clearColorV, clearColorV, clearColorV, 0.0f };
+    VkClearColorValue clearColor = { 0, 0, 0, 1.0f };
     VkClearValue clearValue = {};
     clearValue.color = clearColor;
 

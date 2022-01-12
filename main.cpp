@@ -13,11 +13,10 @@ int main() {
     world.set(flecs::rest::Rest{});
 
     world.import<kaki::windowing>();
-    world.set<kaki::Window>(kaki::Window{
+    auto window = world.entity("window").set<kaki::Window>(kaki::Window{
         .width = 640,
         .height = 480,
-    });
-    world.set<kaki::Input>({});
+    }).set<kaki::Input>({});
     world.import<kaki::gfx>();
 
     world.entity("vertex_shader").set<kaki::Asset>({"shader.vert.shd"}).add<kaki::asset::Shader>();
@@ -45,18 +44,26 @@ int main() {
     });
 
     world.system<kaki::Rectangle>().each([](flecs::entity entity, kaki::Rectangle& rect) {
-        auto* input = entity.world().get<kaki::Input>();
+        auto* input = entity.world().lookup("window").get<kaki::Input>();
 
-        if (input->keyDown('d')) {
+        if (input->keyDown('D')) {
             rect.pos.x += entity.delta_time() * 10;
+        }
+        if (input->keyDown('A')) {
+            rect.pos.x -= entity.delta_time() * 10;
+        }
+        if (input->keyDown('S')) {
+            rect.pos.y += entity.delta_time() * 10;
+        }
+        if (input->keyDown('W')) {
+            rect.pos.y -= entity.delta_time() * 10;
         }
 
     });
 
-    auto window = world.get<kaki::Window>();
     double lastFrameTime = kaki::getTime();
 
-    while(!window->shouldClose()) {
+    while(!window.get<kaki::Window>()->shouldClose()) {
         double currentFrameTime = kaki::getTime();
         double deltaTime = currentFrameTime - lastFrameTime;
         lastFrameTime = currentFrameTime;

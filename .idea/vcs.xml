@@ -4,6 +4,7 @@
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/SPIRV-Headers" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/SPIRV-Reflect" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/SPIRV-Reflect/third_party/googletest" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/SPIRV-Tools" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/cereal" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/flecs" vcs="Git" />
@@ -11,6 +12,7 @@
     <mapping directory="$PROJECT_DIR$/external/glm" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/glslang" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/rapidjson" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/rapidjson/thirdparty/gtest" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/shaderc" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/vk-bootstrap" vcs="Git" />
   </component>

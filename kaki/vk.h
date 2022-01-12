@@ -26,7 +26,6 @@ namespace kaki {
         VkCommandPool cmdPool {};
         VkCommandBuffer cmd[framesInFlight] {};
 
-        Pipeline pipeline {};
         VkRenderPass renderPass {};
         VkFramebuffer framebuffer[10] {};
     };

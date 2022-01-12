@@ -13,6 +13,8 @@ add_subdirectory(external/glfw)
 
 add_subdirectory(external/vk-bootstrap)
 
+add_subdirectory(external/VulkanMemoryAllocator)
+
 add_subdirectory(external/SPIRV-Headers)
 
 set(SPIRV_SKIP_EXECUTABLES ON)

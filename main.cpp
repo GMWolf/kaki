@@ -2,6 +2,9 @@
 
 #include "kaki/gfx.h"
 #include "kaki/window.h"
+#include "kaki/asset.h"
+#include "kaki/shader.h"
+#include "kaki/pipeline.h"
 
 int main() {
 
@@ -16,6 +19,12 @@ int main() {
     });
     world.set<kaki::Input>({});
     world.import<kaki::gfx>();
+
+    world.entity("vertex_shader").set<kaki::Asset>({"shader.vert.shd"}).add<kaki::asset::Shader>();
+    world.entity("fragment_shader").set<kaki::Asset>({"shader.frag.shd"}).add<kaki::asset::Shader>();
+
+    world.entity("pipeline").set<kaki::Asset>({nullptr}).add<kaki::asset::Pipeline>();
+
 
     auto camera = world.entity("camera");
     camera.set<kaki::Camera>(kaki::Camera{

@@ -9,7 +9,12 @@
 #include <vector>
 #include <cereal/types/vector.hpp>
 
+
 namespace kaki {
+
+    namespace asset {
+        struct Shader {};
+    }
 
     struct ShaderModule {
         VkShaderModule module;

@@ -10,6 +10,7 @@
       <file path="$PROJECT_DIR$/external/SPIRV-Headers" />
       <file path="$PROJECT_DIR$/external/SPIRV-Reflect" />
       <file path="$PROJECT_DIR$/external/SPIRV-Tools" />
+      <file path="$PROJECT_DIR$/external/VulkanMemoryAllocator" />
       <file path="$PROJECT_DIR$/external/cereal" />
       <file path="$PROJECT_DIR$/external/flecs" />
       <file path="$PROJECT_DIR$/external/glfw" />

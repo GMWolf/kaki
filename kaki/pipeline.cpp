@@ -6,11 +6,11 @@
 #include "shader.h"
 #include <span>
 
-static VkPipelineLayout createPipelineLayout(VkDevice device, std::span<kaki::ShaderModule> modules)
+static VkPipelineLayout createPipelineLayout(VkDevice device, std::span<const kaki::ShaderModule*> modules)
 {
     std::vector<VkPushConstantRange> pushConstantRanges;
     for(auto m : modules) {
-        pushConstantRanges.insert(pushConstantRanges.end(), m.pushConstantRanges.begin(), m.pushConstantRanges.end());
+        pushConstantRanges.insert(pushConstantRanges.end(), m->pushConstantRanges.begin(), m->pushConstantRanges.end());
     }
 
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo {
@@ -24,21 +24,23 @@ static VkPipelineLayout createPipelineLayout(VkDevice device, std::span<kaki::Sh
     return layout;
 }
 
-kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, const char *vertexPath, const char *fragmentPath) {
-    kaki::ShaderModule modules[] = {kaki::loadShaderModule(device, vertexPath), kaki::loadShaderModule(device, fragmentPath)};
+kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, const kaki::ShaderModule* vertexModule, const kaki::ShaderModule* fragmentModule) {
+
+
+    const kaki::ShaderModule* modules[] = {vertexModule, fragmentModule};
     auto pipelineLayout = createPipelineLayout(device, modules);
 
     VkPipelineShaderStageCreateInfo shaderStageCreateInfo[] {
             {
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                     .stage = VK_SHADER_STAGE_VERTEX_BIT,
-                    .module = modules[0].module,
+                    .module = modules[0]->module,
                     .pName = "main"
             },
             {
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                     .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-                    .module = modules[1].module,
+                    .module = modules[1]->module,
                     .pName = "main"
             }
     };
@@ -167,5 +169,6 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
 
     Pipeline pipeline;
     vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineInfo, nullptr, &pipeline.pipeline);
+    pipeline.pipelineLayout = pipelineLayout;
     return pipeline;
 }

@@ -10,15 +10,18 @@
 #include "window.h"
 #include <cstdio>
 #include "pipeline.h"
+#include "shader.h"
+#include "asset.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
 
 static VkRenderPass createRenderPass(VkDevice device, VkFormat format) {
     VkAttachmentDescription attachment {
         .flags = 0,
         .format = format,
         .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -88,8 +91,8 @@ static bool createGlobals(flecs::world& world) {
 
     vkb::PhysicalDeviceSelector selector{ vkb_inst };
     auto phys_ret = selector.set_surface(surface)
-            .set_minimum_version(1,0)
-            .prefer_gpu_device_type(vkb::PreferredDeviceType::integrated)
+            .set_minimum_version(1,2)
+            .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
             .select();
 
     if (!phys_ret) {
@@ -174,7 +177,6 @@ static bool createGlobals(flecs::world& world) {
     vkAllocateCommandBuffers(vk.device, &cmdAllocInfo, vk.cmd);
 
     vk.renderPass = createRenderPass(vk.device, vk.swapchain.image_format);
-    vk.pipeline = kaki::createPipeline(vk.device, vk.renderPass, "shader.vert.shd", "shader.frag.shd");
 
     for(int i = 0; i < vk.swapchain.image_count; i++) {
         vk.framebuffer[i] = createFrameBuffer(vk.device, vk.renderPass, vk.swapchain.get_image_views()->at(i), vk.swapchain.extent.width, vk.swapchain.extent.height);
@@ -219,7 +221,6 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     vkResetCommandBuffer(vk.cmd[vk.currentFrame], 0);
     vkBeginCommandBuffer(vk.cmd[vk.currentFrame], &beginInfo);
 
-
     //vkCmdClearColorImage(vk.cmd[vk.currentFrame], vk.swapchain.get_images()->at(imageIndex), VK_IMAGE_LAYOUT_GENERAL, &clearColor, 1, &imageRange);
     VkRenderPassBeginInfo renderPassBeginInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -234,11 +235,16 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
                         .width = vk.swapchain.extent.width,
                         .height = vk.swapchain.extent.height,
                 }
-        }
+        },
+        .clearValueCount = 1,
+        .pClearValues = &clearValue,
     };
 
     vkCmdBeginRenderPass(vk.cmd[vk.currentFrame], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipeline.pipeline);
+
+    auto pipeline = entity.world().lookup("pipeline").get<kaki::Pipeline>();
+
+    vkCmdBindPipeline(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
     VkViewport viewport {
         .x = 0,
         .y = 0,
@@ -257,11 +263,11 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
     entity.world().each([&](const kaki::Camera& camera) {
         glm::mat4 proj = glm::ortho(camera.x, camera.x + camera.width, camera.y, camera.y + camera.height);
-        vkCmdPushConstants(vk.cmd[vk.currentFrame], vk.pipeline.pipelineLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(proj), &proj);
+        vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(proj), &proj);
 
         entity.world().each([&](const kaki::Rectangle& rect) {
-            vkCmdPushConstants(vk.cmd[vk.currentFrame], vk.pipeline.pipelineLayout,VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(proj), sizeof(rect.pos), &rect.pos);
-            vkCmdPushConstants(vk.cmd[vk.currentFrame], vk.pipeline.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj) + sizeof(rect.pos) + sizeof(glm::vec2), sizeof(rect.color), &rect.color);
+            vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj), sizeof(rect.pos), &rect.pos);
+            vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj) + sizeof(rect.pos) + sizeof(glm::vec2), sizeof(rect.color), &rect.color);
             vkCmdDraw(vk.cmd[vk.currentFrame], 6, 1, 0, 0);
         });
     });
@@ -273,6 +279,8 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     VkPipelineStageFlags waitStages[] = {
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
     };
+
+    vkResetFences(vk.device, 1, &vk.cmdBufFence[vk.currentFrame]);
 
     VkSubmitInfo submitInfo {
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -292,8 +300,8 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     VkPresentInfoKHR presentInfo {
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .pNext = nullptr,
-            .waitSemaphoreCount = 0,
-            .pWaitSemaphores = nullptr,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = &vk.renderCompleteSemaphores[vk.currentFrame],
             .swapchainCount = 1,
             .pSwapchains = &vk.swapchain.swapchain,
             .pImageIndices = &imageIndex,
@@ -305,8 +313,30 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 }
 
 
+void handleShaderModuleLoads(flecs::iter iter, kaki::Asset* assets, kaki::asset::Shader*) {
+    for(auto i : iter) {
+        iter.entity(i).set<kaki::ShaderModule>(kaki::loadShaderModule(iter.world().get<kaki::VkGlobals>()->device, assets[i].path));
+    }
+}
+
+void handlePipelineLoads(flecs::iter iter, kaki::Asset* assets, kaki::asset::Pipeline*) {
+    auto vk = iter.world().get<kaki::VkGlobals>();
+
+    auto vertexModule = iter.world().lookup("vertex_shader").get<kaki::ShaderModule>();
+    auto fragmentModule = iter.world().lookup("fragment_shader").get<kaki::ShaderModule>();
+
+    for(auto i : iter) {
+        iter.entity(i).set<kaki::Pipeline>(kaki::createPipeline(vk->device, vk->renderPass, vertexModule, fragmentModule));
+    }
+}
+
+
 kaki::gfx::gfx(flecs::world &world) {
     world.module<gfx>();
+
+    world.observer<kaki::Asset, kaki::asset::Shader>().event(flecs::OnAdd).iter(handleShaderModuleLoads);
+
+    world.observer<kaki::Asset, kaki::asset::Pipeline>().event(flecs::OnAdd).iter(handlePipelineLoads);
 
     createGlobals(world);
 

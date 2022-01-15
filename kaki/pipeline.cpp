@@ -26,7 +26,6 @@ static VkPipelineLayout createPipelineLayout(VkDevice device, std::span<const ka
 
 kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, const kaki::ShaderModule* vertexModule, const kaki::ShaderModule* fragmentModule) {
 
-
     const kaki::ShaderModule* modules[] = {vertexModule, fragmentModule};
     auto pipelineLayout = createPipelineLayout(device, modules);
 

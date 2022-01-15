@@ -8,7 +8,7 @@
 #include "shader.h"
 
 
-void kaki::loadAssets(flecs::world& world, const char *path) {
+flecs::entity kaki::loadAssets(flecs::world& world, const char *path) {
     rapidjson::Document doc;
     std::ifstream t(path);
     std::string str((std::istreambuf_iterator<char>(t)),
@@ -33,13 +33,13 @@ void kaki::loadAssets(flecs::world& world, const char *path) {
 
 
     // Create a query that iterates asset handles in dependency order
-    auto handlerFilter = world.query_builder<>()
+    auto handlerQuery = world.query_builder<>()
             .term<kaki::AssetHandler>(flecs::Wildcard)
             .term<kaki::AssetHandler>(flecs::Wildcard).super(world.component<kaki::DependsOn>(),flecs::Cascade).oper(flecs::Optional)
             .build();
 
     // Iterate over each handler
-    handlerFilter.iter([pack](flecs::iter iter) {
+    handlerQuery.iter([pack](flecs::iter iter) {
 
         // Create a filter over assets in the pack of that handles asset type
         auto assetType = iter.term_id(1).object();
@@ -63,4 +63,5 @@ void kaki::loadAssets(flecs::world& world, const char *path) {
 
     });
 
+    return pack;
 }

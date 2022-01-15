@@ -19,7 +19,18 @@ int main() {
     }).set<kaki::Input>({});
     world.import<kaki::gfx>();
 
-    kaki::loadAssets(world, "assets.json");
+    auto mainAssets = kaki::loadAssets(world, "assets.json");
+
+    // Print out assets in main assets
+    world.filter_builder()
+        .term<kaki::Asset>()
+        .term(flecs::ChildOf, mainAssets)
+        .build()
+        .each([](flecs::entity e) {
+            std::cout << e.path() << std::endl;
+    });
+
+
 
     auto camera = world.entity("camera");
     camera.set<kaki::Camera>(kaki::Camera{

@@ -19,5 +19,5 @@ namespace kaki {
         asset_handle_fn load;
     };
 
-    void loadAssets(flecs::world& world, const char* path);
+    flecs::entity loadAssets(flecs::world& world, const char* path);
 }

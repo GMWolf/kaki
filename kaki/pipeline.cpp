@@ -9,12 +9,19 @@
 static VkPipelineLayout createPipelineLayout(VkDevice device, std::span<const kaki::ShaderModule*> modules)
 {
     std::vector<VkPushConstantRange> pushConstantRanges;
+    std::vector<VkDescriptorSetLayout> descSetLayouts;
     for(auto m : modules) {
         pushConstantRanges.insert(pushConstantRanges.end(), m->pushConstantRanges.begin(), m->pushConstantRanges.end());
+
+        for(auto& descSet : m->descSets) {
+            descSetLayouts.push_back(descSet.layout);
+        }
     }
 
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            .setLayoutCount = static_cast<uint32_t>(descSetLayouts.size()),
+            .pSetLayouts = descSetLayouts.data(),
             .pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges.size()),
             .pPushConstantRanges = pushConstantRanges.data(),
     };
@@ -169,5 +176,10 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
     Pipeline pipeline;
     vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineInfo, nullptr, &pipeline.pipeline);
     pipeline.pipelineLayout = pipelineLayout;
+
+    for(auto module : modules) {
+        pipeline.descriptorSets.insert(pipeline.descriptorSets.end(), module->descSets.begin(), module->descSets.end());
+    }
+
     return pipeline;
 }

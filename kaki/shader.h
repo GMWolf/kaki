@@ -12,14 +12,28 @@
 
 namespace kaki {
 
+    struct DescriptorSet {
+        uint8_t index;
+        std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+        VkDescriptorSetLayout layout;
+    };
+
     struct ShaderModule {
-        VkShaderModule module;
         std::vector<VkPushConstantRange> pushConstantRanges;
+        std::vector<DescriptorSet> descSets;
+
+        VkShaderModule module;
     };
 
     template<class Archive>
     void serialize(Archive& archive, ShaderModule& module) {
-        archive(module.pushConstantRanges);
+        archive(module.pushConstantRanges, module.descSets);
+    }
+
+    template<class Archive>
+    void serialize(Archive& archive, DescriptorSet& descSet) {
+        archive(descSet.index, descSet.bindings);
     }
 
     kaki::ShaderModule loadShaderModule(VkDevice device, const char* path);
@@ -28,6 +42,11 @@ namespace kaki {
 template<class Archive>
 void serialize(Archive& archive, VkPushConstantRange& pc) {
     archive(pc.stageFlags, pc.offset, pc.size);
+}
+
+template<class Archive>
+void serialize(Archive& archive, VkDescriptorSetLayoutBinding& b) {
+    archive(b.binding, b.descriptorType, b.descriptorCount, b.stageFlags);
 }
 
 #endif //KAKI_SHADER_H

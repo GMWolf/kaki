@@ -41,11 +41,13 @@ int main() {
     world.entity().set<kaki::Rectangle>(kaki::Rectangle{
         .pos = {2, 2},
         .color = {1, 1, 1},
+        .image = world.lookup("main::kaki"),
     });
 
     world.entity().set<kaki::Rectangle>(kaki::Rectangle{
             .pos = {10, 4},
             .color = {1, 1, 1},
+            .image = world.lookup("main::kaki"),
     });
 
     world.system<kaki::Rectangle>().each([](flecs::entity entity, kaki::Rectangle& rect) {

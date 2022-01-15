@@ -18,6 +18,7 @@ namespace kaki {
     struct Rectangle {
         glm::vec2 pos;
         glm::vec3 color;
+        flecs::entity image;
     };
 
     struct gfx {

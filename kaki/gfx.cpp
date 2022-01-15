@@ -157,8 +157,8 @@ static bool createGlobals(flecs::world& world) {
             .flags = VK_FENCE_CREATE_SIGNALED_BIT
     };
 
-    for(int i = 0; i < kaki::VkGlobals::framesInFlight; i++) {
-        vkCreateFence(vk.device, &fenceCreateInfo, nullptr, &vk.cmdBufFence[i]);
+    for(auto & i : vk.cmdBufFence) {
+        vkCreateFence(vk.device, &fenceCreateInfo, nullptr, &i);
     }
 
     VkCommandPoolCreateInfo poolInfo{
@@ -185,6 +185,42 @@ static bool createGlobals(flecs::world& world) {
         vk.framebuffer[i] = createFrameBuffer(vk.device, vk.renderPass, vk.swapchain.get_image_views()->at(i), vk.swapchain.extent.width, vk.swapchain.extent.height);
     }
 
+    {
+        VkDescriptorPoolSize descriptorPoolSize[]{
+                VkDescriptorPoolSize{
+                        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                        .descriptorCount = 32,
+                }
+        };
+
+        VkDescriptorPoolCreateInfo descPoolInfo{
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+                .maxSets = 32,
+                .poolSizeCount = 1,
+                .pPoolSizes = descriptorPoolSize,
+        };
+
+        for(auto & descriptorPool : vk.descriptorPools) {
+            vkCreateDescriptorPool(vk.device, &descPoolInfo, nullptr, &descriptorPool);
+        }
+    }
+
+    {
+        VkSamplerCreateInfo samplerCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+            .magFilter = VK_FILTER_LINEAR,
+            .minFilter = VK_FILTER_LINEAR,
+            .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+            .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+            .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+            .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+            .minLod = 0,
+            .maxLod = VK_LOD_CLAMP_NONE,
+        };
+
+        vkCreateSampler(vk.device, &samplerCreateInfo, nullptr, &vk.sampler);
+    }
+
     world.set<kaki::VkGlobals>(vk);
 
     return true;
@@ -193,6 +229,10 @@ static bool createGlobals(flecs::world& world) {
 
 static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     vkWaitForFences(vk.device, 1, &vk.cmdBufFence[vk.currentFrame], true, UINT64_MAX);
+
+    vkResetDescriptorPool(vk.device, vk.descriptorPools[vk.currentFrame], 0);
+    vkResetCommandBuffer(vk.cmd[vk.currentFrame], 0);
+
 
     uint32_t imageIndex;
     auto acquire = vkAcquireNextImageKHR(vk.device, vk.swapchain, UINT64_MAX, vk.imageAvailableSemaphore[vk.currentFrame], nullptr, &imageIndex);
@@ -219,7 +259,6 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     imageRange.levelCount = 1;
     imageRange.layerCount = 1;
 
-    vkResetCommandBuffer(vk.cmd[vk.currentFrame], 0);
     vkBeginCommandBuffer(vk.cmd[vk.currentFrame], &beginInfo);
 
     //vkCmdClearColorImage(vk.cmd[vk.currentFrame], vk.swapchain.get_images()->at(imageIndex), VK_IMAGE_LAYOUT_GENERAL, &clearColor, 1, &imageRange);
@@ -245,6 +284,11 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
     auto pipeline = entity.world().lookup("main::pipeline").get<kaki::Pipeline>();
 
+    std::vector<VkDescriptorSetLayout> descSetLayouts;
+    for(auto& descSet : pipeline->descriptorSets) {
+        descSetLayouts.push_back(descSet.layout);
+    }
+
     vkCmdBindPipeline(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
     VkViewport viewport {
         .x = 0,
@@ -267,6 +311,40 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
         vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(proj), &proj);
 
         entity.world().each([&](const kaki::Rectangle& rect) {
+
+            VkDescriptorSetAllocateInfo descAlloc {
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                .pNext = nullptr,
+                .descriptorPool = vk.descriptorPools[vk.currentFrame],
+                .descriptorSetCount = static_cast<uint32_t>(descSetLayouts.size()),
+                .pSetLayouts = descSetLayouts.data(),
+            };
+
+            std::vector<VkDescriptorSet> descriptorSets(descSetLayouts.size());
+            vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
+
+            VkDescriptorImageInfo imageInfo {
+                .sampler = vk.sampler,
+                .imageView = rect.image.get<kaki::Image>()->view,
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            };
+
+            VkWriteDescriptorSet descSetWrite {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .pNext = nullptr,
+                .dstSet = descriptorSets[0],
+                .dstBinding = 0,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .pImageInfo = &imageInfo
+            };
+
+            vkUpdateDescriptorSets(vk.device, 1, &descSetWrite, 0, nullptr);
+
+            vkCmdBindDescriptorSets(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipelineLayout,
+                                    0, descriptorSets.size(), descriptorSets.data(), 0, nullptr);
+
             vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj), sizeof(rect.pos), &rect.pos);
             vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj) + sizeof(rect.pos) + sizeof(glm::vec2), sizeof(rect.color), &rect.color);
             vkCmdDraw(vk.cmd[vk.currentFrame], 6, 1, 0, 0);

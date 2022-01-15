@@ -9,8 +9,10 @@ layout(push_constant) uniform constants {
     vec3 color;
 };
 
+layout(set = 0, binding = 0) uniform sampler2D tex;
+
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    outColor = vec4(pow(color, vec3(2.2)), 1.0);
+    outColor = texture(tex, UV);
 }

@@ -28,6 +28,9 @@ namespace kaki {
 
         VkRenderPass renderPass {};
         VkFramebuffer framebuffer[10] {};
+
+        VkDescriptorPool descriptorPools[framesInFlight];
+        VkSampler sampler;
     };
 
 }

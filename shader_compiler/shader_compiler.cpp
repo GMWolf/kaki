@@ -92,11 +92,17 @@ int main(int argc, char* argv[])
         spvReflectEnumerateDescriptorSets(&module, &descriptorSetCount, sets.data());
 
         for(SpvReflectDescriptorSet* set : sets) {
+            kaki::DescriptorSet& kakiDescSet = kakiModule.descSets.emplace_back();
+            kakiDescSet.index = set->set;
             for(SpvReflectDescriptorBinding* binding : std::span(set->bindings, set->binding_count)) {
-
+                kakiDescSet.bindings.push_back(VkDescriptorSetLayoutBinding{
+                    .binding = binding->binding,
+                    .descriptorType = static_cast<VkDescriptorType>(binding->descriptor_type),
+                    .descriptorCount = binding->count,
+                    .stageFlags = module.shader_stage,
+                });
             }
         }
-
 
         uint32_t pushConstantCount;
         spvReflectEnumeratePushConstantBlocks(&module, &pushConstantCount, nullptr);

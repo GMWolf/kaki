@@ -27,5 +27,5 @@ void main() {
 
     gl_Position = proj * gl_Position;
 
-    UV = gl_Position.xy / 2.0 + 0.5;
+    UV = positions[gl_VertexIndex].xy / 2.0 + 0.5;
 }

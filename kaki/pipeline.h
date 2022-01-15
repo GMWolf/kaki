@@ -14,6 +14,7 @@ namespace kaki {
     struct Pipeline {
         VkPipelineLayout pipelineLayout {};
         VkPipeline pipeline {};
+        std::vector<DescriptorSet> descriptorSets;
     };
 
     Pipeline createPipeline(VkDevice device, VkRenderPass renderpass, const kaki::ShaderModule* vertexModule, const kaki::ShaderModule* fragmentModule);

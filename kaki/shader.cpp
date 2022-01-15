@@ -15,6 +15,7 @@ static VkShaderModule createModule(VkDevice device, std::span<uint32_t> code)
             .pCode = code.data(),
     };
 
+
     VkShaderModule shader_module;
     if(vkCreateShaderModule(device, &createInfo, nullptr, &shader_module) != VK_SUCCESS){
         return VK_NULL_HANDLE;
@@ -34,6 +35,19 @@ kaki::ShaderModule kaki::loadShaderModule(VkDevice device, const char* path) {
     archive(code);
 
     module.module = createModule(device, code);
+
+    for(auto& descSet : module.descSets) {
+
+        VkDescriptorSetLayoutCreateInfo descSetLayoutInfo {
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .bindingCount = static_cast<uint32_t>(descSet.bindings.size()),
+                .pBindings = descSet.bindings.data(),
+        };
+
+        vkCreateDescriptorSetLayout(device, &descSetLayoutInfo, nullptr, &descSet.layout);
+    }
 
     return module;
 }

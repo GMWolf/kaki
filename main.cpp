@@ -30,8 +30,6 @@ int main() {
             std::cout << e.path() << std::endl;
     });
 
-
-
     auto camera = world.entity("camera");
     camera.set<kaki::Camera>(kaki::Camera{
         .x = 0,

@@ -12,6 +12,7 @@
 #include "pipeline.h"
 #include "shader.h"
 #include "asset.h"
+#include "image.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <rapidjson/document.h>
@@ -312,7 +313,6 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     vk.currentFrame = (vk.currentFrame + 1) % kaki::VkGlobals::framesInFlight;
 }
 
-
 void handleShaderModuleLoads(flecs::iter iter, kaki::Asset* assets) {
     for(auto i : iter) {
         iter.entity(i).set<kaki::ShaderModule>(kaki::loadShaderModule(iter.world().get<kaki::VkGlobals>()->device, assets[i].path));
@@ -354,6 +354,11 @@ kaki::gfx::gfx(flecs::world &world) {
         handlePipelineLoads,
     }).add<kaki::DependsOn>(shdLoader);
 
+    world.entity("imageLoader").set<kaki::AssetHandler, kaki::Image>({
+        imageLoadHandler
+    });
+
+
     createGlobals(world);
-    world.system<VkGlobals>().kind(flecs::OnStore).each(render);
+    world.system<VkGlobals>("Render system").kind(flecs::OnStore).each(render);
 }

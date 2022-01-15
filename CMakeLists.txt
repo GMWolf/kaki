@@ -42,6 +42,9 @@ add_library(cereal INTERFACE)
 target_include_directories(cereal INTERFACE external/cereal/include)
 
 add_subdirectory(external/glm)
+
+add_subdirectory(external/KTX-Software)
+
 add_subdirectory(kaki)
 add_subdirectory(shader_compiler)
 
@@ -54,3 +57,13 @@ compile_shader(test-shader SOURCES shader.vert shader.frag)
 add_dependencies(test test-shader)
 configure_file(pipeline.json pipeline.json COPYONLY)
 configure_file(assets.json assets.json COPYONLY)
+
+add_custom_command(
+        OUTPUT kaki.ktx2
+        COMMAND toktx --genmipmap kaki.ktx2 ${CMAKE_CURRENT_LIST_DIR}/kaki.png
+        DEPENDS kaki.png
+        USES_TERMINAL
+)
+
+add_custom_target(textures DEPENDS kaki.ktx2)
+add_dependencies(test textures)

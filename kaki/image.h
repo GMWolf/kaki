@@ -7,19 +7,17 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include <glm/vec2.hpp>
+#include <flecs.h>
+#include "asset.h"
 
 namespace kaki {
 
     struct Image
     {
-        glm::ivec2 size;
-
         VkImage image;
         VmaAllocation allocation;
+        VkImageView view;
     };
 
-    template<class Archive>
-    void serialize(Archive& archive, Image& image) {
-        archive(image.size.x, image.size.y);
-    }
+    void imageLoadHandler(flecs::iter iter, kaki::Asset* assets);
 }

@@ -31,7 +31,6 @@ flecs::entity kaki::loadAssets(flecs::world& world, const char *path) {
         }
     });
 
-
     // Create a query that iterates asset handles in dependency order
     auto handlerQuery = world.query_builder<>()
             .term<kaki::AssetHandler>(flecs::Wildcard)

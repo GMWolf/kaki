@@ -80,7 +80,7 @@ kaki::windowing::windowing(flecs::world &world) {
         exit(1);
     }
 
-    world.system<Input>().kind(flecs::OnLoad).each([](flecs::entity entity, Input& input) {
+    world.system<Input>("Input system").kind(flecs::OnLoad).each([](flecs::entity entity, Input& input) {
         input.frame++;
     });
 

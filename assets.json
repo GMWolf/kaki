@@ -15,6 +15,11 @@
       "name": "pipeline",
       "path": "pipeline.json",
       "type": "kaki::Pipeline"
+    },
+    {
+      "name": "kaki",
+      "path": "kaki.ktx2",
+      "type": "kaki::Image"
     }
   ]
 }

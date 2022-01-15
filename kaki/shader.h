@@ -18,13 +18,12 @@ namespace kaki {
 
     struct ShaderModule {
         VkShaderModule module;
-        std::vector<uint32_t> code;
         std::vector<VkPushConstantRange> pushConstantRanges;
     };
 
     template<class Archive>
     void serialize(Archive& archive, ShaderModule& module) {
-        archive(module.code, module.pushConstantRanges);
+        archive(module.pushConstantRanges);
     }
 
     kaki::ShaderModule loadShaderModule(VkDevice device, const char* path);

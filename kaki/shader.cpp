@@ -30,11 +30,10 @@ kaki::ShaderModule kaki::loadShaderModule(VkDevice device, const char* path) {
     kaki::ShaderModule module;
     archive(module);
 
-    module.module = createModule(device, module.code);
+    std::vector<uint32_t> code;
+    archive(code);
 
-    // Free the code
-    module.code.clear();
-    module.code.shrink_to_fit();
+    module.module = createModule(device, code);
 
     return module;
 }

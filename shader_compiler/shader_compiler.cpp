@@ -112,11 +112,12 @@ int main(int argc, char* argv[])
             });
         }
 
-        kakiModule.code.assign(compiledWords.begin(), compiledWords.end());
+        std::vector<uint32_t> code(compiledWords.begin(), compiledWords.end());
 
         std::ofstream os(std::string(targetPath), std::ios::binary);
         cereal::BinaryOutputArchive archive( os );
-        archive( kakiModule );
+        archive(kakiModule);
+        archive(code);
     }
 
     return 0;

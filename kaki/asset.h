@@ -20,5 +20,5 @@ namespace kaki {
     };
 
 
-    void importAssetManager(flecs::world& world);
+    void loadAssets(flecs::world& world, const char* path);
 }

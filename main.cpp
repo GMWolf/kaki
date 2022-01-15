@@ -19,11 +19,7 @@ int main() {
     }).set<kaki::Input>({});
     world.import<kaki::gfx>();
 
-    world.entity("vertex_shader").set<kaki::Asset>({"shader.vert.shd"}).add<kaki::asset::Shader>();
-    world.entity("fragment_shader").set<kaki::Asset>({"shader.frag.shd"}).add<kaki::asset::Shader>();
-
-    world.entity("pipeline").set<kaki::Asset>({"pipeline.json"}).add<kaki::asset::Pipeline>();
-
+    kaki::loadAssets(world, "assets.json");
 
     auto camera = world.entity("camera");
     camera.set<kaki::Camera>(kaki::Camera{

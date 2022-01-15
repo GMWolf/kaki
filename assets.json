@@ -4,17 +4,17 @@
     {
       "name": "vertex_shader",
       "path": "shader.vert.shd",
-      "type": "kaki::asset::Shader"
+      "type": "kaki::ShaderModule"
     },
     {
       "name": "fragment_shader",
       "path": "shader.frag.shd",
-      "type": "kaki::asset::Shader"
+      "type": "kaki::ShaderModule"
     },
     {
       "name": "pipeline",
       "path": "pipeline.json",
-      "type": "kaki::asset::Pipeline"
+      "type": "kaki::Pipeline"
     }
   ]
 }

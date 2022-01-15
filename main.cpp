@@ -19,9 +19,6 @@ int main() {
     }).set<kaki::Input>({});
     world.import<kaki::gfx>();
 
-    //world.entity("vertex_shader").set(kaki::Asset{"shader.vert.shd"});
-    //ecs_plecs_from_file(world.c_ptr(), "../asset.plecs");
-
     kaki::loadAssets(world, "assets.json");
 
     auto camera = world.entity("camera");

@@ -7,21 +7,6 @@
 #include <fstream>
 #include "shader.h"
 
-static void processEntitiesForAsset(flecs::entity assetType, flecs::entity pack) {
-    auto world = assetType.world();
-
-
-
-    auto assetHandlers = world.filter_builder<kaki::AssetHandler>()
-            .term(assetType)
-            .build();
-
-    assetHandlers.each([&](kaki::AssetHandler& handler) {
-        //assetFilter.iter([&](flecs::iter iter, kaki::Asset* assets) {
-        //    handler.load(iter, assets);
-        //});
-    });
-}
 
 void kaki::loadAssets(flecs::world& world, const char *path) {
     rapidjson::Document doc;
@@ -47,20 +32,23 @@ void kaki::loadAssets(flecs::world& world, const char *path) {
     });
 
 
+    // Create a query that iterates asset handles in dependency order
     auto handlerFilter = world.query_builder<>()
             .term<kaki::AssetHandler>(flecs::Wildcard)
             .term<kaki::AssetHandler>(flecs::Wildcard).super(world.component<kaki::DependsOn>(),flecs::Cascade).oper(flecs::Optional)
             .build();
 
+    // Iterate over each handler
     handlerFilter.iter([pack](flecs::iter iter) {
-       auto id = iter.term_id(1);
-       auto assetType = id.object();
-       auto assetName = assetType.name();
-       auto assetFilter = iter.world().filter_builder<kaki::Asset>()
+
+        // Create a filter over assets in the pack of that handles asset type
+        auto assetType = iter.term_id(1).object();
+        auto assetFilter = iter.world().filter_builder<kaki::Asset>()
                 .term(assetType)
                 .term(flecs::ChildOf, pack)
                 .build();
 
+       // Iterate the handlers
        auto handlers = iter.term<AssetHandler>(1);
 
        for(auto i : iter) {

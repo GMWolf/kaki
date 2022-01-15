@@ -11,10 +11,6 @@
 
 namespace kaki {
 
-    namespace asset {
-        struct Pipeline {};
-    }
-
     struct Pipeline {
         VkPipelineLayout pipelineLayout {};
         VkPipeline pipeline {};

@@ -346,21 +346,13 @@ void handlePipelineLoads(flecs::iter iter, kaki::Asset* assets) {
 kaki::gfx::gfx(flecs::world &world) {
     world.module<gfx>();
 
-    auto pipe = world.entity("pipelineLoader").set<kaki::AssetHandler, kaki::asset::Pipeline>({
-        handlePipelineLoads,
-    });
-
-    auto shd = world.entity("shaderLoader").set<kaki::AssetHandler, kaki::asset::Shader>({
+    auto shdLoader = world.entity("shaderLoader").set<kaki::AssetHandler, kaki::ShaderModule>({
         handleShaderModuleLoads,
     });
 
-
-    pipe.add<kaki::DependsOn>(shd);
-
-
-
-
-    //world.observer<kaki::Asset, kaki::asset::Shader>().event(flecs::OnAdd).iter(handleShaderModuleLoads);
+    world.entity("pipelineLoader").set<kaki::AssetHandler, kaki::Pipeline>({
+        handlePipelineLoads,
+    }).add<kaki::DependsOn>(shdLoader);
 
     createGlobals(world);
     world.system<VkGlobals>().kind(flecs::OnStore).each(render);

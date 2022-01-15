@@ -12,10 +12,6 @@
 
 namespace kaki {
 
-    namespace asset {
-        struct Shader {};
-    }
-
     struct ShaderModule {
         VkShaderModule module;
         std::vector<VkPushConstantRange> pushConstantRanges;

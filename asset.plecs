@@ -1,0 +1,7 @@
+
+
+
+
+with kaki.asset.Shader {
+    vertex_shader
+}

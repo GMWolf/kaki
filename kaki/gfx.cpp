@@ -242,7 +242,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
     vkCmdBeginRenderPass(vk.cmd[vk.currentFrame], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    auto pipeline = entity.world().lookup("pipeline").get<kaki::Pipeline>();
+    auto pipeline = entity.world().lookup("main::pipeline").get<kaki::Pipeline>();
 
     vkCmdBindPipeline(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
     VkViewport viewport {
@@ -313,13 +313,13 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 }
 
 
-void handleShaderModuleLoads(flecs::iter iter, kaki::Asset* assets, kaki::asset::Shader*) {
+void handleShaderModuleLoads(flecs::iter iter, kaki::Asset* assets) {
     for(auto i : iter) {
         iter.entity(i).set<kaki::ShaderModule>(kaki::loadShaderModule(iter.world().get<kaki::VkGlobals>()->device, assets[i].path));
     }
 }
 
-void handlePipelineLoads(flecs::iter iter, kaki::Asset* assets, kaki::asset::Pipeline*) {
+void handlePipelineLoads(flecs::iter iter, kaki::Asset* assets) {
     auto vk = iter.world().get<kaki::VkGlobals>();
 
     for(auto i : iter) {
@@ -330,8 +330,13 @@ void handlePipelineLoads(flecs::iter iter, kaki::Asset* assets, kaki::asset::Pip
                         std::istreambuf_iterator<char>());
         doc.ParseInsitu(str.data());
 
-        auto vertexModule = iter.world().lookup(doc["vertex"].GetString()).get<kaki::ShaderModule>();
-        auto fragmentModule = iter.world().lookup(doc["fragment"].GetString()).get<kaki::ShaderModule>();
+        auto parent = iter.entity(i).get_object(flecs::ChildOf);
+
+        auto vertexEntity = parent.lookup(doc["vertex"].GetString());
+        auto fragmentEntity = parent.lookup(doc["fragment"].GetString());
+
+        auto vertexModule = vertexEntity.get<kaki::ShaderModule>();
+        auto fragmentModule = fragmentEntity.get<kaki::ShaderModule>();
 
         iter.entity(i).set<kaki::Pipeline>(kaki::createPipeline(vk->device, vk->renderPass, vertexModule, fragmentModule));
     }
@@ -341,12 +346,22 @@ void handlePipelineLoads(flecs::iter iter, kaki::Asset* assets, kaki::asset::Pip
 kaki::gfx::gfx(flecs::world &world) {
     world.module<gfx>();
 
-    world.observer<kaki::Asset, kaki::asset::Shader>().event(flecs::OnAdd).iter(handleShaderModuleLoads);
+    auto pipe = world.entity("pipelineLoader").set<kaki::AssetHandler, kaki::asset::Pipeline>({
+        handlePipelineLoads,
+    });
 
-    world.observer<kaki::Asset, kaki::asset::Pipeline>().event(flecs::OnAdd).iter(handlePipelineLoads);
+    auto shd = world.entity("shaderLoader").set<kaki::AssetHandler, kaki::asset::Shader>({
+        handleShaderModuleLoads,
+    });
+
+
+    pipe.add<kaki::DependsOn>(shd);
+
+
+
+
+    //world.observer<kaki::Asset, kaki::asset::Shader>().event(flecs::OnAdd).iter(handleShaderModuleLoads);
 
     createGlobals(world);
-
     world.system<VkGlobals>().kind(flecs::OnStore).each(render);
-
 }

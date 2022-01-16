@@ -11,7 +11,8 @@
 namespace kaki {
 
     struct Gltf {
-        std::vector<std::pair<VkBuffer, VmaAllocation>> buffers;
+        std::vector<VkBuffer> buffers;
+        std::vector<VmaAllocation> allocations;
     };
 
     struct Mesh {

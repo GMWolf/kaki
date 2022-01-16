@@ -51,12 +51,42 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
             }
     };
 
+    VkVertexInputBindingDescription bindings[] = {
+            {
+                    .binding = 0,
+                    .stride = 12,
+                    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+            },
+            {
+                .binding = 1,
+                .stride = 12,
+                .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+            },
+    };
+
+    VkVertexInputAttributeDescription attributes[] = {
+            {
+                .location = 0,
+                .binding = 0,
+                .format = VK_FORMAT_R32G32B32_SFLOAT,
+                .offset = 0,
+            },
+            {
+                .location = 1,
+                .binding = 1,
+                .format = VK_FORMAT_R32G32B32_SFLOAT,
+                .offset = 0,
+            }
+    };
+
+
+
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-            .vertexBindingDescriptionCount = 0,
-            .pVertexBindingDescriptions = nullptr,
-            .vertexAttributeDescriptionCount = 0,
-            .pVertexAttributeDescriptions = nullptr,
+            .vertexBindingDescriptionCount = 2,
+            .pVertexBindingDescriptions = bindings,
+            .vertexAttributeDescriptionCount = 2,
+            .pVertexAttributeDescriptions = attributes,
     };
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{

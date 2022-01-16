@@ -1,10 +1,13 @@
+#include <iostream>
+
 #include <flecs.h>
 
 #include "kaki/gfx.h"
 #include "kaki/window.h"
 #include "kaki/asset.h"
-#include "kaki/shader.h"
-#include "kaki/pipeline.h"
+#include "kaki/transform.h"
+
+struct Control{};
 
 int main() {
 
@@ -31,39 +34,37 @@ int main() {
     });
 
     auto camera = world.entity("camera");
-    camera.set<kaki::Camera>(kaki::Camera{
-        .x = 0,
-        .y = 0,
-        .width = 64,
-        .height = 48,
+    camera.set(kaki::Camera{
+        .fov = glm::radians(90.0f),
+    }).set(kaki::Transform {
+        .position = {0,0,-5},
+        .scale = 1,
+        .orientation = glm::quatLookAt(glm::vec3{0,0,1}, glm::vec3{0,1,0}),
     });
 
-    world.entity().set<kaki::Rectangle>(kaki::Rectangle{
-        .pos = {2, 2},
-        .color = {1, 1, 1},
-        .image = world.lookup("main::kaki"),
-    });
+    world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
+        .mesh = world.lookup("main::untitled::Cube1"),
+    }).set(kaki::Transform{
+        .position = {0,0,0},
+        .scale = 1,
+        .orientation = {},
+    }).add<Control>();
 
-    world.entity().set<kaki::Rectangle>(kaki::Rectangle{
-            .pos = {10, 4},
-            .color = {1, 0, 1},
-            .image = world.lookup("main::kaki"),
-    });
 
-    world.system<kaki::Rectangle>().each([](flecs::entity entity, kaki::Rectangle& rect) {
+    world.system<kaki::Transform>().term<Control>().each([](flecs::entity entity, kaki::Transform& transform) {
         auto* input = entity.world().lookup("window").get<kaki::Input>();
 
         if (input->keyDown('D')) {
-            rect.pos.x += entity.delta_time() * 10;
+            transform.position.x += entity.delta_time() * 10;
         }
         if (input->keyDown('A')) {
-            rect.pos.x -= entity.delta_time() * 10;
-        }
-        if (input->keyDown('S')) {
-            rect.pos.y += entity.delta_time() * 10;
+            transform.position.x -= entity.delta_time() * 10;
         }
         if (input->keyDown('W')) {
-            rect.pos.y -= entity.delta_time() * 10;
+            transform.position.y += entity.delta_time() * 10;
+        }
+        if (input->keyDown('S')) {
+            transform.position.y -= entity.delta_time() * 10;
         }
 
     });

@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <numeric>
 #include "gltf.h"
+#include "transform.h"
 
 static VkRenderPass createRenderPass(VkDevice device, VkFormat format) {
     VkAttachmentDescription attachment {
@@ -374,37 +375,61 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     vkCmdSetViewport(vk.cmd[vk.currentFrame], 0, 1, &viewport);
     vkCmdSetScissor(vk.cmd[vk.currentFrame], 0, 1, &scissor);
 
-    entity.world().each([&](const kaki::Camera& camera) {
-        glm::mat4 proj = glm::ortho(camera.x, camera.x + camera.width, camera.y, camera.y + camera.height);
-        vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(proj), &proj);
+    entity.world().each([&](const kaki::Camera& camera, const kaki::Transform& cameraTransform) {
 
-        entity.world().each([&](const kaki::Rectangle& rect) {
+        float aspect = (float)vk.swapchain.extent.width / (float)vk.swapchain.extent.height;
+        glm::mat4 proj = glm::perspective(camera.fov, aspect, 0.01f, 1000.0f);
+        glm::mat4 view = cameraTransform.inverse().matrix();
+        glm::mat4 viewProj = proj * view;
+        vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,
+                           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(viewProj), &viewProj);
 
-            VkDescriptorSetAllocateInfo descAlloc {
-                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                .pNext = nullptr,
-                .descriptorPool = vk.descriptorPools[vk.currentFrame],
-                .descriptorSetCount = static_cast<uint32_t>(descSetLayouts.size()),
-                .pSetLayouts = descSetLayouts.data(),
-            };
+        entity.world().each([&](const kaki::MeshFilter& meshFilter, const kaki::Transform& transform) {
 
-            std::vector<VkDescriptorSet> descriptorSets(descSetLayouts.size());
-            vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
+            auto mesh = meshFilter.mesh.get<kaki::Mesh>();
+            auto gltfE = meshFilter.mesh.get_object(flecs::ChildOf);
+            auto gltf = gltfE.get<kaki::Gltf>();
 
-            ShaderInput inputs[] {{
-                .name = "tex",
-                .imageView = rect.image.get<kaki::Image>()->view,
-                },
-            };
+            assert(gltf->buffers.size() <= 4);
+            VkDeviceSize offsets[4]{0,0,0,0};
 
-            updateDescSets( vk,  descriptorSets, *pipeline, inputs);
+            //TODO: Dont use maginc indices for vertex/index buffers.
+            vkCmdBindVertexBuffers(vk.cmd[vk.currentFrame], 0, 2, gltf->buffers.data(), offsets);
+            vkCmdBindIndexBuffer(vk.cmd[vk.currentFrame], gltf->buffers[2], 0, VK_INDEX_TYPE_UINT16);
 
-            vkCmdBindDescriptorSets(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipelineLayout,
-                                    0, descriptorSets.size(), descriptorSets.data(), 0, nullptr);
+            if (!descSetLayouts.empty()) {
+                VkDescriptorSetAllocateInfo descAlloc{
+                        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                        .pNext = nullptr,
+                        .descriptorPool = vk.descriptorPools[vk.currentFrame],
+                        .descriptorSetCount = static_cast<uint32_t>(descSetLayouts.size()),
+                        .pSetLayouts = descSetLayouts.data(),
+                };
 
-            vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj), sizeof(rect.pos), &rect.pos);
-            vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj) + sizeof(rect.pos) + sizeof(glm::vec2), sizeof(rect.color), &rect.color);
-            vkCmdDraw(vk.cmd[vk.currentFrame], 6, 1, 0, 0);
+                std::vector<VkDescriptorSet> descriptorSets(descSetLayouts.size());
+                vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
+
+                ShaderInput inputs[]{{
+                                             .name = "tex",
+                                             .imageView = VK_NULL_HANDLE,
+                                     },
+                };
+
+                updateDescSets(vk, descriptorSets, *pipeline, inputs);
+
+                vkCmdBindDescriptorSets(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                        pipeline->pipelineLayout,
+                                        0, descriptorSets.size(), descriptorSets.data(), 0, nullptr);
+            }
+
+            glm::vec3 color = {1,0,1};
+            vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj), sizeof(transform), &transform);
+            vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj) + sizeof(transform), sizeof(color), &color);
+
+            for(auto& prim : mesh->primitives) {
+                vkCmdDrawIndexed(vk.cmd[vk.currentFrame], prim.indexCount, 1, prim.indexOffset, prim.vertexOffset, 0);
+            }
+
         });
     });
 

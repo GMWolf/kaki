@@ -42,6 +42,7 @@ add_library(cereal INTERFACE)
 target_include_directories(cereal INTERFACE external/cereal/include)
 
 add_subdirectory(external/glm)
+target_compile_definitions(glm INTERFACE GLM_FORCE_QUAT_DATA_XYZW)
 
 add_subdirectory(external/KTX-Software)
 
@@ -54,7 +55,6 @@ add_subdirectory(shader_compiler)
 add_executable(test main.cpp)
 target_link_libraries(test PRIVATE kaki-gfx)
 target_link_libraries(test PRIVATE flecs)
-
 
 compile_shader(test-shader SOURCES shader.vert shader.frag)
 add_dependencies(test test-shader)

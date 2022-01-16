@@ -42,7 +42,7 @@ namespace kaki {
 
         Mesh::Primitive prim{};
         prim.indexCount = primitive.indices->count;
-        prim.indexOffset = primitive.indices->offset;
+        prim.indexOffset = primitive.indices->offset / primitive.indices->stride;
         prim.vertexOffset = primitive.attributes[0].data->offset / primitive.attributes[0].data->stride;
 
         return prim;
@@ -81,11 +81,14 @@ namespace kaki {
             return;
         }
 
-        std::vector<std::pair<VkBuffer, VmaAllocation>> buffers;
+        std::vector<VkBuffer> buffers;
+        std::vector<VmaAllocation> allocations;
         buffers.reserve(data->buffers_count);
 
         for(auto& buffer_view : std::span(data->buffer_views, data->buffer_views_count)) {
-            buffers.push_back(loadGltfBuffer(vk, buffer_view));
+            auto a = loadGltfBuffer(vk, buffer_view);
+            buffers.push_back(a.first);
+            allocations.push_back(a.second);
         }
 
         entity.scope([&](){
@@ -99,11 +102,11 @@ namespace kaki {
 
         entity.set(Gltf{
             .buffers = buffers,
+            .allocations = allocations,
         });
     }
 
     void handleGltfLoads(flecs::iter iter, kaki::Asset *assets) {
-
         for(auto i : iter) {
             loadGltf(iter.entity(i), assets[i].path);
         }

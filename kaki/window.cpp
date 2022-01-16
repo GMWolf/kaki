@@ -47,7 +47,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 
 static void createWindow(flecs::entity e, kaki::Window& window) {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* handle = glfwCreateWindow(window.width, window.height, "window", nullptr, nullptr);
+    GLFWwindow* handle = glfwCreateWindow(window.width, window.height, window.title, nullptr, nullptr);
 
     if (!handle) {
         fprintf(stderr, "Failed to create glfw window.\n");

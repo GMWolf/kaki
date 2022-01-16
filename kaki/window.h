@@ -14,6 +14,8 @@ namespace kaki {
         int width {};
         int height {};
 
+        const char* title;
+
         void* handle{};
 
         [[nodiscard]] bool shouldClose() const;

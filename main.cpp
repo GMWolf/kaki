@@ -19,6 +19,7 @@ int main() {
     auto window = world.entity("window").set<kaki::Window>(kaki::Window{
         .width = 640,
         .height = 480,
+        .title = "Test kaki app",
     }).set<kaki::Input>({});
     world.import<kaki::gfx>();
 
@@ -30,7 +31,12 @@ int main() {
         .term(flecs::ChildOf, mainAssets)
         .build()
         .each([](flecs::entity e) {
-            std::cout << e.path() << std::endl;
+            std::cout << "-" << e.path() << std::endl;
+            e.world().filter_builder()
+                .term(flecs::ChildOf, e)
+                .build().each([](flecs::entity e){
+                   std::cout << "~" << e.path() << std::endl;
+                });
     });
 
     auto camera = world.entity("camera");

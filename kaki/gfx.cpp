@@ -20,6 +20,7 @@
 #include <span>
 #include <algorithm>
 #include <numeric>
+#include "gltf.h"
 
 static VkRenderPass createRenderPass(VkDevice device, VkFormat format) {
     VkAttachmentDescription attachment {
@@ -141,6 +142,14 @@ static bool createGlobals(flecs::world& world) {
     vk.instance = vkb_inst.instance;
     vk.device = vkbDevice;
     vk.queue = queue;
+
+    VmaAllocatorCreateInfo allocatorInfo = {
+            .physicalDevice = vk.device.physical_device,
+            .device = vk.device,
+            .instance = vk.instance
+    };
+    vmaCreateAllocator(&allocatorInfo, &vk.allocator);
+
 
     VkSemaphoreCreateInfo semaphoreCreateInfo {
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
@@ -482,6 +491,10 @@ kaki::gfx::gfx(flecs::world &world) {
 
     world.entity("imageLoader").set<kaki::AssetHandler, kaki::Image>({
         imageLoadHandler
+    });
+
+    world.entity("gltdLoader").set<kaki::AssetHandler, kaki::Gltf>({
+        handleGltfLoads
     });
 
 

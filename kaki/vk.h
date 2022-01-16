@@ -8,6 +8,7 @@
 #include <VkBootstrap.h>
 #include <vulkan/vulkan.h>
 #include "pipeline.h"
+#include <vk_mem_alloc.h>
 
 namespace kaki {
 
@@ -16,6 +17,8 @@ namespace kaki {
         vkb::Device device{};
         vkb::Swapchain swapchain;
         VkQueue queue{};
+
+        VmaAllocator allocator;
 
         static const size_t framesInFlight = 2;
         uint32_t currentFrame = 0;

@@ -21,6 +21,10 @@ namespace kaki {
         flecs::entity image;
     };
 
+    struct MeshFilter {
+        flecs::entity mesh;
+    };
+
     struct gfx {
         explicit gfx(flecs::world& world);
     };

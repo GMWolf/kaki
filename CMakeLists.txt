@@ -45,6 +45,9 @@ add_subdirectory(external/glm)
 
 add_subdirectory(external/KTX-Software)
 
+add_library(cgltf INTERFACE)
+target_include_directories(cgltf INTERFACE external/cgltf)
+
 add_subdirectory(kaki)
 add_subdirectory(shader_compiler)
 
@@ -57,6 +60,8 @@ compile_shader(test-shader SOURCES shader.vert shader.frag)
 add_dependencies(test test-shader)
 configure_file(pipeline.json pipeline.json COPYONLY)
 configure_file(assets.json assets.json COPYONLY)
+configure_file(untitled.gltf untitled.gltf COPYONLY)
+configure_file(untitled.bin untitled.bin COPYONLY)
 
 add_custom_command(
         OUTPUT kaki.ktx2

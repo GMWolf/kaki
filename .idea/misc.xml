@@ -7,11 +7,13 @@
       <file path="$PROJECT_DIR$/kaki/core/src" />
     </sourceRoots>
     <libraryRoots>
+      <file path="$PROJECT_DIR$/external/KTX-Software" />
       <file path="$PROJECT_DIR$/external/SPIRV-Headers" />
       <file path="$PROJECT_DIR$/external/SPIRV-Reflect" />
       <file path="$PROJECT_DIR$/external/SPIRV-Tools" />
       <file path="$PROJECT_DIR$/external/VulkanMemoryAllocator" />
       <file path="$PROJECT_DIR$/external/cereal" />
+      <file path="$PROJECT_DIR$/external/cgltf" />
       <file path="$PROJECT_DIR$/external/flecs" />
       <file path="$PROJECT_DIR$/external/glfw" />
       <file path="$PROJECT_DIR$/external/glm" />

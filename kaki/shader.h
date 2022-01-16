@@ -8,12 +8,14 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
 
 
 namespace kaki {
 
     struct DescriptorSet {
         uint8_t index;
+        std::vector<std::string> bindingNames;
         std::vector<VkDescriptorSetLayoutBinding> bindings;
 
         VkDescriptorSetLayout layout;
@@ -33,7 +35,7 @@ namespace kaki {
 
     template<class Archive>
     void serialize(Archive& archive, DescriptorSet& descSet) {
-        archive(descSet.index, descSet.bindings);
+        archive(descSet.index, descSet.bindingNames, descSet.bindings);
     }
 
     kaki::ShaderModule loadShaderModule(VkDevice device, const char* path);

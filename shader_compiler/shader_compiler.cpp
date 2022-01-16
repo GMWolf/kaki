@@ -95,6 +95,7 @@ int main(int argc, char* argv[])
             kaki::DescriptorSet& kakiDescSet = kakiModule.descSets.emplace_back();
             kakiDescSet.index = set->set;
             for(SpvReflectDescriptorBinding* binding : std::span(set->bindings, set->binding_count)) {
+                kakiDescSet.bindingNames.emplace_back(binding->name);
                 kakiDescSet.bindings.push_back(VkDescriptorSetLayoutBinding{
                     .binding = binding->binding,
                     .descriptorType = static_cast<VkDescriptorType>(binding->descriptor_type),

@@ -321,7 +321,6 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
     vkBeginCommandBuffer(vk.cmd[vk.currentFrame], &beginInfo);
 
-    //vkCmdClearColorImage(vk.cmd[vk.currentFrame], vk.swapchain.get_images()->at(imageIndex), VK_IMAGE_LAYOUT_GENERAL, &clearColor, 1, &imageRange);
     VkRenderPassBeginInfo renderPassBeginInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass = vk.renderPass,

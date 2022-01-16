@@ -46,7 +46,7 @@ int main() {
 
     world.entity().set<kaki::Rectangle>(kaki::Rectangle{
             .pos = {10, 4},
-            .color = {1, 1, 1},
+            .color = {1, 0, 1},
             .image = world.lookup("main::kaki"),
     });
 

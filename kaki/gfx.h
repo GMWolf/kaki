@@ -16,6 +16,7 @@ namespace kaki {
 
     struct MeshFilter {
         flecs::entity mesh;
+        flecs::entity image;
     };
 
     struct gfx {

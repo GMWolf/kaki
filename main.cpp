@@ -44,11 +44,31 @@ int main() {
 
     world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
         .mesh = world.lookup("main::untitled::Cube1"),
+        .image = world.lookup("main::kaki"),
     }).set(kaki::Transform{
         .position = {0,0,0},
         .scale = 1,
         .orientation = {},
     }).add<Control>();
+
+    world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
+            .mesh = world.lookup("main::untitled::Cube"),
+            .image = world.lookup("main::kaki"),
+    }).set(kaki::Transform{
+            .position = {0,-1,0},
+            .scale = 1,
+            .orientation = {},
+    });
+
+    world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
+            .mesh = world.lookup("main::untitled::Cube1"),
+            .image = world.lookup("main::kaki"),
+    }).set(kaki::Transform{
+            .position = {2,-0.2,2},
+            .scale = 1.2,
+            .orientation = {},
+    });
+
 
 
     world.system<kaki::Transform>().term<Control>().each([](flecs::entity entity, kaki::Transform& transform) {

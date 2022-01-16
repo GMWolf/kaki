@@ -62,6 +62,11 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
                 .stride = 12,
                 .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
             },
+            {
+                .binding = 2,
+                .stride = 8,
+                .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+            }
     };
 
     VkVertexInputAttributeDescription attributes[] = {
@@ -76,6 +81,12 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
                 .binding = 1,
                 .format = VK_FORMAT_R32G32B32_SFLOAT,
                 .offset = 0,
+            },
+            {
+                .location = 2,
+                .binding = 2,
+                .format = VK_FORMAT_R32G32_SFLOAT,
+                .offset = 0,
             }
     };
 
@@ -83,9 +94,9 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-            .vertexBindingDescriptionCount = 2,
+            .vertexBindingDescriptionCount = 3,
             .pVertexBindingDescriptions = bindings,
-            .vertexAttributeDescriptionCount = 2,
+            .vertexAttributeDescriptionCount = 3,
             .pVertexAttributeDescriptions = attributes,
     };
 
@@ -122,8 +133,8 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
             .depthClampEnable = false,
             .rasterizerDiscardEnable = false,
             .polygonMode = VK_POLYGON_MODE_FILL,
-            .cullMode = VK_CULL_MODE_NONE,
-            .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+            .cullMode = VK_CULL_MODE_BACK_BIT,
+            .frontFace = VK_FRONT_FACE_CLOCKWISE,
             .depthBiasEnable = false,
             .depthBiasConstantFactor = 0.0f,
             .depthBiasClamp = 0.0f,

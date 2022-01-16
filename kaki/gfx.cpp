@@ -389,13 +389,14 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
             auto mesh = meshFilter.mesh.get<kaki::Mesh>();
             auto gltfE = meshFilter.mesh.get_object(flecs::ChildOf);
             auto gltf = gltfE.get<kaki::Gltf>();
+            auto image = meshFilter.image.get<kaki::Image>();
 
             assert(gltf->buffers.size() <= 4);
             VkDeviceSize offsets[4]{0,0,0,0};
 
             //TODO: Dont use maginc indices for vertex/index buffers.
-            vkCmdBindVertexBuffers(vk.cmd[vk.currentFrame], 0, 2, gltf->buffers.data(), offsets);
-            vkCmdBindIndexBuffer(vk.cmd[vk.currentFrame], gltf->buffers[2], 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindVertexBuffers(vk.cmd[vk.currentFrame], 0, 3, gltf->buffers.data(), offsets);
+            vkCmdBindIndexBuffer(vk.cmd[vk.currentFrame], gltf->buffers[3], 0, VK_INDEX_TYPE_UINT16);
 
             if (!descSetLayouts.empty()) {
                 VkDescriptorSetAllocateInfo descAlloc{
@@ -410,9 +411,9 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
                 vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
 
                 ShaderInput inputs[]{{
-                                             .name = "tex",
-                                             .imageView = VK_NULL_HANDLE,
-                                     },
+                    .name = "tex",
+                    .imageView = image->view,
+                    },
                 };
 
                 updateDescSets(vk, descriptorSets, *pipeline, inputs);
@@ -422,7 +423,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
                                         0, descriptorSets.size(), descriptorSets.data(), 0, nullptr);
             }
 
-            glm::vec3 color = {1,0,1};
+            glm::vec3 color = {1,1,1};
             vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj), sizeof(transform), &transform);
             vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj) + sizeof(transform), sizeof(color), &color);
 

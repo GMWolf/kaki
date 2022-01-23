@@ -49,8 +49,8 @@ int main() {
     });
 
     world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
-        .mesh = world.lookup("main::untitled::Cube1"),
-        .image = world.lookup("main::kaki"),
+        .mesh = mainAssets.lookup("untitled::Cube1"),
+        .image = mainAssets.lookup("kaki"),
     }).set(kaki::Transform{
         .position = {0,0,0},
         .scale = 1,
@@ -58,8 +58,8 @@ int main() {
     }).add<Control>();
 
     world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
-            .mesh = world.lookup("main::untitled::Cube"),
-            .image = world.lookup("main::kaki"),
+            .mesh = mainAssets.lookup("untitled::Cube"),
+            .image = mainAssets.lookup("kaki"),
     }).set(kaki::Transform{
             .position = {0,-1,0},
             .scale = 1,
@@ -67,14 +67,13 @@ int main() {
     });
 
     world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
-            .mesh = world.lookup("main::untitled::Cube1"),
-            .image = world.lookup("main::kaki"),
+            .mesh = mainAssets.lookup("untitled::Cube1"),
+            .image = mainAssets.lookup("kaki"),
     }).set(kaki::Transform{
             .position = {2,-0.2,2},
             .scale = 1.2,
             .orientation = {},
     });
-
 
 
     world.system<kaki::Transform>().term<Control>().each([](flecs::entity entity, kaki::Transform& transform) {
@@ -87,10 +86,10 @@ int main() {
             transform.position.x -= entity.delta_time() * 10;
         }
         if (input->keyDown('W')) {
-            transform.position.y += entity.delta_time() * 10;
+            transform.position.z += entity.delta_time() * 10;
         }
         if (input->keyDown('S')) {
-            transform.position.y -= entity.delta_time() * 10;
+            transform.position.z -= entity.delta_time() * 10;
         }
 
     });

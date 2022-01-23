@@ -36,9 +36,30 @@ static VkRenderPass createRenderPass(VkDevice device, VkFormat format) {
         .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
     };
 
+    VkAttachmentDescription depthAttachment {
+            .flags = 0,
+            .format = VK_FORMAT_D32_SFLOAT,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
+
+    VkAttachmentDescription attachments[] = {
+            attachment, depthAttachment
+    };
+
     VkAttachmentReference attachmentReference {
         .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+
+    VkAttachmentReference depthAttachmentReference {
+            .attachment = 1,
+            .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
 
     VkSubpassDescription subpass {
@@ -46,13 +67,14 @@ static VkRenderPass createRenderPass(VkDevice device, VkFormat format) {
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .colorAttachmentCount = 1,
         .pColorAttachments = &attachmentReference,
+        .pDepthStencilAttachment = &depthAttachmentReference,
     };
 
     VkRenderPassCreateInfo renderPassCreateInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .flags = 0,
-        .attachmentCount = 1,
-        .pAttachments = &attachment,
+        .attachmentCount = 2,
+        .pAttachments = attachments,
         .subpassCount = 1,
         .pSubpasses = &subpass,
     };
@@ -62,13 +84,15 @@ static VkRenderPass createRenderPass(VkDevice device, VkFormat format) {
     return renderPass;
 }
 
-VkFramebuffer createFrameBuffer(VkDevice device, VkRenderPass pass, VkImageView image, uint32_t width, uint32_t height) {
+VkFramebuffer createFrameBuffer(VkDevice device, VkRenderPass pass, VkImageView image, VkImageView depth, uint32_t width, uint32_t height) {
+
+    VkImageView views[] { image, depth };
 
     VkFramebufferCreateInfo createInfo {
         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
         .renderPass = pass,
-        .attachmentCount = 1,
-        .pAttachments = &image,
+        .attachmentCount = 2,
+        .pAttachments = views,
         .width = width,
         .height = height,
         .layers = 1,
@@ -193,8 +217,67 @@ static bool createGlobals(flecs::world& world) {
 
     vk.renderPass = createRenderPass(vk.device, vk.swapchain.image_format);
 
+    {
+        uint32_t queueIndex = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+
+        VkImageCreateInfo imageCreateInfo {
+                .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                .imageType = VK_IMAGE_TYPE_2D,
+                .format = VK_FORMAT_D32_SFLOAT,
+                .extent = {
+                        .width = vk.swapchain.extent.width,
+                        .height = vk.swapchain.extent.height,
+                        .depth = 1,
+                },
+                .mipLevels = 1,
+                .arrayLayers = 1,
+                .samples =VK_SAMPLE_COUNT_1_BIT,
+                .tiling = VK_IMAGE_TILING_OPTIMAL,
+                .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                .queueFamilyIndexCount = 1,
+                .pQueueFamilyIndices = &queueIndex,
+                .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        };
+
+        VmaAllocationCreateInfo allocInfo {
+                .flags = 0,
+                .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+                .requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                .preferredFlags = 0,
+        };
+
+        vmaCreateImage(vk.allocator, &imageCreateInfo, &allocInfo, &vk.depthBuffer, &vk.depthBufferAlloc, nullptr);
+
+        VkImageSubresourceRange imageRange {
+                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+        };
+
+        VkImageViewCreateInfo viewInfo {
+                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                .image = vk.depthBuffer,
+                .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                .format = VK_FORMAT_D32_SFLOAT,
+                .components = VkComponentMapping {
+                        .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                        .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                        .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                        .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+                },
+                .subresourceRange = imageRange,
+        };
+
+        VkImageView view;
+        vkCreateImageView(vk.device, &viewInfo, nullptr, &vk.depthBufferView);
+
+    }
+
     for(int i = 0; i < vk.swapchain.image_count; i++) {
-        vk.framebuffer[i] = createFrameBuffer(vk.device, vk.renderPass, vk.swapchain.get_image_views()->at(i), vk.swapchain.extent.width, vk.swapchain.extent.height);
+        vk.framebuffer[i] = createFrameBuffer(vk.device, vk.renderPass, vk.swapchain.get_image_views()->at(i), vk.depthBufferView, vk.swapchain.extent.width, vk.swapchain.extent.height);
     }
 
     {
@@ -320,6 +403,13 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     VkClearValue clearValue = {};
     clearValue.color = clearColor;
 
+    VkClearDepthStencilValue clearDepth {1.0f, 0};
+    VkClearValue depthClearValue {
+        .depthStencil = clearDepth,
+    };
+
+    VkClearValue clearValues[] {clearValue, depthClearValue};
+
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
@@ -345,8 +435,8 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
                         .height = vk.swapchain.extent.height,
                 }
         },
-        .clearValueCount = 1,
-        .pClearValues = &clearValue,
+        .clearValueCount = 2,
+        .pClearValues = clearValues,
     };
 
     vkCmdBeginRenderPass(vk.cmd[vk.currentFrame], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -505,7 +595,9 @@ void handlePipelineLoads(flecs::iter iter, kaki::Asset* assets) {
 
 
 kaki::gfx::gfx(flecs::world &world) {
-    world.module<gfx>();
+    auto This = world.module<gfx>();
+    flecs::doc::set_brief(This, "Rendering module for kaki");
+
 
     auto shdLoader = world.entity("shaderLoader").set<kaki::AssetHandler, kaki::ShaderModule>({
         handleShaderModuleLoads,
@@ -522,6 +614,42 @@ kaki::gfx::gfx(flecs::world &world) {
     world.entity("gltdLoader").set<kaki::AssetHandler, kaki::Gltf>({
         handleGltfLoads
     });
+
+
+    ecs_struct_desc_t vec3Desc {
+            .entity = {.name = "vec3"},
+            .members = {
+                    {"x", ecs_id(ecs_f32_t)},
+                    {"y", ecs_id(ecs_f32_t)},
+                    {"z", ecs_id(ecs_f32_t)}
+            }
+    };
+
+    auto vec3 = ecs_struct_init(world.m_world, &vec3Desc);
+
+    ecs_struct_desc_t vec4Desc {
+            .entity = {.name = "vec4"},
+            .members = {
+                    {"x", ecs_id(ecs_f32_t)},
+                    {"y", ecs_id(ecs_f32_t)},
+                    {"z", ecs_id(ecs_f32_t)},
+                    {"w", ecs_id(ecs_f32_t)},
+            }
+    };
+
+    auto vec4 = ecs_struct_init(world.m_world, &vec4Desc);
+
+    ecs_entity_t t = world.component<Transform>().id();
+
+    ecs_struct_desc_t transformDesc {
+        .entity = {.entity = t },
+        .members = {
+                { .name = "position", .type = vec3 },
+                { .name = "scale", .type = ecs_id(ecs_f32_t)},
+                { .name = "rotation", .type = vec4},
+        }
+    };
+    ecs_struct_init(world, &transformDesc);
 
 
     createGlobals(world);

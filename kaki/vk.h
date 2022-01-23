@@ -34,6 +34,10 @@ namespace kaki {
 
         VkDescriptorPool descriptorPools[framesInFlight];
         VkSampler sampler;
+
+        VkImage depthBuffer;
+        VkImageView depthBufferView;
+        VmaAllocation depthBufferAlloc;
     };
 
 }

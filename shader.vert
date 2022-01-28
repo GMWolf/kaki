@@ -6,6 +6,7 @@ layout(location = 1) in vec3 NORMAL;
 layout(location = 2) in vec2 UV;
 
 layout(location = 0) out vec2 UV_OUT;
+layout(location = 1) out vec3 NORMAL_OUT;
 
 struct Transform {
     vec3 position;
@@ -32,4 +33,5 @@ void main() {
     vec3 pos = applyTransform(POSITION, transform);
     gl_Position = proj * vec4(pos , 1.0);
     UV_OUT = UV;
+    NORMAL_OUT = NORMAL;
 }

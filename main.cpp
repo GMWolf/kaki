@@ -49,8 +49,8 @@ int main() {
     });
 
     world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
-        .mesh = mainAssets.lookup("untitled::Cube1"),
-        .image = mainAssets.lookup("kaki"),
+        .mesh = mainAssets.lookup("SciFiHelmet::SciFiHelmet"),
+        .image = mainAssets.lookup("SciFiHelmet_BaseColor"),
     }).set(kaki::Transform{
         .position = {0,0,0},
         .scale = 1,

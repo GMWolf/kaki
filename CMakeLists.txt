@@ -51,17 +51,19 @@ target_include_directories(cgltf INTERFACE external/cgltf)
 
 add_subdirectory(kaki)
 add_subdirectory(shader_compiler)
+add_subdirectory(gltf_compiler)
 
 add_executable(test main.cpp)
 target_link_libraries(test PRIVATE kaki-gfx)
 target_link_libraries(test PRIVATE flecs)
 
 compile_shader(test-shader SOURCES shader.vert shader.frag)
-add_dependencies(test test-shader)
+compile_gltf(test-gltf SOURCES untitled.gltf SciFiHelmet/SciFiHelmet.gltf)
+add_dependencies(test test-shader test-gltf )
 configure_file(pipeline.json pipeline.json COPYONLY)
 configure_file(assets.json assets.json COPYONLY)
-configure_file(untitled.gltf untitled.gltf COPYONLY)
-configure_file(untitled.bin untitled.bin COPYONLY)
+configure_file(SciFiHelmet/SciFiHelmet_p.gltf SciFiHelmet/SciFiHelmet_p.gltf COPYONLY)
+configure_file(SciFiHelmet/SciFiHelmet_p.bin SciFiHelmet/SciFiHelmet_p.bin COPYONLY)
 
 add_custom_command(
         OUTPUT kaki.ktx2
@@ -70,5 +72,12 @@ add_custom_command(
         USES_TERMINAL
 )
 
-add_custom_target(textures DEPENDS kaki.ktx2)
+add_custom_command(
+        OUTPUT SciFiHelmet/SciFiHelmet_BaseColor.ktx2
+        COMMAND toktx --genmipmap SciFiHelmet/SciFiHelmet_BaseColor.ktx2 ${CMAKE_CURRENT_LIST_DIR}/SciFiHelmet/SciFiHelmet_BaseColor.png
+        DEPENDS SciFiHelmet/SciFiHelmet_BaseColor.png
+        USES_TERMINAL
+)
+
+add_custom_target(textures DEPENDS kaki.ktx2 SciFiHelmet/SciFiHelmet_BaseColor.ktx2)
 add_dependencies(test textures)

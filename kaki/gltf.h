@@ -8,14 +8,29 @@
 #include "asset.h"
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
+#include <cereal/types/vector.hpp>
+
 namespace kaki {
 
     struct Gltf {
-        std::vector<VkBuffer> buffers;
-        std::vector<VmaAllocation> allocations;
+        union {
+            VkBuffer buffers[3];
+            struct {
+                VkBuffer positionBuffer;
+                VkBuffer normalBuffer;
+                VkBuffer uvBuffer;
+            };
+        };
+
+        VkBuffer indexBuffer;
+        VmaAllocation positionBufferAllocation;
+        VmaAllocation normalBufferAllocation;
+        VmaAllocation uvBufferAllocation;
     };
 
     struct Mesh {
+        std::string name;
+
         struct Primitive {
             uint32_t indexOffset;
             uint32_t vertexOffset;
@@ -25,7 +40,15 @@ namespace kaki {
         std::vector<Primitive> primitives;
     };
 
+    template<class Archive>
+    void serialize(Archive& archive, Mesh::Primitive& primitive) {
+        archive(primitive.indexOffset, primitive.vertexOffset, primitive.indexCount);
+    }
+
+    template<class Archive>
+    void serialize(Archive& archive, Mesh& mesh) {
+        archive(mesh.name, mesh.primitives);
+    }
 
     void handleGltfLoads(flecs::iter iter, kaki::Asset* assets);
-
 }

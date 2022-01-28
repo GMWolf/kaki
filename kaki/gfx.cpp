@@ -481,12 +481,12 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
             auto gltf = gltfE.get<kaki::Gltf>();
             auto image = meshFilter.image.get<kaki::Image>();
 
-            assert(gltf->buffers.size() <= 4);
+            //assert(gltf->buffers.size() <= 4);
             VkDeviceSize offsets[4]{0,0,0,0};
 
             //TODO: Dont use maginc indices for vertex/index buffers.
-            vkCmdBindVertexBuffers(vk.cmd[vk.currentFrame], 0, 3, gltf->buffers.data(), offsets);
-            vkCmdBindIndexBuffer(vk.cmd[vk.currentFrame], gltf->buffers[3], 0, VK_INDEX_TYPE_UINT16);
+            vkCmdBindVertexBuffers(vk.cmd[vk.currentFrame], 0, 3, gltf->buffers, offsets);
+            vkCmdBindIndexBuffer(vk.cmd[vk.currentFrame], gltf->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
             if (!descSetLayouts.empty()) {
                 VkDescriptorSetAllocateInfo descAlloc{

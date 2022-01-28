@@ -93,6 +93,14 @@ Mesh loadMeshData(cgltf_mesh* mesh, Buffers& buffers) {
     return m;
 };
 
+
+template<class T, class Archive>
+void saveBuffer(const std::vector<T>& vec, Archive& archive)
+{
+    archive( cereal::make_size_tag( static_cast<size_t>( vec.size() ) ) );
+    archive( cereal::binary_data( vec.data(), vec.size() * sizeof(T) ) );
+}
+
 int main(int argc, char* argv[]) {
 
     if (argc < 3) {
@@ -128,10 +136,10 @@ int main(int argc, char* argv[]) {
     std::ofstream os(std::string(outputPath), std::ios::binary);
     cereal::BinaryOutputArchive archive( os );
 
-    archive(buffers.position);
-    archive(buffers.normal);
-    archive(buffers.texcoord);
-    archive(buffers.indices);
+    saveBuffer(buffers.position, archive);
+    saveBuffer(buffers.normal, archive);
+    saveBuffer(buffers.texcoord, archive);
+    saveBuffer(buffers.indices, archive);
 
     archive(meshes);
 

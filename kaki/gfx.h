@@ -6,7 +6,7 @@
 #define KAKI_GFX_H
 
 #include <flecs.h>
-
+#include <vector>
 
 namespace kaki {
 
@@ -18,6 +18,17 @@ namespace kaki {
         flecs::entity mesh;
         flecs::entity image;
     };
+
+    namespace internal {
+        struct MeshInstance {
+            struct Primitive {
+                uint32_t indexOffset;
+                uint32_t vertexOffset;
+                uint32_t indexCount;
+            };
+            std::vector<Primitive> primitives;
+        };
+    }
 
     struct gfx {
         explicit gfx(flecs::world& world);

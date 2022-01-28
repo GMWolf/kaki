@@ -474,51 +474,61 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
         vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,
                            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(viewProj), &viewProj);
 
-        entity.world().each([&](const kaki::MeshFilter& meshFilter, const kaki::Transform& transform) {
 
-            auto mesh = meshFilter.mesh.get<kaki::Mesh>();
-            auto gltfE = meshFilter.mesh.get_object(flecs::ChildOf);
+        entity.world().filter_builder<kaki::Transform, kaki::MeshFilter>().term<kaki::internal::MeshInstance>(flecs::Wildcard).build()
+        .iter([&](flecs::iter& it, kaki::Transform* transforms, kaki::MeshFilter* filters) {
+
+            auto meshInstances = it.term<kaki::internal::MeshInstance>(3);
+            auto gltfE = it.term_id(3).object();
             auto gltf = gltfE.get<kaki::Gltf>();
-            auto image = meshFilter.image.get<kaki::Image>();
 
-            //assert(gltf->buffers.size() <= 4);
-            VkDeviceSize offsets[4]{0,0,0,0};
-
-            //TODO: Dont use maginc indices for vertex/index buffers.
+            VkDeviceSize offsets[4]{0, 0, 0, 0};
             vkCmdBindVertexBuffers(vk.cmd[vk.currentFrame], 0, 3, gltf->buffers, offsets);
             vkCmdBindIndexBuffer(vk.cmd[vk.currentFrame], gltf->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-            if (!descSetLayouts.empty()) {
-                VkDescriptorSetAllocateInfo descAlloc{
-                        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                        .pNext = nullptr,
-                        .descriptorPool = vk.descriptorPools[vk.currentFrame],
-                        .descriptorSetCount = static_cast<uint32_t>(descSetLayouts.size()),
-                        .pSetLayouts = descSetLayouts.data(),
-                };
+            for(auto i : it) {
 
-                std::vector<VkDescriptorSet> descriptorSets(descSetLayouts.size());
-                vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
+                auto& mesh = meshInstances[i];
+                auto image = filters[i].image.get<kaki::Image>();
+                auto& transform = transforms[i];
 
-                ShaderInput inputs[]{{
-                    .name = "tex",
-                    .imageView = image->view,
-                    },
-                };
+                if (!descSetLayouts.empty()) {
+                    VkDescriptorSetAllocateInfo descAlloc{
+                            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                            .pNext = nullptr,
+                            .descriptorPool = vk.descriptorPools[vk.currentFrame],
+                            .descriptorSetCount = static_cast<uint32_t>(descSetLayouts.size()),
+                            .pSetLayouts = descSetLayouts.data(),
+                    };
 
-                updateDescSets(vk, descriptorSets, *pipeline, inputs);
+                    std::vector<VkDescriptorSet> descriptorSets(descSetLayouts.size());
+                    vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
 
-                vkCmdBindDescriptorSets(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                        pipeline->pipelineLayout,
-                                        0, descriptorSets.size(), descriptorSets.data(), 0, nullptr);
-            }
+                    ShaderInput inputs[]{{
+                                                 .name = "tex",
+                                                 .imageView = image->view,
+                                         },
+                    };
 
-            glm::vec3 color = {1,1,1};
-            vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj), sizeof(transform), &transform);
-            vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj) + sizeof(transform), sizeof(color), &color);
+                    updateDescSets(vk, descriptorSets, *pipeline, inputs);
 
-            for(auto& prim : mesh->primitives) {
-                vkCmdDrawIndexed(vk.cmd[vk.currentFrame], prim.indexCount, 1, prim.indexOffset, prim.vertexOffset, 0);
+                    vkCmdBindDescriptorSets(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                            pipeline->pipelineLayout,
+                                            0, descriptorSets.size(), descriptorSets.data(), 0, nullptr);
+                }
+
+                glm::vec3 color = {1, 1, 1};
+                vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,
+                                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj),
+                                   sizeof(transform), &transform);
+                vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,
+                                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                                   sizeof(proj) + sizeof(transform), sizeof(color), &color);
+
+                for (auto &prim: mesh.primitives) {
+                    vkCmdDrawIndexed(vk.cmd[vk.currentFrame], prim.indexCount, 1, prim.indexOffset, prim.vertexOffset,
+                                     0);
+                }
             }
 
         });
@@ -594,6 +604,26 @@ void handlePipelineLoads(flecs::iter iter, kaki::Asset* assets) {
 }
 
 
+static void UpdateMeshInstance(flecs::iter iter, kaki::MeshFilter* meshFilters) {
+    for(auto i : iter) {
+
+        auto mesh = meshFilters[i].mesh.get<kaki::Mesh>();
+        auto gltf = meshFilters[i].mesh.get_object(flecs::ChildOf);
+
+        std::vector<kaki::internal::MeshInstance::Primitive> prims(mesh->primitives.size());
+        for(int i = 0; i < mesh->primitives.size(); i++) {
+            prims[i].indexOffset = mesh->primitives[i].indexOffset;
+            prims[i].vertexOffset = mesh->primitives[i].vertexOffset;
+            prims[i].indexCount = mesh->primitives[i].indexCount;
+        }
+
+        iter.entity(i).set<kaki::internal::MeshInstance>(gltf, kaki::internal::MeshInstance{
+            .primitives = prims,
+        } );
+    }
+}
+
+
 kaki::gfx::gfx(flecs::world &world) {
     auto This = world.module<gfx>();
     flecs::doc::set_brief(This, "Rendering module for kaki");
@@ -654,4 +684,6 @@ kaki::gfx::gfx(flecs::world &world) {
 
     createGlobals(world);
     world.system<VkGlobals>("Render system").kind(flecs::OnStore).each(render);
+
+    world.trigger<MeshFilter>().event(flecs::OnSet).iter(UpdateMeshInstance);
 }

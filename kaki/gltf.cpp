@@ -30,14 +30,16 @@ namespace cereal {
 }
 
 namespace kaki {
+    
+    template<class T, class Archive>
+    VkBuffer loadBuffer(const VkGlobals& vk, Archive& archive) {
 
-
-    template<class T>
-    VkBuffer loadBuffer(const VkGlobals& vk, const std::span<T>& v) {
+        size_t numElements = 0;
+        archive( cereal::make_size_tag( numElements ) );
 
         VkBufferCreateInfo bufferInfo = {};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = v.size_bytes();
+        bufferInfo.size = numElements * sizeof(T);
         bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 
         VmaAllocationCreateInfo vmaAllocInfo = {};
@@ -53,7 +55,7 @@ namespace kaki {
 
         void* bufferData;
         vmaMapMemory(vk.allocator, alloc, &bufferData);
-        memcpy(bufferData, v.data(), v.size_bytes());
+        archive( cereal::binary_data( bufferData, numElements * sizeof(T) ) );
         vmaUnmapMemory(vk.allocator, alloc);
 
         return buffer;
@@ -62,32 +64,26 @@ namespace kaki {
 
     void loadGltf(flecs::entity entity, const char *file) {
 
+        const VkGlobals& vk = *entity.world().get<VkGlobals>();
+
         std::ifstream is(file);
         cereal::BinaryInputArchive archive(is);
 
-        std::vector<glm::vec3> positions;
-        std::vector<glm::vec3> normals;
-        std::vector<glm::vec2> texcoord;
-        std::vector<uint32_t> indices;
+        Gltf gltf {};
+        gltf.positionBuffer = loadBuffer<glm::vec3>(vk, archive);
+        gltf.normalBuffer = loadBuffer<glm::vec3>(vk, archive);
+        gltf.uvBuffer = loadBuffer<glm::vec2>(vk, archive);
+        gltf.indexBuffer = loadBuffer<uint32_t>(vk, archive);
 
         std::vector<Mesh> meshes;
 
-        archive(positions, normals, texcoord, indices, meshes);
+        archive(meshes);
 
         entity.scope([&]{
             for(auto& m : meshes) {
                 entity.world().entity(m.name.c_str()).set<Mesh>(m);
             }
         });
-
-        const VkGlobals& vk = *entity.world().get<VkGlobals>();
-
-        Gltf gltf;
-
-        gltf.positionBuffer = loadBuffer(vk, std::span(positions));
-        gltf.normalBuffer = loadBuffer(vk, std::span(normals));
-        gltf.uvBuffer = loadBuffer(vk, std::span(texcoord));
-        gltf.indexBuffer = loadBuffer(vk, std::span(indices));
 
         entity.set<Gltf>(gltf);
     }

@@ -487,7 +487,6 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
             vkCmdBindIndexBuffer(vk.cmd[vk.currentFrame], gltf->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
             for(auto i : it) {
-
                 auto& mesh = meshInstances[i];
                 auto image = filters[i].image.get<kaki::Image>();
                 auto& transform = transforms[i];

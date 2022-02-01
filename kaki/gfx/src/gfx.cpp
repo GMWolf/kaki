@@ -11,7 +11,7 @@
 #include <cstdio>
 #include "pipeline.h"
 #include "shader.h"
-#include "asset.h"
+#include <kaki/asset.h>
 #include "image.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -21,7 +21,7 @@
 #include <algorithm>
 #include <numeric>
 #include "gltf.h"
-#include "transform.h"
+#include <kaki/transform.h>
 
 static VkRenderPass createRenderPass(VkDevice device, VkFormat format) {
     VkAttachmentDescription attachment {

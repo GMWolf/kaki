@@ -8,7 +8,7 @@
 #include <cstring>
 #include <spirv_reflect.h>
 #include <vector>
-#include "../kaki/shader.h"
+#include <kaki/shader.h>
 #include <cereal/archives/binary.hpp>
 #include <fstream>
 

@@ -1,5 +1,5 @@
 add_executable(shader_compiler shader_compiler.cpp)
-target_link_libraries(shader_compiler PRIVATE shaderc spirv-reflect vulkan cereal)
+target_link_libraries(shader_compiler PRIVATE shaderc spirv-reflect vulkan cereal kaki-gfx-interface)
 
 function(compile_shader targetName)
     set(flags)

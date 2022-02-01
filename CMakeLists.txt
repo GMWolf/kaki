@@ -62,8 +62,6 @@ compile_gltf(test-gltf SOURCES untitled.gltf SciFiHelmet/SciFiHelmet.gltf)
 add_dependencies(test test-shader test-gltf )
 configure_file(pipeline.json pipeline.json COPYONLY)
 configure_file(assets.json assets.json COPYONLY)
-configure_file(SciFiHelmet/SciFiHelmet_p.gltf SciFiHelmet/SciFiHelmet_p.gltf COPYONLY)
-configure_file(SciFiHelmet/SciFiHelmet_p.bin SciFiHelmet/SciFiHelmet_p.bin COPYONLY)
 
 add_custom_command(
         OUTPUT kaki.ktx2

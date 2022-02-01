@@ -1,10 +1,3 @@
-add_library(kaki-gfx
-        gfx.h
-        gfx.cpp
-        vk.h
-        window.h
-        window.cpp
-        shader.h shader.cpp pipeline.h pipeline.cpp image.h image.cpp asset.h asset.cpp gltf.h gltf.cpp vma_impl.cpp cgltf_impl.cpp transform.h transform.cpp render_graph.h render_graph.cpp rg_default.h)
-
-target_link_libraries(kaki-gfx PUBLIC flecs cereal glm)
-target_link_libraries(kaki-gfx PRIVATE vulkan vk-bootstrap glfw VulkanMemoryAllocator rapidjson ktx_read cgltf)
+add_subdirectory(core)
+add_subdirectory(asset)
+add_subdirectory(gfx)

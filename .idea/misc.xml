@@ -3,8 +3,13 @@
   <component name="CMakeWorkspace" PROJECT_DIR="$PROJECT_DIR$" />
   <component name="CidrRootsConfiguration">
     <sourceRoots>
+      <file path="$PROJECT_DIR$/kaki/asset/include" />
+      <file path="$PROJECT_DIR$/kaki/asset/src" />
       <file path="$PROJECT_DIR$/kaki/core/include" />
       <file path="$PROJECT_DIR$/kaki/core/src" />
+      <file path="$PROJECT_DIR$/kaki/gfx/include" />
+      <file path="$PROJECT_DIR$/kaki/gfx/include/kaki" />
+      <file path="$PROJECT_DIR$/kaki/gfx/src" />
     </sourceRoots>
     <libraryRoots>
       <file path="$PROJECT_DIR$/external/KTX-Software" />

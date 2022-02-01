@@ -5,7 +5,7 @@
 #pragma once
 #include <flecs.h>
 #include <vector>
-#include "asset.h"
+#include <kaki/asset.h>
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include <cereal/types/vector.hpp>

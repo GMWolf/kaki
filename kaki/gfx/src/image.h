@@ -8,7 +8,7 @@
 #include <vk_mem_alloc.h>
 #include <glm/vec2.hpp>
 #include <flecs.h>
-#include "asset.h"
+#include <kaki/asset.h>
 
 namespace kaki {
 

@@ -2,10 +2,10 @@
 
 #include <flecs.h>
 
-#include "kaki/gfx.h"
-#include "kaki/window.h"
-#include "kaki/asset.h"
-#include "kaki/transform.h"
+#include <kaki/gfx.h>
+#include <kaki/window.h>
+#include <kaki/asset.h>
+#include <kaki/transform.h>
 
 struct Control{};
 

@@ -5,7 +5,6 @@
 #include "asset.h"
 #include <rapidjson/document.h>
 #include <fstream>
-#include "shader.h"
 
 
 flecs::entity kaki::loadAssets(flecs::world& world, const char *path) {

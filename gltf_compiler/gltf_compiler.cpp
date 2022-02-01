@@ -30,6 +30,11 @@ struct Mesh {
     std::vector<Primitive> primitives;
 };
 
+struct Image {
+    std::string name;
+    std::vector<uint8_t> ktxData;
+};
+
 template<class Archive>
 void serialize(Archive& archive, Mesh::Primitive& primitive) {
     archive(primitive.indexOffset, primitive.vertexOffset, primitive.indexCount);
@@ -93,13 +98,13 @@ Mesh loadMeshData(cgltf_mesh* mesh, Buffers& buffers) {
     return m;
 };
 
-
 template<class T, class Archive>
 void saveBuffer(const std::vector<T>& vec, Archive& archive)
 {
     archive( cereal::make_size_tag( static_cast<size_t>( vec.size() ) ) );
     archive( cereal::binary_data( vec.data(), vec.size() * sizeof(T) ) );
 }
+
 
 int main(int argc, char* argv[]) {
 
@@ -131,6 +136,16 @@ int main(int argc, char* argv[]) {
     std::vector<Mesh> meshes;
     for(auto& mesh : std::span(data->meshes, data->meshes_count)) {
         meshes.push_back(loadMeshData(&mesh, buffers));
+    }
+
+
+
+    //std::vector<Image> images;
+
+    for(auto& image : std::span(data->images, data->images_count)) {
+        char path[1024];
+        cgltf_combine_paths(path, inputPath, image.uri);
+
     }
 
     std::ofstream os(std::string(outputPath), std::ios::binary);

@@ -3,7 +3,6 @@
 //
 
 #include "gltf.h"
-#include "cgltf.h"
 #include <cstdio>
 #include <span>
 #include "vk.h"

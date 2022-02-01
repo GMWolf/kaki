@@ -5,7 +5,11 @@
 #include "asset.h"
 #include <rapidjson/document.h>
 #include <fstream>
-
+#include <cereal/cereal.hpp>
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/vector.hpp>
+#include <span>
 
 flecs::entity kaki::loadAssets(flecs::world& world, const char *path) {
     rapidjson::Document doc;
@@ -62,4 +66,61 @@ flecs::entity kaki::loadAssets(flecs::world& world, const char *path) {
     });
 
     return pack;
+}
+
+namespace kaki {
+
+    template<class Archive>
+    void serialize(Archive &archive, Package::Entity &entity) {
+        archive(entity.name);
+    }
+
+    template<class Archive>
+    void serialize(Archive &archive, Package::ComponentEntry &entry) {
+        archive(entry.entity, entry.dataOffset, entry.dataSize);
+    }
+
+    template<class Archive>
+    void serialize(Archive &archive, Package::ComponentGroup &group) {
+        archive(group.type, group.componentBegin, group.componentEnd);
+    }
+
+    template<class Archive>
+    void serialize(Archive &archive, Package &package) {
+        archive(package.name, package.data, package.entities, package.componentEntries, package.componentGroups);
+    }
+
+    flecs::entity loadPackage(flecs::world &world, const char *path) {
+
+        std::ifstream is(path);
+        cereal::BinaryInputArchive archive(is);
+
+        Package package;
+        archive(package);
+
+        auto packageEntity = world.entity(package.name);
+
+        std::vector<flecs::entity> entities;
+
+        packageEntity.scope([&]{
+            for(const Package::Entity& entity : package.entities) {
+                entities.push_back(world.entity(entity.name));
+            }
+        });
+
+        for(const Package::ComponentGroup& group : package.componentGroups) {
+            flecs::entity componentType = world.lookup(group.type);
+            auto filter = world.filter_builder().term<ComponentLoader>(componentType).build();
+            component_deserialize_fn fn;
+            filter.each([&](ComponentLoader& loader) {
+                fn = loader.deserialize;
+            });
+
+            for(auto c = group.componentBegin; c != group.componentEnd; c++) {
+                const Package::ComponentEntry& entry = package.componentEntries[c];
+                fn(entities[entry.entity], std::span(package.data + entry.dataOffset, entry.dataSize));
+            }
+        }
+
+    }
 }

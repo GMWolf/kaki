@@ -7,7 +7,7 @@ target_sources(kaki-asset PUBLIC
         )
 
 target_link_libraries(kaki-asset PUBLIC flecs)
-target_link_libraries(kaki-asset PRIVATE rapidjson)
+target_link_libraries(kaki-asset PRIVATE rapidjson cereal)
 
 target_include_directories(kaki-asset
         PUBLIC include

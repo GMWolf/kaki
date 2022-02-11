@@ -7,6 +7,7 @@
 #include <vulkan/vulkan.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#include <cstdio>
 
 VkSurfaceKHR kaki::Window::createSurface(VkInstance instance) const {
     VkSurfaceKHR surface;

@@ -479,7 +479,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
         .iter([&](flecs::iter& it, kaki::Transform* transforms, kaki::MeshFilter* filters) {
 
             auto meshInstances = it.term<kaki::internal::MeshInstance>(3);
-            auto gltfE = it.term_id(3).object();
+            auto gltfE = it.pair(3).object();
             auto gltf = gltfE.get<kaki::Gltf>();
 
             VkDeviceSize offsets[4]{0, 0, 0, 0};

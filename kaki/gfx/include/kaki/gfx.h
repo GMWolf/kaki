@@ -10,6 +10,9 @@
 
 namespace kaki {
 
+    struct Renderer {
+    };
+
     struct Camera {
         float fov;
     };

@@ -3,6 +3,7 @@ project(kaki)
 
 set(CMAKE_CXX_STANDARD 23)
 
+set(FLECS_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/flecs)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -55,7 +56,6 @@ add_subdirectory(gltf_compiler)
 
 add_executable(test main.cpp)
 target_link_libraries(test PRIVATE kaki-gfx)
-target_link_libraries(test PRIVATE flecs)
 
 compile_shader(test-shader SOURCES shader.vert shader.frag)
 compile_gltf(test-gltf SOURCES untitled.gltf SciFiHelmet/SciFiHelmet.gltf)

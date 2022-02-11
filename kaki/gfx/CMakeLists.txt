@@ -24,7 +24,7 @@ add_library(kaki-gfx
         )
 
 target_link_libraries(kaki-gfx PUBLIC kaki-gfx-interface kaki-core kaki-asset)
-target_link_libraries(kaki-gfx PUBLIC flecs cereal glm)
+target_link_libraries(kaki-gfx PUBLIC flecs_static cereal glm)
 target_link_libraries(kaki-gfx PRIVATE vulkan vk-bootstrap glfw VulkanMemoryAllocator rapidjson ktx_read)
 
 target_include_directories(kaki-gfx

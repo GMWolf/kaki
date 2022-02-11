@@ -6,6 +6,8 @@
 
 #include <flecs.h>
 #include <span>
+#include <string>
+#include <vector>
 
 namespace kaki {
 

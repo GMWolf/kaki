@@ -1,0 +1,3 @@
+with kaki.windowing.Window {
+    window = {640, 480, "game"}
+}

@@ -104,7 +104,7 @@ VkFramebuffer createFrameBuffer(VkDevice device, VkRenderPass pass, VkImageView 
 }
 
 
-static bool createGlobals(flecs::world& world) {
+static bool createGlobals(flecs::entity entity, kaki::VkGlobals& vk) {
     vkb::InstanceBuilder builder;
     auto inst_ret = builder.set_app_name("Kaki application")
             .request_validation_layers()
@@ -118,7 +118,7 @@ static bool createGlobals(flecs::world& world) {
 
     vkb::Instance vkb_inst = inst_ret.value();
 
-    VkSurfaceKHR surface = world.lookup("window").get<kaki::Window>()->createSurface(vkb_inst);
+    VkSurfaceKHR surface = entity.get<kaki::Window>()->createSurface(vkb_inst);
 
     vkb::PhysicalDeviceSelector selector{ vkb_inst };
     auto phys_ret = selector.set_surface(surface)
@@ -162,7 +162,6 @@ static bool createGlobals(flecs::world& world) {
         return false;
     }
 
-    kaki::VkGlobals vk;
     vk.swapchain = swap_ret.value();
     vk.instance = vkb_inst.instance;
     vk.device = vkbDevice;
@@ -316,8 +315,6 @@ static bool createGlobals(flecs::world& world) {
         vkCreateSampler(vk.device, &samplerCreateInfo, nullptr, &vk.sampler);
     }
 
-    world.set<kaki::VkGlobals>(vk);
-
     return true;
 }
 
@@ -380,7 +377,7 @@ void updateDescSets( kaki::VkGlobals& vk, std::span<VkDescriptorSet> descSets, c
 }
 
 
-static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
+static void render(const flecs::entity entity, kaki::VkGlobals& vk) {
     vkWaitForFences(vk.device, 1, &vk.cmdBufFence[vk.currentFrame], true, UINT64_MAX);
 
     vkResetDescriptorPool(vk.device, vk.descriptorPools[vk.currentFrame], 0);
@@ -479,7 +476,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
         .iter([&](flecs::iter& it, kaki::Transform* transforms, kaki::MeshFilter* filters) {
 
             auto meshInstances = it.term<kaki::internal::MeshInstance>(3);
-            auto gltfE = it.term_id(3).object();
+            auto gltfE = it.pair(3).object();
             auto gltf = gltfE.get<kaki::Gltf>();
 
             VkDeviceSize offsets[4]{0, 0, 0, 0};
@@ -627,7 +624,6 @@ kaki::gfx::gfx(flecs::world &world) {
     auto This = world.module<gfx>();
     flecs::doc::set_brief(This, "Rendering module for kaki");
 
-
     auto shdLoader = world.entity("shaderLoader").set<kaki::AssetHandler, kaki::ShaderModule>({
         handleShaderModuleLoads,
     });
@@ -644,45 +640,13 @@ kaki::gfx::gfx(flecs::world &world) {
         handleGltfLoads
     });
 
+    auto eVkGlobals = world.component<VkGlobals>();
 
-    ecs_struct_desc_t vec3Desc {
-            .entity = {.name = "vec3"},
-            .members = {
-                    {"x", ecs_id(ecs_f32_t)},
-                    {"y", ecs_id(ecs_f32_t)},
-                    {"z", ecs_id(ecs_f32_t)}
-            }
-    };
+    world.component<Window>().add(flecs::With, eVkGlobals);
 
-    auto vec3 = ecs_struct_init(world.m_world, &vec3Desc);
-
-    ecs_struct_desc_t vec4Desc {
-            .entity = {.name = "vec4"},
-            .members = {
-                    {"x", ecs_id(ecs_f32_t)},
-                    {"y", ecs_id(ecs_f32_t)},
-                    {"z", ecs_id(ecs_f32_t)},
-                    {"w", ecs_id(ecs_f32_t)},
-            }
-    };
-
-    auto vec4 = ecs_struct_init(world.m_world, &vec4Desc);
-
-    ecs_entity_t t = world.component<Transform>().id();
-
-    ecs_struct_desc_t transformDesc {
-        .entity = {.entity = t },
-        .members = {
-                { .name = "position", .type = vec3 },
-                { .name = "scale", .type = ecs_id(ecs_f32_t)},
-                { .name = "rotation", .type = vec4},
-        }
-    };
-    ecs_struct_init(world, &transformDesc);
-
-
-    createGlobals(world);
     world.system<VkGlobals>("Render system").kind(flecs::OnStore).each(render);
+
+    world.trigger<VkGlobals>().event(flecs::OnAdd).each(createGlobals);
 
     world.trigger<MeshFilter>().event(flecs::OnSet).iter(UpdateMeshInstance);
 }

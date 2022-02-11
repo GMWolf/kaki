@@ -7,6 +7,7 @@
 #include <vulkan/vulkan.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#include <cstdio>
 
 VkSurfaceKHR kaki::Window::createSurface(VkInstance instance) const {
     VkSurfaceKHR surface;
@@ -70,6 +71,17 @@ static void destroyWindow(flecs::entity entity, kaki::Window& window) {
 
 kaki::windowing::windowing(flecs::world &world) {
     world.module<windowing>();
+
+    auto eInput = world.component<Input>();
+
+    world.component<Window>()
+            .member<int>("width")
+            .member<int>("height")
+            .member("title", flecs::String)
+            .member<uintptr_t>("handle")
+            .add(flecs::With, eInput);
+
+
 
     glfwSetErrorCallback([](int error, const char *description) {
         fprintf(stderr, "GLFW error: %s\n", description);

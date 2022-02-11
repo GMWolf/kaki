@@ -12,6 +12,9 @@
 #include <span>
 
 flecs::entity kaki::loadAssets(flecs::world& world, const char *path) {
+
+    world.component<DependsOn>().add(flecs::Acyclic);
+
     rapidjson::Document doc;
     std::ifstream t(path);
     std::string str((std::istreambuf_iterator<char>(t)),
@@ -44,7 +47,7 @@ flecs::entity kaki::loadAssets(flecs::world& world, const char *path) {
     handlerQuery.iter([pack](flecs::iter iter) {
 
         // Create a filter over assets in the pack of that handles asset type
-        auto assetType = iter.term_id(1).object();
+        auto assetType = iter.pair(1).object();
         auto assetFilter = iter.world().filter_builder<kaki::Asset>()
                 .term(assetType)
                 .term(flecs::ChildOf, pack)
@@ -98,29 +101,31 @@ namespace kaki {
         Package package;
         archive(package);
 
-        auto packageEntity = world.entity(package.name);
+        auto packageEntity = world.entity(package.name.c_str());
 
         std::vector<flecs::entity> entities;
 
         packageEntity.scope([&]{
             for(const Package::Entity& entity : package.entities) {
-                entities.push_back(world.entity(entity.name));
+                entities.push_back(world.entity(entity.name.c_str()));
             }
         });
 
         for(const Package::ComponentGroup& group : package.componentGroups) {
-            flecs::entity componentType = world.lookup(group.type);
+            flecs::entity componentType = world.lookup(group.type.c_str());
             auto filter = world.filter_builder().term<ComponentLoader>(componentType).build();
             component_deserialize_fn fn;
-            filter.each([&](ComponentLoader& loader) {
-                fn = loader.deserialize;
-            });
+            //filter.each([&](flecs::entity& loader) {
+            //    fn = loader.deserialize;
+            //});
 
             for(auto c = group.componentBegin; c != group.componentEnd; c++) {
                 const Package::ComponentEntry& entry = package.componentEntries[c];
-                fn(entities[entry.entity], std::span(package.data + entry.dataOffset, entry.dataSize));
+                fn(entities[entry.entity], std::span(package.data.data() + entry.dataOffset, entry.dataSize));
             }
         }
 
+
+        return packageEntity;
     }
 }

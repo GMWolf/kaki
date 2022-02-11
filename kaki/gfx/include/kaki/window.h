@@ -7,6 +7,7 @@
 
 #include <vulkan/vulkan.h>
 #include "flecs.h"
+#include <string>
 
 namespace kaki {
 
@@ -14,7 +15,7 @@ namespace kaki {
         int width {};
         int height {};
 
-        const char* title;
+        const char* title{};
 
         void* handle{};
 

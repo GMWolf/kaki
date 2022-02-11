@@ -16,11 +16,13 @@ int main() {
     world.set(flecs::rest::Rest{});
 
     world.import<kaki::windowing>();
-    auto window = world.entity("window").set<kaki::Window>(kaki::Window{
-        .width = 640,
-        .height = 480,
-        .title = "Test kaki app",
-    }).set<kaki::Input>({});
+    //auto window = world.entity("window").set<kaki::Window>(kaki::Window{
+    //    .width = 640,
+    //    .height = 480,
+    //    .title = "Test kaki app",
+    //}).set<kaki::Input>({});
+    world.plecs_from_file("../game.plecs");
+    auto window = world.lookup("window");
     world.import<kaki::gfx>();
 
     auto mainAssets = kaki::loadAssets(world, "assets.json");

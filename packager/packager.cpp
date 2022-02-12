@@ -8,7 +8,6 @@
 #include <cereal/archives/json.hpp>
 #include <fstream>
 
-
 void mergePackages(kaki::Package& out, kaki::Package& in) {
 
     auto entitiesOffset = out.entities.size();
@@ -19,6 +18,16 @@ void mergePackages(kaki::Package& out, kaki::Package& in) {
 
     for(size_t i = tableOffset; i < out.tables.size(); i++) {
         out.tables[i].entityFirst += entitiesOffset;
+        for(auto& type : out.tables[i].types) {
+            if(uint64_t* id = std::get_if<uint64_t>(&type.typeId)) {
+                *id += entitiesOffset;
+            }
+            if (type.object) {
+                if (uint64_t *id = std::get_if<uint64_t>(&*type.object)) {
+                    *id += entitiesOffset;
+                }
+            }
+        }
     }
 
 }

@@ -126,6 +126,7 @@ int main(int argc, char* argv[])
             });
         }
 
+
         std::vector<uint32_t> code(compiledWords.begin(), compiledWords.end());
 
         std::string data;

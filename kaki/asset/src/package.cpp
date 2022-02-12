@@ -101,6 +101,6 @@ flecs::entity kaki::loadPackage(flecs::world &world, const char *path) {
     Package package;
     archive(package);
 
-    instanciatePackage(world, package);
+    return instanciatePackage(world, package);
 
 }

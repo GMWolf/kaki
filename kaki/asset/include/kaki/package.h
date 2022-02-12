@@ -52,6 +52,7 @@ namespace kaki {
 
     template<class Archive>
     void serialize(Archive& archive, Package::Table& table) {
+        archive(cereal::make_nvp("first", table.entityFirst));
         archive(cereal::make_nvp("size", table.entityCount));
         archive(cereal::make_nvp("types", table.types));
         archive(cereal::make_nvp("data", table.typeData));

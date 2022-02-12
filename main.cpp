@@ -55,8 +55,7 @@ int main() {
     //}).set<kaki::Input>({});
     world.import<kaki::gfx>();
 
-    kaki::loadPackage(world, "shader.frag.shd");
-    kaki::loadPackage(world, "shader.vert.shd");
+    kaki::loadPackage(world, "test-package.json");
 
     auto mainAssets = kaki::loadAssets(world, "assets.json");
 

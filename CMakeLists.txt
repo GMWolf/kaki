@@ -55,14 +55,16 @@ target_include_directories(cgltf INTERFACE external/cgltf)
 add_subdirectory(kaki)
 add_subdirectory(shader_compiler)
 add_subdirectory(gltf_compiler)
+add_subdirectory(packager)
 
 add_executable(test main.cpp)
 target_link_libraries(test PRIVATE kaki-gfx)
 target_link_libraries(test PRIVATE flecs_static)
 
 compile_shader(test-shader SOURCES shader.vert shader.frag)
+make_package(test-package SOURCES shader.vert.shd shader.frag.shd)
 compile_gltf(test-gltf SOURCES untitled.gltf SciFiHelmet/SciFiHelmet.gltf)
-add_dependencies(test test-shader test-gltf )
+add_dependencies(test test-gltf test-package)
 configure_file(pipeline.json pipeline.json COPYONLY)
 configure_file(assets.json assets.json COPYONLY)
 

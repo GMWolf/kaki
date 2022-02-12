@@ -16,8 +16,8 @@ namespace kaki {
         const char* path;
     };
 
-    typedef void* (*component_deserialize_fn)(size_t count, std::span<uint8_t> data);
-    typedef void (*component_free_fn)(size_t count, void* data);
+    typedef void* (*component_deserialize_fn)(flecs::world& world, size_t count, std::span<uint8_t> data);
+    typedef void (*component_free_fn)(flecs::world& world, size_t count, void* data);
 
     struct ComponentLoader {
         component_deserialize_fn deserialize;
@@ -31,6 +31,8 @@ namespace kaki {
     struct AssetHandler {
         asset_handle_fn load;
     };
+
+    flecs::entity loadPackage(flecs::world& world, const char* path);
 
     flecs::entity instanciatePackage(flecs::world& world, const Package& package);
 

@@ -3,9 +3,10 @@
 //
 
 #include "shader.h"
-#include <fstream>
+#include <sstream>
 #include <span>
 #include <cereal/archives/binary.hpp>
+#include <membuf.h>
 
 static VkShaderModule createModule(VkDevice device, std::span<uint32_t> code)
 {
@@ -24,9 +25,7 @@ static VkShaderModule createModule(VkDevice device, std::span<uint32_t> code)
     return shader_module;
 }
 
-kaki::ShaderModule kaki::loadShaderModule(VkDevice device, const char* path) {
-    std::ifstream is(path);
-    cereal::BinaryInputArchive archive(is);
+kaki::ShaderModule kaki::loadShaderModule(VkDevice device, cereal::BinaryInputArchive& archive) {
 
     kaki::ShaderModule module;
     archive(module);

@@ -1,14 +1,12 @@
-add_library(kaki-asset
-        src/asset.cpp
-        include/kaki/package.h)
-
-target_sources(kaki-asset PUBLIC
+add_library(kaki-asset-interface INTERFACE
         include/kaki/asset.h
-        )
+        include/kaki/package.h)
+target_include_directories(kaki-asset-interface INTERFACE include)
 
-target_link_libraries(kaki-asset PUBLIC flecs_static kaki-common)
+add_library(kaki-asset src/asset.cpp src/package.cpp)
+
+target_link_libraries(kaki-asset PUBLIC kaki-asset-interface flecs_static kaki-common)
 target_link_libraries(kaki-asset PRIVATE rapidjson cereal)
 
 target_include_directories(kaki-asset
-        PUBLIC include
         PRIVATE include/kaki)

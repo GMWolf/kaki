@@ -9,14 +9,20 @@
 #include <spirv_reflect.h>
 #include <vector>
 #include <kaki/shader.h>
+#include <sstream>
 #include <cereal/archives/binary.hpp>
+#include <cereal/archives/json.hpp>
 #include <fstream>
+#include <kaki/package.h>
+#include <cereal_ext.h>
 
 const char *get_filename_ext(const char *filename) {
     const char *dot = strrchr(filename, '.');
     if(!dot || dot == filename) return "";
     return dot + 1;
 }
+
+
 
 int main(int argc, char* argv[])
 {
@@ -25,26 +31,27 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    auto sourcePath = argv[1];
-    fprintf(stdout, "Compiling %s\n", sourcePath);
+    std::string sourcePath = argv[1];
+    fprintf(stdout, "Compiling %s\n", sourcePath.c_str());
     auto targetPath = argv[2];
+    auto assetName = sourcePath.substr(sourcePath.find_last_of("/\\") + 1);
 
-    auto ext = get_filename_ext(sourcePath);
+    auto ext = sourcePath.substr(sourcePath.find_last_of(".") + 1);
 
     shaderc_shader_kind shaderKind;
 
-    if (strcmp(ext, "vert") == 0) {
+    if (ext == "vert") {
         shaderKind = shaderc_vertex_shader;
-    } else if (strcmp(ext, "frag") == 0) {
+    } else if (ext == "frag") {
         shaderKind = shaderc_fragment_shader;
     } else {
-        fprintf(stderr, "Unknown shader extension .%s\n", ext);
+        fprintf(stderr, "Unknown shader extension .%s\n", ext.c_str());
         return 1;
     }
 
     std::string source;
     {
-        FILE *inFile = fopen(sourcePath, "r");
+        FILE *inFile = fopen(sourcePath.c_str(), "r");
         fseek(inFile, 0, SEEK_END);
         size_t fileSize = ftell(inFile);
         fseek(inFile, 0, SEEK_SET);
@@ -58,7 +65,7 @@ int main(int argc, char* argv[])
     options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
     options.SetTargetSpirv(shaderc_spirv_version_1_0);
 
-    auto preprocessed = compiler.PreprocessGlsl(source, shaderKind, sourcePath, options);
+    auto preprocessed = compiler.PreprocessGlsl(source, shaderKind, sourcePath.c_str(), options);
 
     if (preprocessed.GetCompilationStatus() != shaderc_compilation_status_success) {
         fprintf(stderr, "%s", preprocessed.GetErrorMessage().c_str());
@@ -66,7 +73,7 @@ int main(int argc, char* argv[])
     }
 
     auto compiled = compiler.CompileGlslToSpv({preprocessed.cbegin(), preprocessed.cend()},
-                                              shaderKind, sourcePath, options);
+                                              shaderKind, sourcePath.c_str(), options);
 
     if (compiled.GetCompilationStatus() != shaderc_compilation_status_success) {
         fprintf(stderr, "%s", compiled.GetErrorMessage().c_str());
@@ -121,10 +128,30 @@ int main(int argc, char* argv[])
 
         std::vector<uint32_t> code(compiledWords.begin(), compiledWords.end());
 
-        std::ofstream os(std::string(targetPath), std::ios::binary);
-        cereal::BinaryOutputArchive archive( os );
-        archive(kakiModule);
-        archive(code);
+        std::vector<uint8_t> data;
+        std::stringstream datastream(std::stringstream::binary | std::ios::in | std::ios::out);
+        {
+            cereal::BinaryOutputArchive dataArchive(datastream);
+            dataArchive(kakiModule, code);
+            data = {std::istream_iterator<uint8_t>(datastream), std::istream_iterator<uint8_t>()};
+            fprintf(stdout, "data size: %zu\n", data.size());
+            fprintf(stdout, "cose size: %zu\n", code.size() * 4);
+
+        }
+
+        std::ofstream os(targetPath);
+        cereal::JSONOutputArchive archive( os );
+
+        kaki::Package package{};
+        package.entities = {{sourcePath}};
+        package.tables = {kaki::Package::Table {
+                .entityFirst = 0,
+                .entityCount = 1,
+                .types = {{"kaki::ShaderModule", {}}},
+                .typeData = {data}
+        }};
+
+        archive(package);
     }
 
     return 0;

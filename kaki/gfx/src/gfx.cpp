@@ -22,6 +22,7 @@
 #include <numeric>
 #include "gltf.h"
 #include <kaki/transform.h>
+#include <membuf.h>
 
 static VkRenderPass createRenderPass(VkDevice device, VkFormat format) {
     VkAttachmentDescription attachment {
@@ -575,7 +576,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
 void handleShaderModuleLoads(flecs::iter iter, kaki::Asset* assets) {
     for(auto i : iter) {
-        iter.entity(i).set<kaki::ShaderModule>(kaki::loadShaderModule(iter.world().get<kaki::VkGlobals>()->device, assets[i].path));
+        //iter.entity(i).set<kaki::ShaderModule>(kaki::loadShaderModule(iter.world().get<kaki::VkGlobals>()->device, assets[i].path));
     }
 }
 
@@ -642,6 +643,31 @@ kaki::gfx::gfx(flecs::world &world) {
 
     world.entity("gltdLoader").set<kaki::AssetHandler, kaki::Gltf>({
         handleGltfLoads
+    });
+
+    world.component<kaki::ShaderModule>().set(kaki::ComponentLoader{
+        .deserialize = [](flecs::world& world, size_t count, std::span<uint8_t> data) {
+            membuf buf(data);
+            std::istream bufStream(&buf);
+            cereal::BinaryInputArchive archive(bufStream);
+
+            auto modules = static_cast<ShaderModule*>(malloc(count * sizeof(ShaderModule)));
+
+            auto device = world.get<VkGlobals>()->device.device;
+
+            for(int i = 0; i < count; i++) {
+                modules[i] = loadShaderModule(device, archive);
+            }
+
+            return static_cast<void*>(modules);
+        },
+        .free = [](flecs::world& world, size_t count, void* data) {
+            auto modules = static_cast<ShaderModule*>(data);
+            for(int i = 0; i < count; i++) {
+                modules[i].~ShaderModule();
+            }
+            free(data);
+        },
     });
 
 

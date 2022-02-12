@@ -16,37 +16,37 @@ int main() {
     world.set(flecs::rest::Rest{});
     world.import<kaki::windowing>();
 
-
-    kaki::Package windowPackage {};
-    windowPackage.entities.push_back({"window"});
-    windowPackage.tables.push_back(kaki::Package::Table{
-        .entityFirst = 0,
-        .entityCount = 1,
-        .types = {{"kaki::Window", {}}, {"kaki::Input", {}}},
-        .typeData = {{},{}},
-    });
-
-
     world.component<kaki::Window>().set(kaki::ComponentLoader{
-        .deserialize = [](size_t count, std::span<uint8_t> data) {
-            auto* ret = static_cast<kaki::Window*>(malloc(count * sizeof(kaki::Window)));
+            .deserialize = [](flecs::world& world, size_t count, std::span<uint8_t> data) {
+                auto* ret = static_cast<kaki::Window*>(malloc(count * sizeof(kaki::Window)));
 
-            for(int i = 0; i < count; i++) {
-                ret[i] = kaki::Window {
-                    .width = 640,
-                    .height = 480,
-                    .title = "Test kaki app",
-                };
-            }
+                for(int i = 0; i < count; i++) {
+                    ret[i] = kaki::Window {
+                            .width = 640,
+                            .height = 480,
+                            .title = "Test kaki app",
+                    };
+                }
 
-            return static_cast<void*>(ret);
-        },
-        .free = [](size_t count, void* data) {
-            free(data);
-        },
+                return static_cast<void*>(ret);
+            },
+            .free = [](flecs::world& world, size_t count, void* data) {
+                free(data);
+            },
     });
 
-    auto window = kaki::instanciatePackage(world, windowPackage);
+    auto window = [&]{
+        kaki::Package windowPackage {};
+        windowPackage.entities.push_back({"window"});
+        windowPackage.tables.push_back(kaki::Package::Table{
+                .entityFirst = 0,
+                .entityCount = 1,
+                .types = {{"kaki::Window", {}}, {"kaki::Input", {}}},
+                .typeData = {{},{}},
+        });
+
+        return kaki::instanciatePackage(world, windowPackage);
+    }();
 
     //auto window = world.entity("window").set<kaki::Window>(kaki::Window{
     //    .width = 640,
@@ -54,6 +54,9 @@ int main() {
     //    .title = "Test kaki app",
     //}).set<kaki::Input>({});
     world.import<kaki::gfx>();
+
+    kaki::loadPackage(world, "shader.frag.shd");
+    kaki::loadPackage(world, "shader.vert.shd");
 
     auto mainAssets = kaki::loadAssets(world, "assets.json");
 
@@ -107,9 +110,8 @@ int main() {
             .orientation = {},
     });
 
-
-    world.system<kaki::Transform>().term<Control>().each([](flecs::entity entity, kaki::Transform& transform) {
-        auto* input = entity.world().lookup("window").get<kaki::Input>();
+    world.system<kaki::Transform>().term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
+        auto* input = window.get<kaki::Input>();
 
         if (input->keyDown('D')) {
             transform.position.x += entity.delta_time() * 10;
@@ -123,7 +125,6 @@ int main() {
         if (input->keyDown('S')) {
             transform.position.z -= entity.delta_time() * 10;
         }
-
     });
 
     double lastFrameTime = kaki::getTime();

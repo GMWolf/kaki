@@ -41,23 +41,30 @@ namespace kaki {
             std::vector<std::vector<uint8_t>> typeData;
         };
 
-        std::string name;
         std::vector<Table> tables;
     };
 
     template<class Archive>
     void serialize(Archive& archive, Package::Type& type) {
-        archive(type.typeId, type.object);
+        archive(cereal::make_nvp("id", type.typeId));
+        archive(cereal::make_nvp("object", type.object));
     }
 
     template<class Archive>
     void serialize(Archive& archive, Package::Table& table) {
-        archive(table, table.entityCount, table.types, table.typeData);
+        archive(cereal::make_nvp("size", table.entityCount));
+        archive(cereal::make_nvp("types", table.types));
+        archive(cereal::make_nvp("data", table.typeData));
+    }
+
+    template<class Archive>
+    void serialize(Archive& archive, Package::Entity& entity) {
+        archive(cereal::make_nvp("name", entity.name));
     }
 
     template<class Archive>
     void serialize(Archive& archive, Package& package) {
-        archive(package.name, package.tables);
+        archive(cereal::make_nvp("entities", package.entities));
+        archive(cereal::make_nvp("tables", package.tables));
     }
-
 }

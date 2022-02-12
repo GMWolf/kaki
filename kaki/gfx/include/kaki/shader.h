@@ -7,9 +7,10 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <cereal/archives/binary.hpp>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/string.hpp>
-
+#include <span>
 
 namespace kaki {
 
@@ -38,7 +39,7 @@ namespace kaki {
         archive(descSet.index, descSet.bindingNames, descSet.bindings);
     }
 
-    kaki::ShaderModule loadShaderModule(VkDevice device, const char* path);
+    kaki::ShaderModule loadShaderModule(VkDevice device, cereal::BinaryInputArchive& archive);
 }
 
 template<class Archive>

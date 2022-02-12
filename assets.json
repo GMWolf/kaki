@@ -2,16 +2,6 @@
   "name": "main",
   "assets": [
     {
-      "name": "vertex_shader",
-      "path": "shader.vert.shd",
-      "type": "kaki::ShaderModule"
-    },
-    {
-      "name": "fragment_shader",
-      "path": "shader.frag.shd",
-      "type": "kaki::ShaderModule"
-    },
-    {
       "name": "pipeline",
       "path": "pipeline.json",
       "type": "kaki::Pipeline"

@@ -14,13 +14,45 @@ int main() {
     flecs::world world;
 
     world.set(flecs::rest::Rest{});
-
     world.import<kaki::windowing>();
-    auto window = world.entity("window").set<kaki::Window>(kaki::Window{
-        .width = 640,
-        .height = 480,
-        .title = "Test kaki app",
-    }).set<kaki::Input>({});
+
+
+    kaki::Package windowPackage {};
+    windowPackage.entities.push_back({"window"});
+    windowPackage.tables.push_back(kaki::Package::Table{
+        .entityFirst = 0,
+        .entityCount = 1,
+        .types = {{"kaki::Window", {}}, {"kaki::Input", {}}},
+        .typeData = {{},{}},
+    });
+
+
+    world.component<kaki::Window>().set(kaki::ComponentLoader{
+        .deserialize = [](size_t count, std::span<uint8_t> data) {
+            auto* ret = static_cast<kaki::Window*>(malloc(count * sizeof(kaki::Window)));
+
+            for(int i = 0; i < count; i++) {
+                ret[i] = kaki::Window {
+                    .width = 640,
+                    .height = 480,
+                    .title = "Test kaki app",
+                };
+            }
+
+            return static_cast<void*>(ret);
+        },
+        .free = [](size_t count, void* data) {
+            free(data);
+        },
+    });
+
+    auto window = kaki::instanciatePackage(world, windowPackage);
+
+    //auto window = world.entity("window").set<kaki::Window>(kaki::Window{
+    //    .width = 640,
+    //    .height = 480,
+    //    .title = "Test kaki app",
+    //}).set<kaki::Input>({});
     world.import<kaki::gfx>();
 
     auto mainAssets = kaki::loadAssets(world, "assets.json");

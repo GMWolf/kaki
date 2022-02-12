@@ -39,7 +39,7 @@ target_include_directories(spirv-reflect PUBLIC external/SPIRV-Reflect)
 add_library(rapidjson INTERFACE)
 target_include_directories(rapidjson INTERFACE external/rapidjson/include)
 
-add_library(cereal INTERFACE)
+add_library(cereal INTERFACE kaki/common/include/overloaded.h)
 target_include_directories(cereal INTERFACE external/cereal/include)
 
 add_subdirectory(external/glm)

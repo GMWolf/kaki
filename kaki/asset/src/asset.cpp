@@ -10,6 +10,7 @@
 #include <cereal/types/string.hpp>
 #include <cereal/types/vector.hpp>
 #include <span>
+#include <overloaded.h>
 
 flecs::entity kaki::loadAssets(flecs::world& world, const char *path) {
 
@@ -71,62 +72,82 @@ flecs::entity kaki::loadAssets(flecs::world& world, const char *path) {
     return pack;
 }
 
-namespace kaki {
+static flecs::entity_t resolveEntity(flecs::world& world, std::span<flecs::entity_t> entities,
+                                   const kaki::Package::EntityRef& ref) {
+    return std::visit(overloaded{
+            [&world](const kaki::Package::TypeId& id) {
+                switch (id) {
+                    case kaki::Package::TypeId::ChildOf:
+                        return flecs::ChildOf;
+                        break;
+                };
+                return flecs::entity_t{};
+            },
+            [&entities](const uint64_t& index) {
+              return entities[index];
+            },
+            [&world](const std::string& str) {
+                return world.lookup(str.c_str()).id();
+            },
+    }, ref);
+}
 
-    template<class Archive>
-    void serialize(Archive &archive, Package::Entity &entity) {
-        archive(entity.name);
+static flecs::id_t resolveComponentType(flecs::world& world, std::span<flecs::entity_t> entities,
+                                          const kaki::Package::Type& type) {
+    auto r = resolveEntity(world, entities, type.typeId);
+
+    if (type.object) {
+        auto o = resolveEntity(world, entities, type.object.value());
+        return world.pair(r, o);
+    } else {
+        return r;
+    }
+}
+
+flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package &package) {
+
+    std::vector<ecs_entity_t> entities;
+    {
+        auto entityCount = package.entities.size();
+        ecs_bulk_desc_t entitiesBulkDesc{};
+        entitiesBulkDesc.count = static_cast<int32_t >(entityCount);
+        auto entitiesTmp = ecs_bulk_init(world.c_ptr(), &entitiesBulkDesc);
+        entities.insert(entities.end(), entitiesTmp, entitiesTmp + entityCount);
+
+        for(int i = 0; i < entityCount; i++) {
+            flecs::entity(world, entities[i]).set_name(package.entities[i].name.c_str());
+        }
     }
 
-    template<class Archive>
-    void serialize(Archive &archive, Package::ComponentEntry &entry) {
-        archive(entry.entity, entry.dataOffset, entry.dataSize);
-    }
+    for(auto table : package.tables) {
+        ecs_bulk_desc_t bulkDesc{};
+        bulkDesc.count = static_cast<int32_t>(table.entityCount);
+        bulkDesc.entities = entities.data() + table.entityFirst;
 
-    template<class Archive>
-    void serialize(Archive &archive, Package::ComponentGroup &group) {
-        archive(group.type, group.componentBegin, group.componentEnd);
-    }
+        const ComponentLoader* loaders[ECS_MAX_ADD_REMOVE] {};
+        void* data[ECS_MAX_ADD_REMOVE]{};
+        bulkDesc.data = data;
 
-    template<class Archive>
-    void serialize(Archive &archive, Package &package) {
-        archive(package.name, package.data, package.entities, package.componentEntries, package.componentGroups);
-    }
+        for (int i = 0; i < table.types.size(); i++) {
+            assert(table.entityFirst + table.entityCount <= entities.size());
+            auto t = resolveComponentType(world, entities, table.types[i]);
+            auto e = flecs::entity(world, t);
+            bulkDesc.ids[i] = e;
 
-    flecs::entity loadPackage(flecs::world &world, const char *path) {
-
-        std::ifstream is(path);
-        cereal::BinaryInputArchive archive(is);
-
-        Package package;
-        archive(package);
-
-        auto packageEntity = world.entity(package.name.c_str());
-
-        std::vector<flecs::entity> entities;
-
-        packageEntity.scope([&]{
-            for(const Package::Entity& entity : package.entities) {
-                entities.push_back(world.entity(entity.name.c_str()));
-            }
-        });
-
-        for(const Package::ComponentGroup& group : package.componentGroups) {
-            flecs::entity componentType = world.lookup(group.type.c_str());
-            auto filter = world.filter_builder().term<ComponentLoader>(componentType).build();
-            component_deserialize_fn fn;
-            filter.each([&](flecs::entity e) {
-                auto loader = e.get<ComponentLoader>();
-                fn = loader->deserialize;
-            });
-
-            for(auto c = group.componentBegin; c != group.componentEnd; c++) {
-                const Package::ComponentEntry& entry = package.componentEntries[c];
-                fn(entities[entry.entity], std::span(package.data.data() + entry.dataOffset, entry.dataSize));
+            loaders[i] = e.get<ComponentLoader>();
+            if (loaders[i]) {
+                bulkDesc.data[i] = loaders[i]->deserialize(table.entityCount, table.typeData[i]);
             }
         }
 
+        ecs_bulk_init( world.c_ptr(), &bulkDesc );
 
-        return packageEntity;
+        for(int i = 0; i < table.types.size(); i++) {
+            if (loaders[i]) {
+                loaders[i]->free(table.entityCount, bulkDesc.data[i]);
+            }
+        }
     }
+
+    return entities.empty() ? flecs::entity{} : flecs::entity(world, entities[0]);
 }

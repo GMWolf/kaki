@@ -128,27 +128,24 @@ int main(int argc, char* argv[])
 
         std::vector<uint32_t> code(compiledWords.begin(), compiledWords.end());
 
-        std::vector<uint8_t> data;
+        std::string data;
         std::stringstream datastream(std::stringstream::binary | std::ios::in | std::ios::out);
         {
             cereal::BinaryOutputArchive dataArchive(datastream);
             dataArchive(kakiModule, code);
-            data = {std::istream_iterator<uint8_t>(datastream), std::istream_iterator<uint8_t>()};
-            fprintf(stdout, "data size: %zu\n", data.size());
-            fprintf(stdout, "cose size: %zu\n", code.size() * 4);
-
+            data = datastream.str();
         }
 
         std::ofstream os(targetPath);
         cereal::JSONOutputArchive archive( os );
 
         kaki::Package package{};
-        package.entities = {{sourcePath}};
+        package.entities = {{assetName}};
         package.tables = {kaki::Package::Table {
                 .entityFirst = 0,
                 .entityCount = 1,
                 .types = {{"kaki::ShaderModule", {}}},
-                .typeData = {data}
+                .typeData = { std::vector<uint8_t>(data.begin(), data.end())}
         }};
 
         archive(package);

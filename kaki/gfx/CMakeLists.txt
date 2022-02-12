@@ -2,7 +2,8 @@
 add_library(kaki-gfx-interface INTERFACE
         include/kaki/gfx.h
         include/kaki/window.h
-        include/kaki/shader.h)
+        include/kaki/shader.h
+        )
 
 target_include_directories(kaki-gfx-interface INTERFACE include)
 

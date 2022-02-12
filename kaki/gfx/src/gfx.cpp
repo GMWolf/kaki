@@ -593,8 +593,8 @@ void handlePipelineLoads(flecs::iter iter, kaki::Asset* assets) {
 
         auto parent = iter.entity(i).get_object(flecs::ChildOf);
 
-        auto vertexEntity = parent.lookup(doc["vertex"].GetString());
-        auto fragmentEntity = parent.lookup(doc["fragment"].GetString());
+        auto vertexEntity = iter.world().lookup(doc["vertex"].GetString());
+        auto fragmentEntity = iter.world().lookup(doc["fragment"].GetString());
 
         auto vertexModule = vertexEntity.get<kaki::ShaderModule>();
         auto fragmentModule = fragmentEntity.get<kaki::ShaderModule>();
@@ -656,7 +656,7 @@ kaki::gfx::gfx(flecs::world &world) {
             auto device = world.get<VkGlobals>()->device.device;
 
             for(int i = 0; i < count; i++) {
-                modules[i] = loadShaderModule(device, archive);
+                new  (&modules[i])  ShaderModule(loadShaderModule(device, archive));
             }
 
             return static_cast<void*>(modules);

@@ -7,6 +7,7 @@
 #include <cereal/archives/binary.hpp>
 #include <cereal/archives/json.hpp>
 #include <fstream>
+#include <algorithm>
 
 void mergePackages(kaki::Package& out, kaki::Package& in) {
 
@@ -29,7 +30,75 @@ void mergePackages(kaki::Package& out, kaki::Package& in) {
             }
         }
     }
+}
 
+static bool typesEqual(const kaki::Package::Type& a, const kaki::Package::Type& b) {
+    return a.typeId == b.typeId && a.object == b.object;
+}
+
+static bool compareType(const kaki::Package::Type& a, const kaki::Package::Type& b) {
+    if (a.typeId != b.typeId) {
+        return a.typeId < b.typeId;
+    } else {
+        return a.object < b.object;
+    }
+}
+
+struct TableTypeCompare {
+
+    bool operator()(const kaki::Package::Table& a, const kaki::Package::Table& b) {
+        if (a.types.size() != b.types.size()) {
+            return a.types.size() < b.types.size();
+        }
+
+        for(int i = 0; i < a.types.size(); i++) {
+            if (!typesEqual(a.types[i], b.types[i])) {
+                return compareType(a.types[i], b.types[i]);
+            }
+        }
+        return false;
+    }
+};
+
+bool tableTypesEqual(const kaki::Package::Table& a, const kaki::Package::Table& b) {
+    if (a.types.size() != b.types.size()) {
+        return false;
+    }
+
+    for(int i = 0; i < a.types.size(); i++) {
+        if (!typesEqual(a.types[i], b.types[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void mergeTables(kaki::Package& package) {
+    std::sort(package.tables.begin(), package.tables.end(), TableTypeCompare());
+
+    auto f = std::adjacent_find(package.tables.begin(), package.tables.end(), tableTypesEqual);
+    while(f != package.tables.end()) {
+        auto& first = *f;
+        auto& second = *(f+1);
+
+        first.entityCount += second.entityCount;
+        for(int i = 0; i < first.typeData.size(); i++) {
+            first.typeData[i].insert(first.typeData[i].begin(), second.typeData[i].begin(), second.typeData[i].end());
+        }
+
+        std::vector<kaki::Package::Entity> moveEntities(package.entities.begin() + second.entityFirst, package.entities.begin() + second.entityFirst + second.entityCount);
+        package.entities.erase(package.entities.begin() + second.entityFirst, package.entities.begin() + second.entityFirst + second.entityCount);
+
+        if (second.entityFirst < first.entityFirst) {
+            first.entityFirst -= second.entityCount;
+        }
+
+        package.entities.insert(package.entities.begin() + first.entityFirst + first.entityCount, moveEntities.begin(), moveEntities.end());
+
+        package.tables.erase(f+1);
+
+        f = std::adjacent_find(package.tables.begin(), package.tables.end(), tableTypesEqual);
+    }
 }
 
 int main(int argc, char* argv[]) {

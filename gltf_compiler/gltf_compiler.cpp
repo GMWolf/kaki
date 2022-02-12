@@ -138,14 +138,9 @@ int main(int argc, char* argv[]) {
         meshes.push_back(loadMeshData(&mesh, buffers));
     }
 
-
-
-    //std::vector<Image> images;
-
     for(auto& image : std::span(data->images, data->images_count)) {
         char path[1024];
         cgltf_combine_paths(path, inputPath, image.uri);
-
     }
 
     std::ofstream os(std::string(outputPath), std::ios::binary);

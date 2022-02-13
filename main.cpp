@@ -93,8 +93,8 @@ int main() {
         .orientation = {},
     }).add<Control>();
 
-    /*world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
-            .mesh = mainAssets.lookup("untitled::Cube"),
+    world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
+            .mesh = package.lookup("untitled_gltf::Cube"),
             .image = mainAssets.lookup("kaki"),
     }).set(kaki::Transform{
             .position = {0,-1,0},
@@ -103,14 +103,14 @@ int main() {
     });
 
     world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
-            .mesh = mainAssets.lookup("untitled::Cube1"),
+            .mesh = package.lookup("untitled_gltf::Cube1"),
             .image = mainAssets.lookup("kaki"),
     }).set(kaki::Transform{
             .position = {2,-0.2,2},
             .scale = 1.2,
             .orientation = {},
     });
-     */
+
 
     world.system<kaki::Transform>().term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
         auto* input = window.get<kaki::Input>();

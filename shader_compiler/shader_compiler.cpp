@@ -34,9 +34,11 @@ int main(int argc, char* argv[])
     std::string sourcePath = argv[1];
     fprintf(stdout, "Compiling %s\n", sourcePath.c_str());
     auto targetPath = argv[2];
-    auto assetName = sourcePath.substr(sourcePath.find_last_of("/\\") + 1);
 
-    auto ext = sourcePath.substr(sourcePath.find_last_of(".") + 1);
+    auto ext = sourcePath.substr(sourcePath.find_last_of('.') + 1);
+    auto assetName = sourcePath.substr(sourcePath.find_last_of("/\\") + 1);
+    std::replace(assetName.begin(), assetName.end(), '.', '_');
+
 
     shaderc_shader_kind shaderKind;
 
@@ -146,7 +148,7 @@ int main(int argc, char* argv[])
                 .entityFirst = 0,
                 .entityCount = 1,
                 .types = {{"kaki::ShaderModule", {}}},
-                .typeData = { std::vector<uint8_t>(data.begin(), data.end())}
+                .typeData = { {std::vector<uint8_t>(data.begin(), data.end())}}
         }};
 
         archive(package);

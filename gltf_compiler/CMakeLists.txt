@@ -1,5 +1,5 @@
 add_executable(gltf_compiler gltf_compiler.cpp)
-target_link_libraries(gltf_compiler PRIVATE cgltf cereal glm)
+target_link_libraries(gltf_compiler PRIVATE cgltf cereal glm kaki-asset-interface kaki-common)
 
 function(compile_gltf targetName)
     set(flags)

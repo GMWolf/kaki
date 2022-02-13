@@ -51,4 +51,6 @@ namespace kaki {
     }
 
     void handleGltfLoads(flecs::iter iter, kaki::Asset* assets);
+
+    void* loadGltfs(flecs::world& world, size_t count, std::span<uint8_t> data);
 }

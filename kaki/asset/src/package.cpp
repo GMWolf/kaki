@@ -55,10 +55,6 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
         entitiesBulkDesc.count = static_cast<int32_t >(entityCount);
         auto entitiesTmp = ecs_bulk_init(world.c_ptr(), &entitiesBulkDesc);
         entities.insert(entities.end(), entitiesTmp, entitiesTmp + entityCount);
-
-        for(int i = 0; i < entityCount; i++) {
-            flecs::entity(world, entities[i]).set_name(package.entities[i].name.c_str());
-        }
     }
 
     for(auto table : package.tables) {
@@ -76,9 +72,15 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
             auto e = flecs::entity(world, t);
             bulkDesc.ids[i] = e;
 
-            loaders[i] = e.get<ComponentLoader>();
+            if (e.is_pair()) {
+                loaders[i] = e.relation().get<ComponentLoader>();
+            } else {
+                loaders[i] = e.get<ComponentLoader>();
+            }
+
+
             if (loaders[i]) {
-                bulkDesc.data[i] = loaders[i]->deserialize(world, table.entityCount, table.typeData[i]);
+                bulkDesc.data[i] = loaders[i]->deserialize(world, table.entityCount, table.typeData[i].vec);
             }
         }
 
@@ -89,6 +91,10 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
                 loaders[i]->free(world, table.entityCount, bulkDesc.data[i]);
             }
         }
+    }
+
+    for(int i = 0; i < package.entities.size(); i++) {
+        flecs::entity(world, entities[i]).set_name(package.entities[i].name.c_str());
     }
 
     return entities.empty() ? flecs::entity{} : flecs::entity(world, entities[0]);

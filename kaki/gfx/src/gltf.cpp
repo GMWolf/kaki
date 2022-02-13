@@ -8,6 +8,7 @@
 #include "vk.h"
 #include "glm/vec3.hpp"
 #include "glm/vec2.hpp"
+#include "membuf.h"
 #include <fstream>
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/vector.hpp>
@@ -92,5 +93,25 @@ namespace kaki {
             loadGltf(iter.entity(i), assets[i].path);
         }
 
+    }
+
+    void* loadGltfs(flecs::world &world, size_t count, std::span<uint8_t> data) {
+        membuf buf(data);
+        std::istream bufStream(&buf);
+        cereal::BinaryInputArchive archive(bufStream);
+
+        const VkGlobals& vk = *world.get<VkGlobals>();
+
+        auto gltfs = static_cast<Gltf*>(malloc(count * sizeof(Gltf)));
+
+        for(int i = 0; i < count; i++) {
+            new (&gltfs[i]) Gltf();
+            gltfs[i].positionBuffer = loadBuffer<glm::vec3>(vk, archive);
+            gltfs[i].normalBuffer = loadBuffer<glm::vec3>(vk, archive);
+            gltfs[i].uvBuffer = loadBuffer<glm::vec2>(vk, archive);
+            gltfs[i].indexBuffer = loadBuffer<uint32_t>(vk, archive);
+        }
+
+        return static_cast<void*>(gltfs);
     }
 }

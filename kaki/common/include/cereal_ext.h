@@ -8,8 +8,13 @@
 
 namespace cereal {
     //template<class T>
-    //void serialize(cereal::JSONOutputArchive &ar, cereal::BinaryData<T> const &data) {
+    //void save(cereal::JSONOutputArchive &ar, cereal::BinaryData<T> const &data) {
     //    ar.saveBinaryValue(data.data, data.size);
+    //}
+
+    //template<class T>
+    //void load(cereal::JSONInputArchive &ar, cereal::BinaryData<T> &data) {
+    //    ar.loadBinaryValue(data.data, data.size);
     //}
 
 }

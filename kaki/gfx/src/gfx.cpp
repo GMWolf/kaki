@@ -628,6 +628,7 @@ kaki::gfx::gfx(flecs::world &world) {
     auto This = world.module<gfx>();
     flecs::doc::set_brief(This, "Rendering module for kaki");
 
+    world.component<kaki::Mesh>();
 
     auto shdLoader = world.entity("shaderLoader").set<kaki::AssetHandler, kaki::ShaderModule>({
         handleShaderModuleLoads,
@@ -645,7 +646,7 @@ kaki::gfx::gfx(flecs::world &world) {
         handleGltfLoads
     });
 
-    world.component<kaki::ShaderModule>().set(kaki::ComponentLoader{
+    world.component<kaki::ShaderModule>().set(kaki::ComponentLoader {
         .deserialize = [](flecs::world& world, size_t count, std::span<uint8_t> data) {
             membuf buf(data);
             std::istream bufStream(&buf);
@@ -669,6 +670,42 @@ kaki::gfx::gfx(flecs::world &world) {
             free(data);
         },
     });
+
+    world.component<kaki::Mesh>().set(kaki::ComponentLoader {
+        .deserialize = [](flecs::world& world, size_t count, std::span<uint8_t> data) {
+            membuf buf(data);
+            std::istream bufStream(&buf);
+            cereal::BinaryInputArchive archive(bufStream);
+
+            auto meshes = static_cast<Mesh*>(malloc(count * sizeof(Mesh)));
+
+            for(int i = 0; i < count; i++) {
+                new (&meshes[i]) Mesh();
+                archive(meshes[i]);
+            }
+
+            return static_cast<void*>(meshes);
+        },
+        .free = [](flecs::world& world, size_t count, void* data) {
+            auto meshes = static_cast<Mesh*>(data);
+            for(int i = 0; i < count; i++) {
+                meshes[i].~Mesh();
+            }
+            free(data);
+        },
+    });
+
+    world.component<Gltf>().set(ComponentLoader {
+            .deserialize = loadGltfs,
+            .free = [](flecs::world& world, size_t count, void* data) {
+                auto gltfs = static_cast<Gltf*>(data);
+                for(int i = 0; i < count; i++) {
+                    gltfs[i].~Gltf();
+                }
+                free(data);
+            },
+    });
+
 
 
     ecs_struct_desc_t vec3Desc {

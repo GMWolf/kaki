@@ -8,6 +8,7 @@
 #include <cereal/archives/json.hpp>
 #include <fstream>
 #include <algorithm>
+#include <cereal_ext.h>
 
 void mergePackages(kaki::Package& out, kaki::Package& in) {
 
@@ -83,7 +84,7 @@ void mergeTables(kaki::Package& package) {
 
         first.entityCount += second.entityCount;
         for(int i = 0; i < first.typeData.size(); i++) {
-            first.typeData[i].insert(first.typeData[i].begin(), second.typeData[i].begin(), second.typeData[i].end());
+            first.typeData[i].vec.insert(first.typeData[i].vec.begin(), second.typeData[i].vec.begin(), second.typeData[i].vec.end());
         }
 
         std::vector<kaki::Package::Entity> moveEntities(package.entities.begin() + second.entityFirst, package.entities.begin() + second.entityFirst + second.entityCount);

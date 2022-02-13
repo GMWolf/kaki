@@ -12,16 +12,6 @@
       "type": "kaki::Image"
     },
     {
-      "name": "untitled",
-      "path": "untitled.gltf.bin",
-      "type": "kaki::Gltf"
-    },
-    {
-      "name": "SciFiHelmet",
-      "path": "SciFiHelmet/SciFiHelmet.gltf.bin",
-      "type": "kaki::Gltf"
-    },
-    {
       "name": "SciFiHelmet_BaseColor",
       "path": "SciFiHelmet/SciFiHelmet_BaseColor.ktx2",
       "type": "kaki::Image"

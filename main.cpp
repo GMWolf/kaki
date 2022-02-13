@@ -56,6 +56,7 @@ int main() {
     world.import<kaki::gfx>();
 
     kaki::loadPackage(world, "test-package.json");
+    auto sfh = kaki::loadPackage(world, "SciFiHelmet/SciFiHelmet.gltf.bin");
 
     auto mainAssets = kaki::loadAssets(world, "assets.json");
 
@@ -82,8 +83,9 @@ int main() {
         .orientation = glm::quatLookAt(glm::vec3{0,0,1}, glm::vec3{0,1,0}),
     });
 
+
     world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
-        .mesh = mainAssets.lookup("SciFiHelmet::SciFiHelmet"),
+        .mesh = sfh.lookup("SciFiHelmet"),
         .image = mainAssets.lookup("SciFiHelmet_BaseColor"),
     }).set(kaki::Transform{
         .position = {0,0,0},
@@ -91,7 +93,7 @@ int main() {
         .orientation = {},
     }).add<Control>();
 
-    world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
+    /*world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
             .mesh = mainAssets.lookup("untitled::Cube"),
             .image = mainAssets.lookup("kaki"),
     }).set(kaki::Transform{
@@ -108,6 +110,7 @@ int main() {
             .scale = 1.2,
             .orientation = {},
     });
+     */
 
     world.system<kaki::Transform>().term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
         auto* input = window.get<kaki::Input>();

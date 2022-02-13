@@ -1,6 +1,6 @@
 add_executable(packager packager.cpp)
 
-target_link_libraries(packager PRIVATE kaki-asset-interface cereal)
+target_link_libraries(packager PRIVATE kaki-asset-interface cereal kaki-common)
 
 
 function(make_package targetName)

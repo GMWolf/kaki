@@ -6,11 +6,14 @@
 #include <span>
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
+#include <cereal/archives/json.hpp>
 #include <cereal/archives/binary.hpp>
 #include <glm/glm.hpp>
 #include <fstream>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/string.hpp>
+#include <kaki/package.h>
+#include <cereal_ext.h>
 
 struct Buffers {
     std::vector<glm::vec3> position;
@@ -106,6 +109,69 @@ void saveBuffer(const std::vector<T>& vec, Archive& archive)
 }
 
 
+void writeGltfEntity(kaki::Package& package, const std::string& name, Buffers& buffers) {
+    std::string data;
+    std::stringstream datastream(std::stringstream::binary | std::ios::in | std::ios::out);
+    {
+        cereal::BinaryOutputArchive archive(datastream);
+
+        saveBuffer(buffers.position, archive);
+        saveBuffer(buffers.normal, archive);
+        saveBuffer(buffers.texcoord, archive);
+        saveBuffer(buffers.indices, archive);
+
+        data = datastream.str();
+    }
+
+    auto first = package.entities.size();
+    package.entities.push_back({name});
+    package.tables.push_back(kaki::Package::Table{
+        .entityFirst = first,
+        .entityCount = 1,
+        .types = {
+                {"kaki::Gltf", {}}
+        },
+        .typeData = {
+                {{data.begin(), data.end()}},
+        },
+
+    });
+}
+
+void writeMeshes(kaki::Package& package, std::span<Mesh> meshes) {
+
+    auto first = package.entities.size();
+
+    std::string meshData;
+    {
+        std::stringstream meshDataStream(std::stringstream::binary | std::ios::in | std::ios::out);
+        cereal::BinaryOutputArchive dataArchive(meshDataStream);
+        for (auto& mesh: meshes) {
+            package.entities.push_back({mesh.name});
+            dataArchive(mesh);
+        }
+        meshData = meshDataStream.str();
+    }
+
+    auto childofType = kaki::Package::Type {
+        .typeId = kaki::Package::TypeId::ChildOf,
+        .object = 0u, //
+    };
+
+    package.tables.push_back(kaki::Package::Table{
+        .entityFirst = first,
+        .entityCount = meshes.size(),
+        .types = {
+                {kaki::Package::TypeId::ChildOf, 0u}, //Child of the gltf entity (entity 0 in package)
+                {"kaki::gfx::Mesh", {}}
+        },
+        .typeData = {
+                {},
+                {{meshData.begin(), meshData.end()}},
+        },
+    });
+}
+
 int main(int argc, char* argv[]) {
 
     if (argc < 3) {
@@ -113,22 +179,25 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    const char* inputPath = argv[1];
+    const std::string inputPath = argv[1];
     const char* outputPath = argv[2];
+
+    auto assetName = inputPath.substr(inputPath.find_last_of("/\\") + 1);
+    std::replace(assetName.begin(), assetName.end(), '.', '_');
 
     cgltf_options options = {};
     cgltf_data* data{};
-    cgltf_result result = cgltf_parse_file(&options, inputPath, &data);
+    cgltf_result result = cgltf_parse_file(&options, inputPath.c_str(), &data);
 
     if (result != cgltf_result_success) {
-        fprintf(stderr, "Failed to load gltf file: %s\n", inputPath);
+        fprintf(stderr, "Failed to load gltf file: %s\n", inputPath.c_str());
         return 1;
     }
 
-    result = cgltf_load_buffers(&options, data, inputPath);
+    result = cgltf_load_buffers(&options, data, inputPath.c_str());
 
     if (result != cgltf_result_success) {
-        fprintf(stderr, "Failed to load gltf binary file for %s\n", inputPath);
+        fprintf(stderr, "Failed to load gltf binary file for %s\n", inputPath.c_str());
         return 1;
     }
 
@@ -140,18 +209,19 @@ int main(int argc, char* argv[]) {
 
     for(auto& image : std::span(data->images, data->images_count)) {
         char path[1024];
-        cgltf_combine_paths(path, inputPath, image.uri);
+        cgltf_combine_paths(path, inputPath.c_str(), image.uri);
     }
 
-    std::ofstream os(std::string(outputPath), std::ios::binary);
-    cereal::BinaryOutputArchive archive( os );
 
-    saveBuffer(buffers.position, archive);
-    saveBuffer(buffers.normal, archive);
-    saveBuffer(buffers.texcoord, archive);
-    saveBuffer(buffers.indices, archive);
+    kaki::Package package;
 
-    archive(meshes);
+    writeGltfEntity(package, assetName, buffers);
+    writeMeshes(package, meshes);
+
+
+    std::ofstream os(outputPath);
+    cereal::JSONOutputArchive archive( os );
+    archive(package);
 
     return 0;
 }

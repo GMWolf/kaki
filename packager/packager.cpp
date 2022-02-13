@@ -10,6 +10,11 @@
 #include <algorithm>
 #include <cereal_ext.h>
 
+bool isChildof(const kaki::Package::Type& type) {
+    return std::holds_alternative<kaki::Package::TypeId>(type.typeId)
+           && std::get<kaki::Package::TypeId>(type.typeId) == kaki::Package::TypeId::ChildOf;
+}
+
 void mergePackages(kaki::Package& out, kaki::Package& in) {
 
     auto entitiesOffset = out.entities.size();
@@ -29,6 +34,11 @@ void mergePackages(kaki::Package& out, kaki::Package& in) {
                     *id += entitiesOffset;
                 }
             }
+        }
+        auto& table = out.tables[i];
+        if (std::find_if(table.types.begin(), table.types.end(), isChildof) == table.types.end()) {
+            table.types.insert(table.types.begin(), kaki::Package::Type{kaki::Package::TypeId::ChildOf, 0u});
+            table.typeData.insert(table.typeData.begin(), kaki::Package::Data{});
         }
     }
 }
@@ -106,7 +116,16 @@ int main(int argc, char* argv[]) {
 
     auto out = argv[1];
 
-    kaki::Package outPackage{};
+    kaki::Package outPackage{
+        .entities = { {"package"}},
+        .tables = {kaki::Package::Table{
+            .entityFirst = 0,
+            .entityCount = 1,
+            .types = {},
+            .typeData = {},
+        }
+        }
+    };
 
     for(int i = 2; i < argc; i++) {
         kaki::Package inPackage;

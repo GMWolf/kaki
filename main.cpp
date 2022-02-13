@@ -55,8 +55,8 @@ int main() {
     //}).set<kaki::Input>({});
     world.import<kaki::gfx>();
 
-    kaki::loadPackage(world, "test-package.json");
-    auto sfh = kaki::loadPackage(world, "SciFiHelmet/SciFiHelmet.gltf.bin");
+    auto package = kaki::loadPackage(world, "test-package.json");
+    //auto sfh = kaki::loadPackage(world, "SciFiHelmet/SciFiHelmet.gltf.bin");
 
     auto mainAssets = kaki::loadAssets(world, "assets.json");
 
@@ -85,7 +85,7 @@ int main() {
 
 
     world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
-        .mesh = sfh.lookup("SciFiHelmet"),
+        .mesh = package.lookup("SciFiHelmet_gltf::SciFiHelmet"),
         .image = mainAssets.lookup("SciFiHelmet_BaseColor"),
     }).set(kaki::Transform{
         .position = {0,0,0},

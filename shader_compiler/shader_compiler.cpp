@@ -22,8 +22,6 @@ const char *get_filename_ext(const char *filename) {
     return dot + 1;
 }
 
-
-
 int main(int argc, char* argv[])
 {
     if (argc != 3) {
@@ -33,7 +31,8 @@ int main(int argc, char* argv[])
 
     std::string sourcePath = argv[1];
     fprintf(stdout, "Compiling %s\n", sourcePath.c_str());
-    auto targetPath = argv[2];
+    std::string targetPath = argv[2];
+    auto binTargetPath = targetPath + ".bin";
 
     auto ext = sourcePath.substr(sourcePath.find_last_of('.') + 1);
     auto assetName = sourcePath.substr(sourcePath.find_last_of("/\\") + 1);
@@ -128,27 +127,29 @@ int main(int argc, char* argv[])
             });
         }
 
-
         std::vector<uint32_t> code(compiledWords.begin(), compiledWords.end());
 
-        std::string data;
-        std::stringstream datastream(std::stringstream::binary | std::ios::in | std::ios::out);
+
+
+        std::ofstream outData(binTargetPath, std::ios::binary | std::ios::out);
         {
-            cereal::BinaryOutputArchive dataArchive(datastream);
+            cereal::BinaryOutputArchive dataArchive(outData);
             dataArchive(kakiModule, code);
-            data = datastream.str();
         }
 
         std::ofstream os(targetPath);
         cereal::JSONOutputArchive archive( os );
 
         kaki::Package package{};
+        package.dataFile = binTargetPath.substr(binTargetPath.find_last_of("/\\") + 1);
         package.entities = {{assetName}};
         package.tables = {kaki::Package::Table {
                 .entityFirst = 0,
                 .entityCount = 1,
                 .types = {{"kaki::ShaderModule", {}}},
-                .typeData = { {std::vector<uint8_t>(data.begin(), data.end())}}
+                .typeData = {
+                        {0,static_cast<uint64_t>(outData.tellp())}
+                },
         }};
 
         archive(package);

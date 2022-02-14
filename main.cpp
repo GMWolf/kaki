@@ -13,66 +13,20 @@ int main() {
 
     flecs::world world;
 
-    world.set(flecs::rest::Rest{});
+
+
     world.import<kaki::windowing>();
 
-    world.component<kaki::Window>().set(kaki::ComponentLoader{
-            .deserialize = [](flecs::world& world, size_t count, std::span<uint8_t> data) {
-                auto* ret = static_cast<kaki::Window*>(malloc(count * sizeof(kaki::Window)));
-
-                for(int i = 0; i < count; i++) {
-                    ret[i] = kaki::Window {
-                            .width = 640,
-                            .height = 480,
-                            .title = "Test kaki app",
-                    };
-                }
-
-                return static_cast<void*>(ret);
-            },
-            .free = [](flecs::world& world, size_t count, void* data) {
-                free(data);
-            },
-    });
-
-    auto window = [&]{
-        kaki::Package windowPackage {};
-        windowPackage.entities.push_back({"window"});
-        windowPackage.tables.push_back(kaki::Package::Table{
-                .entityFirst = 0,
-                .entityCount = 1,
-                .types = {{"kaki::Window", {}}, {"kaki::Input", {}}},
-                .typeData = {{},{}},
-        });
-
-        return kaki::instanciatePackage(world, windowPackage);
-    }();
-
-    //auto window = world.entity("window").set<kaki::Window>(kaki::Window{
-    //    .width = 640,
-    //    .height = 480,
-    //    .title = "Test kaki app",
-    //}).set<kaki::Input>({});
+    auto window = world.entity("window").set<kaki::Window>(kaki::Window{
+        .width = 1280,
+        .height = 720,
+        .title = "Test kaki app",
+    }).set<kaki::Input>({});
     world.import<kaki::gfx>();
 
     auto package = kaki::loadPackage(world, "test-package.json");
-    //auto sfh = kaki::loadPackage(world, "SciFiHelmet/SciFiHelmet.gltf.bin");
 
     auto mainAssets = kaki::loadAssets(world, "assets.json");
-
-    // Print out assets in main assets
-    world.filter_builder()
-        .term<kaki::Asset>()
-        .term(flecs::ChildOf, mainAssets)
-        .build()
-        .each([](flecs::entity e) {
-            std::cout << "-" << e.path() << std::endl;
-            e.world().filter_builder()
-                .term(flecs::ChildOf, e)
-                .build().each([](flecs::entity e){
-                   std::cout << "~" << e.path() << std::endl;
-                });
-    });
 
     auto camera = world.entity("camera");
     camera.set(kaki::Camera{
@@ -83,7 +37,6 @@ int main() {
         .orientation = glm::quatLookAt(glm::vec3{0,0,1}, glm::vec3{0,1,0}),
     });
 
-
     world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
         .mesh = package.lookup("SciFiHelmet_gltf::SciFiHelmet"),
         .image = package.lookup("SciFiHelmet_gltf::SciFiHelmet_BaseColor"),
@@ -92,26 +45,6 @@ int main() {
         .scale = 1,
         .orientation = {},
     }).add<Control>();
-
-    /*
-    world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
-            .mesh = package.lookup("untitled_gltf::Cube"),
-            .image = mainAssets.lookup("kaki"),
-    }).set(kaki::Transform{
-            .position = {0,-1,0},
-            .scale = 1,
-            .orientation = {},
-    });
-
-    world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
-            .mesh = package.lookup("untitled_gltf::Cube1"),
-            .image = mainAssets.lookup("kaki"),
-    }).set(kaki::Transform{
-            .position = {2,-0.2,2},
-            .scale = 1.2,
-            .orientation = {},
-    });
-*/
 
     world.system<kaki::Transform>().term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
         auto* input = window.get<kaki::Input>();
@@ -129,6 +62,8 @@ int main() {
             transform.position.z -= entity.delta_time() * 10;
         }
     });
+
+    world.set(flecs::rest::Rest{});
 
     double lastFrameTime = kaki::getTime();
 

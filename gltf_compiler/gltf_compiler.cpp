@@ -109,18 +109,17 @@ void saveBuffer(const std::vector<T>& vec, Archive& archive)
 }
 
 
-void writeGltfEntity(kaki::Package& package, const std::string& name, Buffers& buffers) {
-    std::string data;
-    std::stringstream datastream(std::stringstream::binary | std::ios::in | std::ios::out);
+void writeGltfEntity(kaki::Package& package, const std::string& name, Buffers& buffers, std::ostream& outData) {
+
+    auto dataOffset = outData.tellp();
     {
-        cereal::BinaryOutputArchive archive(datastream);
+        cereal::BinaryOutputArchive archive(outData);
 
         saveBuffer(buffers.position, archive);
         saveBuffer(buffers.normal, archive);
         saveBuffer(buffers.texcoord, archive);
         saveBuffer(buffers.indices, archive);
 
-        data = datastream.str();
     }
 
     auto first = package.entities.size();
@@ -132,25 +131,22 @@ void writeGltfEntity(kaki::Package& package, const std::string& name, Buffers& b
                 {"kaki::Gltf", {}}
         },
         .typeData = {
-                {{data.begin(), data.end()}},
+                {static_cast<uint64_t>(dataOffset), static_cast<uint64_t>(outData.tellp() - dataOffset)},
         },
-
     });
 }
 
-void writeMeshes(kaki::Package& package, std::span<Mesh> meshes) {
+void writeMeshes(kaki::Package& package, std::span<Mesh> meshes, std::ostream& outData) {
 
     auto first = package.entities.size();
+    auto dataOffset = outData.tellp();
 
-    std::string meshData;
     {
-        std::stringstream meshDataStream(std::stringstream::binary | std::ios::in | std::ios::out);
-        cereal::BinaryOutputArchive dataArchive(meshDataStream);
+        cereal::BinaryOutputArchive dataArchive(outData);
         for (auto& mesh: meshes) {
             package.entities.push_back({mesh.name});
             dataArchive(mesh);
         }
-        meshData = meshDataStream.str();
     }
 
     auto childofType = kaki::Package::Type {
@@ -166,22 +162,21 @@ void writeMeshes(kaki::Package& package, std::span<Mesh> meshes) {
                 {"kaki::gfx::Mesh", {}}
         },
         .typeData = {
-                {},
-                {{meshData.begin(), meshData.end()}},
+                {0, 0},
+                {static_cast<uint64_t>(dataOffset), static_cast<uint64_t>((outData.tellp() - dataOffset))},
         },
     });
 }
 
-void writeImages(kaki::Package& package, std::span<cgltf_image> images, const char* inputPath) {
+void writeImages(kaki::Package& package, std::span<cgltf_image> images, const char* inputPath, std::ostream& outData) {
 
     if (!images.empty()) {
-
         auto first = package.entities.size();
+        auto dataStart = outData.tellp();
 
-        std::string data;
         {
-            std::stringstream meshDataStream(std::stringstream::binary | std::ios::in | std::ios::out);
-            cereal::BinaryOutputArchive dataArchive(meshDataStream);
+            cereal::BinaryOutputArchive dataArchive(outData);
+
             for (auto &t: images) {
                 package.entities.push_back({t.name});
                 char path[1024];
@@ -191,7 +186,6 @@ void writeImages(kaki::Package& package, std::span<cgltf_image> images, const ch
                 std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(input), {});
                 dataArchive(buffer);
             }
-            data = meshDataStream.str();
         }
 
         kaki::Package::Table table{
@@ -202,8 +196,8 @@ void writeImages(kaki::Package& package, std::span<cgltf_image> images, const ch
                         {"kaki::gfx::Image",             {}}
                 },
                 .typeData = {
-                        {},
-                        {{data.begin(), data.end()}},
+                        {0, 0},
+                        {static_cast<uint64_t>(dataStart),static_cast<uint64_t>(outData.tellp() - dataStart)},
                 },
         };
 
@@ -219,7 +213,8 @@ int main(int argc, char* argv[]) {
     }
 
     const std::string inputPath = argv[1];
-    const char* outputPath = argv[2];
+    const std::string outputPath = argv[2];
+    const std::string binOutputPath = outputPath + ".bin";
 
     auto assetName = inputPath.substr(inputPath.find_last_of("/\\") + 1);
     std::replace(assetName.begin(), assetName.end(), '.', '_');
@@ -252,11 +247,13 @@ int main(int argc, char* argv[]) {
     }
 
     kaki::Package package;
+    package.dataFile = binOutputPath.substr(binOutputPath.find_last_of("/\\") + 1);
 
-    writeGltfEntity(package, assetName, buffers);
-    writeMeshes(package, meshes);
-    writeImages(package, std::span(data->images, data->images_count), inputPath.c_str());
+    std::ofstream outData(binOutputPath, std::ios::binary | std::ios::out);
 
+    writeGltfEntity(package, assetName, buffers, outData);
+    writeMeshes(package, meshes, outData);
+    writeImages(package, std::span(data->images, data->images_count), inputPath.c_str(), outData);
 
     std::ofstream os(outputPath);
     cereal::JSONOutputArchive archive( os );

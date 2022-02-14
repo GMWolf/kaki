@@ -10,7 +10,7 @@ function(make_package targetName)
     cmake_parse_arguments(arg "${flags}" "${args}" "${listArgs}" ${ARGN})
 
     add_custom_command(
-            OUTPUT ${targetName}.json
+            OUTPUT ${targetName}.json ${targetName}.json.bin
             COMMAND packager ARGS ${targetName}.json ${arg_SOURCES}
             DEPENDS "${arg_SOURCES}" packager
             USES_TERMINAL

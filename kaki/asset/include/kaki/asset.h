@@ -34,7 +34,7 @@ namespace kaki {
 
     flecs::entity loadPackage(flecs::world& world, const char* path);
 
-    flecs::entity instanciatePackage(flecs::world& world, const Package& package);
+    flecs::entity instanciatePackage(flecs::world& world, const Package& package, std::span<uint8_t> data);
 
     flecs::entity loadAssets(flecs::world& world, const char* path);
 }

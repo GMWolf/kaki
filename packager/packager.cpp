@@ -9,6 +9,10 @@
 #include <fstream>
 #include <algorithm>
 #include <cereal_ext.h>
+#include <filesystem>
+#include <iostream>
+
+namespace fs = std::filesystem;
 
 bool isChildof(const kaki::Package::Type& type) {
     return std::holds_alternative<kaki::Package::TypeId>(type.typeId)
@@ -84,6 +88,7 @@ bool tableTypesEqual(const kaki::Package::Table& a, const kaki::Package::Table& 
     return true;
 }
 
+/*
 void mergeTables(kaki::Package& package) {
     std::sort(package.tables.begin(), package.tables.end(), TableTypeCompare());
 
@@ -111,12 +116,16 @@ void mergeTables(kaki::Package& package) {
         f = std::adjacent_find(package.tables.begin(), package.tables.end(), tableTypesEqual);
     }
 }
+ */
 
 int main(int argc, char* argv[]) {
 
-    auto out = argv[1];
+    std::string out = argv[1];
+    auto outData = out + ".bin";
 
-    kaki::Package outPackage{
+    std::ofstream dataOutput(outData, std::ios::binary | std::ios::out);
+
+    kaki::Package outPackage {
         .entities = { {"package"}},
         .tables = {kaki::Package::Table{
             .entityFirst = 0,
@@ -124,19 +133,35 @@ int main(int argc, char* argv[]) {
             .types = {},
             .typeData = {},
         }
-        }
+        },
+        .dataFile = outData.substr(outData.find_last_of("/\\") + 1),
     };
 
     for(int i = 2; i < argc; i++) {
+        fs::path in = argv[i];
+
         kaki::Package inPackage;
         {
-            auto in = argv[i];
-
             std::ifstream input(in);
             cereal::JSONInputArchive archive(input);
             archive(inPackage);
         }
 
+        //patch data
+        if (!inPackage.dataFile.empty()) {
+            auto dataInputPath = in.parent_path() / inPackage.dataFile;
+            std::cout << dataInputPath << std::endl;
+            std::ifstream dataInput(dataInputPath, std::ios::binary);
+
+            for (auto &table: inPackage.tables) {
+                for (auto & t : table.typeData) {
+                    if (t.size > 0) {
+                        t.offset += dataOutput.tellp();
+                    }
+                }
+            }
+            dataOutput << dataInput.rdbuf();
+        }
         mergePackages(outPackage, inPackage);
     }
 

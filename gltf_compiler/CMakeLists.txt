@@ -9,8 +9,8 @@ function(compile_gltf targetName)
 
     foreach(source IN ITEMS ${arg_SOURCES})
         add_custom_command(
-                OUTPUT ${source}.bin
-                COMMAND gltf_compiler ARGS ${CMAKE_CURRENT_LIST_DIR}/${source} ${source}.bin
+                OUTPUT ${source}.json ${source}.json.bin
+                COMMAND gltf_compiler ARGS ${CMAKE_CURRENT_LIST_DIR}/${source} ${source}.json
                 DEPENDS "${CMAKE_CURRENT_LIST_DIR}/${source}" gltf_compiler
                 #DEPFILE ${source}.d
                 USES_TERMINAL

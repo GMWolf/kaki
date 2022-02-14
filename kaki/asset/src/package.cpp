@@ -13,6 +13,36 @@
 #include <span>
 #include <overloaded.h>
 #include <cereal_ext.h>
+#include <cstdio>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+static std::span<uint8_t> mapFile(const char *filename) {
+    int fd = open(filename, O_RDONLY);
+    if (fd == -1) {
+        return {};
+    }
+
+    struct stat sb{};
+    if (fstat(fd, &sb) == -1) {
+        return {};
+    }
+
+    size_t length = sb.st_size;
+    const void *ptr = mmap(nullptr, length, PROT_READ, MAP_PRIVATE, fd, 0u);
+
+    close(fd);
+
+    if (ptr == MAP_FAILED) {
+        return {};
+    }
+    return {(uint8_t *) ptr, length};
+}
+
+static void unmapFile(std::span<uint8_t> data) {
+    munmap((void *) data.data(), data.size_bytes());
+}
 
 static flecs::entity_t resolveEntity(flecs::world& world, std::span<flecs::entity_t> entities,
                                      const kaki::Package::EntityRef& ref) {
@@ -46,7 +76,7 @@ static flecs::id_t resolveComponentType(flecs::world& world, std::span<flecs::en
     }
 }
 
-flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package &package) {
+flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package &package, std::span<uint8_t> dataFile) {
 
     std::vector<ecs_entity_t> entities;
     {
@@ -78,9 +108,9 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
                 loaders[i] = e.get<ComponentLoader>();
             }
 
-
             if (loaders[i]) {
-                bulkDesc.data[i] = loaders[i]->deserialize(world, table.entityCount, table.typeData[i].vec);
+                std::span<uint8_t> cdata = {dataFile.subspan(table.typeData[i].offset, table.typeData[i].size)};
+                bulkDesc.data[i] = loaders[i]->deserialize(world, table.entityCount, cdata);
             }
         }
 
@@ -107,6 +137,8 @@ flecs::entity kaki::loadPackage(flecs::world &world, const char *path) {
     Package package;
     archive(package);
 
-    return instanciatePackage(world, package);
-
+    auto data = mapFile(package.dataFile.c_str());
+    auto pe = instanciatePackage(world, package, data);
+    unmapFile(data);
+    return pe;
 }

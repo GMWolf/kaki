@@ -36,7 +36,8 @@ namespace kaki {
         };
 
         struct Data {
-            std::vector<uint8_t> vec;
+            uint64_t offset;
+            uint64_t size;
         };
 
         struct Table {
@@ -47,22 +48,13 @@ namespace kaki {
         };
 
         std::vector<Table> tables;
+        std::string dataFile;
     };
 
-    template<class Archive, cereal::traits::DisableIf<cereal::traits::is_text_archive<Archive>::value> = cereal::traits::sfinae>
+    template<class Archive>
     void serialize(Archive& archive, Package::Data& data) {
-        archive(data.vec);
-    }
-
-    template<class Archive, cereal::traits::EnableIf<cereal::traits::is_text_archive<Archive>::value> = cereal::traits::sfinae>
-    std::string save_minimal(const Archive& archive, const Package::Data& data) {
-        return cereal::base64::encode(data.vec.data(), data.vec.size());
-    }
-
-    template<class Archive, cereal::traits::EnableIf<cereal::traits::is_text_archive<Archive>::value> = cereal::traits::sfinae>
-    void load_minimal(const Archive& archive, Package::Data& data, const std::string& value) {
-        auto d = cereal::base64::decode(value);
-        data.vec = {d.begin(), d.end()};
+        archive(cereal::make_nvp("offset", data.offset));
+        archive(cereal::make_nvp("size", data.size));
     }
 
     template<class Archive>
@@ -86,6 +78,7 @@ namespace kaki {
 
     template<class Archive>
     void serialize(Archive& archive, Package& package) {
+        archive(cereal::make_nvp("datafile", package.dataFile));
         archive(cereal::make_nvp("entities", package.entities));
         archive(cereal::make_nvp("tables", package.tables));
     }

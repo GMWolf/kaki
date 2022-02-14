@@ -63,7 +63,7 @@ target_link_libraries(test PRIVATE flecs_static)
 
 compile_shader(test-shader SOURCES shader.vert shader.frag)
 compile_gltf(test-gltf SOURCES SciFiHelmet/SciFiHelmet.gltf)
-make_package(test-package SOURCES shader.vert.shd shader.frag.shd SciFiHelmet/SciFiHelmet.gltf.bin)
+make_package(test-package SOURCES shader.vert.shd shader.frag.shd SciFiHelmet/SciFiHelmet.gltf.json)
 add_dependencies(test test-package)
 configure_file(pipeline.json pipeline.json COPYONLY)
 configure_file(assets.json assets.json COPYONLY)

@@ -86,13 +86,14 @@ int main() {
 
     world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
         .mesh = package.lookup("SciFiHelmet_gltf::SciFiHelmet"),
-        .image = mainAssets.lookup("SciFiHelmet_BaseColor"),
+        .image = package.lookup("SciFiHelmet_gltf::SciFiHelmet_BaseColor"),
     }).set(kaki::Transform{
         .position = {0,0,0},
         .scale = 1,
         .orientation = {},
     }).add<Control>();
 
+    /*
     world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
             .mesh = package.lookup("untitled_gltf::Cube"),
             .image = mainAssets.lookup("kaki"),
@@ -110,7 +111,7 @@ int main() {
             .scale = 1.2,
             .orientation = {},
     });
-
+*/
 
     world.system<kaki::Transform>().term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
         auto* input = window.get<kaki::Input>();

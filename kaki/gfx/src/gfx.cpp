@@ -629,6 +629,7 @@ kaki::gfx::gfx(flecs::world &world) {
     flecs::doc::set_brief(This, "Rendering module for kaki");
 
     world.component<kaki::Mesh>();
+    world.component<kaki::Image>();
 
     auto shdLoader = world.entity("shaderLoader").set<kaki::AssetHandler, kaki::ShaderModule>({
         handleShaderModuleLoads,
@@ -704,6 +705,13 @@ kaki::gfx::gfx(flecs::world &world) {
                 }
                 free(data);
             },
+    });
+
+    world.component<kaki::Image>().set(ComponentLoader {
+        .deserialize = loadImages,
+        .free = [](flecs::world& world, size_t count, void* data) {
+            free(data);
+        },
     });
 
 

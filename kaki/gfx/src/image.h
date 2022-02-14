@@ -20,4 +20,6 @@ namespace kaki {
     };
 
     void imageLoadHandler(flecs::iter iter, kaki::Asset* assets);
+
+    void* loadImages(flecs::world& world, size_t count, std::span<uint8_t> data);
 }

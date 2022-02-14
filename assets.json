@@ -5,16 +5,6 @@
       "name": "pipeline",
       "path": "pipeline.json",
       "type": "kaki::Pipeline"
-    },
-    {
-      "name": "kaki",
-      "path": "kaki.ktx2",
-      "type": "kaki::Image"
-    },
-    {
-      "name": "SciFiHelmet_BaseColor",
-      "path": "SciFiHelmet/SciFiHelmet_BaseColor.ktx2",
-      "type": "kaki::Image"
     }
   ]
 }

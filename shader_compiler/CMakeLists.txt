@@ -18,8 +18,8 @@ function(compile_shader targetName)
     add_custom_command(
             OUTPUT ${source}.shd
             COMMAND shader_compiler ARGS ${CMAKE_CURRENT_LIST_DIR}/${source} ${source}.shd
-            DEPENDS "${source}" shader_compiler
-            DEPFILE ${source}.d
+            DEPENDS "${CMAKE_CURRENT_LIST_DIR}/${source}" shader_compiler
+            #DEPFILE ${source}.d
             USES_TERMINAL
     )
     list(APPEND outputFiles ${source}.shd)

@@ -172,6 +172,45 @@ void writeMeshes(kaki::Package& package, std::span<Mesh> meshes) {
     });
 }
 
+void writeImages(kaki::Package& package, std::span<cgltf_image> images, const char* inputPath) {
+
+    if (!images.empty()) {
+
+        auto first = package.entities.size();
+
+        std::string data;
+        {
+            std::stringstream meshDataStream(std::stringstream::binary | std::ios::in | std::ios::out);
+            cereal::BinaryOutputArchive dataArchive(meshDataStream);
+            for (auto &t: images) {
+                package.entities.push_back({t.name});
+                char path[1024];
+                cgltf_combine_paths(path, inputPath, t.uri);
+                printf("%s: %s\n", t.name, path);
+                std::ifstream input(path, std::ios::binary);
+                std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(input), {});
+                dataArchive(buffer);
+            }
+            data = meshDataStream.str();
+        }
+
+        kaki::Package::Table table{
+                .entityFirst = first,
+                .entityCount = images.size(),
+                .types = {
+                        {kaki::Package::TypeId::ChildOf, 0u}, //Child of the gltf entity (entity 0 in package)
+                        {"kaki::gfx::Image",             {}}
+                },
+                .typeData = {
+                        {},
+                        {{data.begin(), data.end()}},
+                },
+        };
+
+        package.tables.emplace_back(std::move(table));
+    }
+}
+
 int main(int argc, char* argv[]) {
 
     if (argc < 3) {
@@ -212,11 +251,11 @@ int main(int argc, char* argv[]) {
         cgltf_combine_paths(path, inputPath.c_str(), image.uri);
     }
 
-
     kaki::Package package;
 
     writeGltfEntity(package, assetName, buffers);
     writeMeshes(package, meshes);
+    writeImages(package, std::span(data->images, data->images_count), inputPath.c_str());
 
 
     std::ofstream os(outputPath);

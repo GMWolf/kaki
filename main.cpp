@@ -24,7 +24,6 @@ int main() {
 
     auto package = kaki::loadPackage(world, "testpackage.json");
 
-
     auto camera = world.entity("camera");
     camera.set(kaki::Camera{
         .fov = glm::radians(75.0f),

@@ -15,8 +15,6 @@
 #include "image.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <rapidjson/document.h>
-#include <fstream>
 #include <span>
 #include <algorithm>
 #include <numeric>
@@ -574,34 +572,6 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     vk.currentFrame = (vk.currentFrame + 1) % kaki::VkGlobals::framesInFlight;
 }
 
-void handleShaderModuleLoads(flecs::iter iter, kaki::Asset* assets) {
-    for(auto i : iter) {
-        //iter.entity(i).set<kaki::ShaderModule>(kaki::loadShaderModule(iter.world().get<kaki::VkGlobals>()->device, assets[i].path));
-    }
-}
-
-void handlePipelineLoads(flecs::iter iter, kaki::Asset* assets) {
-    auto vk = iter.world().get<kaki::VkGlobals>();
-
-    for(auto i : iter) {
-
-        rapidjson::Document doc;
-        std::ifstream t(assets->path);
-        std::string str((std::istreambuf_iterator<char>(t)),
-                        std::istreambuf_iterator<char>());
-        doc.ParseInsitu(str.data());
-
-        auto parent = iter.entity(i).get_object(flecs::ChildOf);
-
-        auto vertexEntity = iter.world().lookup(doc["vertex"].GetString());
-        auto fragmentEntity = iter.world().lookup(doc["fragment"].GetString());
-
-        auto vertexModule = vertexEntity.get<kaki::ShaderModule>();
-        auto fragmentModule = fragmentEntity.get<kaki::ShaderModule>();
-
-        iter.entity(i).set<kaki::Pipeline>(kaki::createPipeline(vk->device, vk->renderPass, vertexModule, fragmentModule));
-    }
-}
 
 
 static void UpdateMeshInstance(flecs::iter iter, kaki::MeshFilter* meshFilters) {
@@ -631,22 +601,6 @@ kaki::gfx::gfx(flecs::world &world) {
     world.component<kaki::Mesh>();
     world.component<kaki::Image>();
     world.component<kaki::Pipeline>();
-
-    auto shdLoader = world.entity("shaderLoader").set<kaki::AssetHandler, kaki::ShaderModule>({
-        handleShaderModuleLoads,
-    });
-
-    world.entity("pipelineLoader").set<kaki::AssetHandler, kaki::Pipeline>({
-        handlePipelineLoads,
-    }).add<kaki::DependsOn>(shdLoader);
-
-    world.entity("imageLoader").set<kaki::AssetHandler, kaki::Image>({
-        imageLoadHandler
-    });
-
-    world.entity("gltdLoader").set<kaki::AssetHandler, kaki::Gltf>({
-        handleGltfLoads
-    });
 
     world.component<kaki::ShaderModule>().set(kaki::ComponentLoader {
         .deserialize = [](flecs::entity& parent, size_t count, std::span<uint8_t> data) {

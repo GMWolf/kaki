@@ -128,7 +128,7 @@ void writeGltfEntity(kaki::Package& package, const std::string& name, Buffers& b
         .entityFirst = first,
         .entityCount = 1,
         .types = {
-                {"kaki::Gltf", {}}
+                {"kaki::gfx::Gltf", {}}
         },
         .typeData = {
                 {static_cast<uint64_t>(dataOffset), static_cast<uint64_t>(outData.tellp() - dataOffset)},

@@ -62,39 +62,6 @@ namespace kaki {
     }
 
 
-    void loadGltf(flecs::entity entity, const char *file) {
-
-        const VkGlobals& vk = *entity.world().get<VkGlobals>();
-
-        std::ifstream is(file);
-        cereal::BinaryInputArchive archive(is);
-
-        Gltf gltf {};
-        gltf.positionBuffer = loadBuffer<glm::vec3>(vk, archive);
-        gltf.normalBuffer = loadBuffer<glm::vec3>(vk, archive);
-        gltf.uvBuffer = loadBuffer<glm::vec2>(vk, archive);
-        gltf.indexBuffer = loadBuffer<uint32_t>(vk, archive);
-
-        std::vector<Mesh> meshes;
-
-        archive(meshes);
-
-        entity.scope([&]{
-            for(auto& m : meshes) {
-                entity.world().entity(m.name.c_str()).set<Mesh>(m);
-            }
-        });
-
-        entity.set<Gltf>(gltf);
-    }
-
-    void handleGltfLoads(flecs::iter iter, kaki::Asset *assets) {
-        for(auto i : iter) {
-            loadGltf(iter.entity(i), assets[i].path);
-        }
-
-    }
-
     void* loadGltfs(flecs::entity &parent, size_t count, std::span<uint8_t> data) {
         membuf buf(data);
         std::istream bufStream(&buf);

@@ -97,13 +97,13 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
 
         flecs::entity parent = flecs::entity(world, entities[0]);
 
-        //for(auto & type : table.types) {
-        //    auto t = resolveComponentType(world, entities, type);
-        //    auto e = flecs::entity(world, t);
-        //    if (e.is_pair() && e.relation() == flecs::ChildOf) {
-        //        parent = e.object();
-        //    }
-        //}
+        for(auto & type : table.types) {
+            auto t = resolveComponentType(world, entities, type);
+            auto e = flecs::entity(world, t);
+            if (e.is_pair() && e.relation() == flecs::ChildOf) {
+                parent = e.object();
+            }
+        }
 
         for (int i = 0; i < table.types.size(); i++) {
             assert(table.entityFirst + table.entityCount <= entities.size());

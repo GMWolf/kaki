@@ -120,13 +120,14 @@ void mergeTables(kaki::Package& package) {
 
 int main(int argc, char* argv[]) {
 
-    std::string out = argv[1];
-    auto outData = out + ".bin";
+    std::string packageName = argv[1];
+    std::string out = packageName + ".json";
+    auto outData = packageName + ".bin";
 
     std::ofstream dataOutput(outData, std::ios::binary | std::ios::out);
 
     kaki::Package outPackage {
-        .entities = { {"package"}},
+        .entities = { {packageName}},
         .tables = {kaki::Package::Table{
             .entityFirst = 0,
             .entityCount = 1,

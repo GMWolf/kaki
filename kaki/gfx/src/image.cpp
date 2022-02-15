@@ -75,13 +75,13 @@ void kaki::imageLoadHandler(flecs::iter iter, kaki::Asset *assets) {
 
 }
 
-void* kaki::loadImages(flecs::world &world, size_t count, std::span<uint8_t> data) {
+void* kaki::loadImages(flecs::entity &parent, size_t count, std::span<uint8_t> data) {
 
     membuf buf(data);
     std::istream bufStream(&buf);
     cereal::BinaryInputArchive archive(bufStream);
 
-    const VkGlobals* vk = world.get<VkGlobals>();
+    const VkGlobals* vk = parent.world().get<VkGlobals>();
 
     ktxVulkanDeviceInfo kvdi;
     ktxVulkanDeviceInfo_Construct(&kvdi, vk->device.physical_device, vk->device, vk->queue, vk->cmdPool, nullptr);

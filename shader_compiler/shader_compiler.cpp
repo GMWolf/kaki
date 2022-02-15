@@ -130,7 +130,6 @@ int main(int argc, char* argv[])
         std::vector<uint32_t> code(compiledWords.begin(), compiledWords.end());
 
 
-
         std::ofstream outData(binTargetPath, std::ios::binary | std::ios::out);
         {
             cereal::BinaryOutputArchive dataArchive(outData);

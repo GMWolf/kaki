@@ -442,7 +442,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
     vkCmdBeginRenderPass(vk.cmd[vk.currentFrame], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    auto pipeline = entity.world().lookup("main::pipeline").get<kaki::Pipeline>();
+    auto pipeline = entity.world().lookup("testpackage::pipeline").get<kaki::Pipeline>();
 
     std::vector<VkDescriptorSetLayout> descSetLayouts;
     for(auto& descSet : pipeline->descriptorSets) {
@@ -630,6 +630,7 @@ kaki::gfx::gfx(flecs::world &world) {
 
     world.component<kaki::Mesh>();
     world.component<kaki::Image>();
+    world.component<kaki::Pipeline>();
 
     auto shdLoader = world.entity("shaderLoader").set<kaki::AssetHandler, kaki::ShaderModule>({
         handleShaderModuleLoads,
@@ -648,14 +649,14 @@ kaki::gfx::gfx(flecs::world &world) {
     });
 
     world.component<kaki::ShaderModule>().set(kaki::ComponentLoader {
-        .deserialize = [](flecs::world& world, size_t count, std::span<uint8_t> data) {
+        .deserialize = [](flecs::entity& parent, size_t count, std::span<uint8_t> data) {
             membuf buf(data);
             std::istream bufStream(&buf);
             cereal::BinaryInputArchive archive(bufStream);
 
             auto modules = static_cast<ShaderModule*>(malloc(count * sizeof(ShaderModule)));
 
-            auto device = world.get<VkGlobals>()->device.device;
+            auto device = parent.world().get<VkGlobals>()->device.device;
 
             for(int i = 0; i < count; i++) {
                 new  (&modules[i])  ShaderModule(loadShaderModule(device, archive));
@@ -673,7 +674,7 @@ kaki::gfx::gfx(flecs::world &world) {
     });
 
     world.component<kaki::Mesh>().set(kaki::ComponentLoader {
-        .deserialize = [](flecs::world& world, size_t count, std::span<uint8_t> data) {
+        .deserialize = [](flecs::entity& parent, size_t count, std::span<uint8_t> data) {
             membuf buf(data);
             std::istream bufStream(&buf);
             cereal::BinaryInputArchive archive(bufStream);
@@ -714,7 +715,43 @@ kaki::gfx::gfx(flecs::world &world) {
         },
     });
 
+    world.component<kaki::Pipeline>().set(kaki::ComponentLoader {
+            .deserialize = [](flecs::entity& parent, size_t count, std::span<uint8_t> data) {
+                membuf buf(data);
+                std::istream bufStream(&buf);
+                cereal::BinaryInputArchive archive(bufStream);
 
+                const VkGlobals& vk = *parent.world().get<VkGlobals>();
+
+                auto pipelines = static_cast<kaki::Pipeline*>(malloc(count * sizeof(Mesh)));
+
+                for(int i = 0; i < count; i++) {
+
+                    std::string vertexName;
+                    std::string fragmentName;
+                    archive(vertexName, fragmentName);
+
+
+                    auto name = parent.path();
+                    auto vertexEntity = parent.lookup(vertexName.c_str());
+                    auto fragmentEntity = parent.lookup(fragmentName.c_str());
+
+                    auto vertexModule = vertexEntity.get<kaki::ShaderModule>();
+                    auto fragmentModule = fragmentEntity.get<kaki::ShaderModule>();
+
+                    new (&pipelines[i]) kaki::Pipeline( kaki::createPipeline(vk.device, vk.renderPass, vertexModule, fragmentModule) );
+                }
+
+                return static_cast<void*>(pipelines);
+            },
+            .free = [](flecs::world& world, size_t count, void* data) {
+                auto pipelines = static_cast<kaki::Pipeline*>(data);
+                for(int i = 0; i < count; i++) {
+                    pipelines[i].~Pipeline();
+                }
+                free(data);
+            },
+    });
 
     ecs_struct_desc_t vec3Desc {
             .entity = {.name = "vec3"},

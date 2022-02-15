@@ -1,4 +1,4 @@
 {
-  "vertex": "package::shader_vert",
-  "fragment": "package::shader_frag"
+  "vertex": "shader_vert",
+  "fragment": "shader_frag"
 }

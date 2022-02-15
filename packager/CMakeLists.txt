@@ -11,7 +11,7 @@ function(make_package targetName)
 
     add_custom_command(
             OUTPUT ${targetName}.json ${targetName}.json.bin
-            COMMAND packager ARGS ${targetName}.json ${arg_SOURCES}
+            COMMAND packager ARGS ${targetName} ${arg_SOURCES}
             DEPENDS "${arg_SOURCES}" packager
             USES_TERMINAL
     )

@@ -95,12 +95,12 @@ namespace kaki {
 
     }
 
-    void* loadGltfs(flecs::world &world, size_t count, std::span<uint8_t> data) {
+    void* loadGltfs(flecs::entity &parent, size_t count, std::span<uint8_t> data) {
         membuf buf(data);
         std::istream bufStream(&buf);
         cereal::BinaryInputArchive archive(bufStream);
 
-        const VkGlobals& vk = *world.get<VkGlobals>();
+        const VkGlobals& vk = *parent.world().get<VkGlobals>();
 
         auto gltfs = static_cast<Gltf*>(malloc(count * sizeof(Gltf)));
 

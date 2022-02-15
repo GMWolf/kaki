@@ -77,7 +77,6 @@ static flecs::id_t resolveComponentType(flecs::world& world, std::span<flecs::en
 }
 
 flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package &package, std::span<uint8_t> dataFile) {
-
     std::vector<ecs_entity_t> entities;
     {
         auto entityCount = package.entities.size();
@@ -96,6 +95,16 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
         void* data[ECS_MAX_ADD_REMOVE]{};
         bulkDesc.data = data;
 
+        flecs::entity parent = flecs::entity(world, entities[0]);
+
+        //for(auto & type : table.types) {
+        //    auto t = resolveComponentType(world, entities, type);
+        //    auto e = flecs::entity(world, t);
+        //    if (e.is_pair() && e.relation() == flecs::ChildOf) {
+        //        parent = e.object();
+        //    }
+        //}
+
         for (int i = 0; i < table.types.size(); i++) {
             assert(table.entityFirst + table.entityCount <= entities.size());
             auto t = resolveComponentType(world, entities, table.types[i]);
@@ -110,7 +119,7 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
 
             if (loaders[i]) {
                 std::span<uint8_t> cdata = {dataFile.subspan(table.typeData[i].offset, table.typeData[i].size)};
-                bulkDesc.data[i] = loaders[i]->deserialize(world, table.entityCount, cdata);
+                bulkDesc.data[i] = loaders[i]->deserialize(parent, table.entityCount, cdata);
             }
         }
 
@@ -121,10 +130,11 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
                 loaders[i]->free(world, table.entityCount, bulkDesc.data[i]);
             }
         }
-    }
 
-    for(int i = 0; i < package.entities.size(); i++) {
-        flecs::entity(world, entities[i]).set_name(package.entities[i].name.c_str());
+        for(int i = table.entityFirst; i < table.entityFirst + table.entityCount; i++) {
+            flecs::entity(world, entities[i]).set_name(package.entities[i].name.c_str());
+        }
+
     }
 
     return entities.empty() ? flecs::entity{} : flecs::entity(world, entities[0]);

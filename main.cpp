@@ -13,8 +13,6 @@ int main() {
 
     flecs::world world;
 
-
-
     world.import<kaki::windowing>();
 
     auto window = world.entity("window").set<kaki::Window>(kaki::Window{
@@ -24,17 +22,16 @@ int main() {
     }).set<kaki::Input>({});
     world.import<kaki::gfx>();
 
-    auto package = kaki::loadPackage(world, "test-package.json");
+    auto package = kaki::loadPackage(world, "testpackage.json");
 
-    auto mainAssets = kaki::loadAssets(world, "assets.json");
 
     auto camera = world.entity("camera");
     camera.set(kaki::Camera{
-        .fov = glm::radians(90.0f),
+        .fov = glm::radians(75.0f),
     }).set(kaki::Transform {
-        .position = {0,0,-5},
+        .position = {0,0,5},
         .scale = 1,
-        .orientation = glm::quatLookAt(glm::vec3{0,0,1}, glm::vec3{0,1,0}),
+        .orientation = glm::quatLookAt(glm::vec3{0,0,-1}, glm::vec3{0,1,0}),
     });
 
     world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
@@ -50,10 +47,10 @@ int main() {
         auto* input = window.get<kaki::Input>();
 
         if (input->keyDown('D')) {
-            transform.position.x += entity.delta_time() * 10;
+            transform.position.x -= entity.delta_time() * 10;
         }
         if (input->keyDown('A')) {
-            transform.position.x -= entity.delta_time() * 10;
+            transform.position.x += entity.delta_time() * 10;
         }
         if (input->keyDown('W')) {
             transform.position.z += entity.delta_time() * 10;

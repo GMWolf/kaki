@@ -5,29 +5,21 @@
 #include "image.h"
 #include <ktxvulkan.h>
 #include "vk.h"
-#include "membuf.h"
 
-void* kaki::loadImages(flecs::entity &parent, size_t count, std::span<uint8_t> data) {
+void kaki::loadImages(flecs::iter iter, AssetData* data, void* pimages) {
 
-    membuf buf(data);
-    std::istream bufStream(&buf);
-    cereal::BinaryInputArchive archive(bufStream);
 
-    const VkGlobals* vk = parent.world().get<VkGlobals>();
+    auto* images = static_cast<Image*>(pimages);
+
+
+    const VkGlobals* vk = iter.world().get<VkGlobals>();
 
     ktxVulkanDeviceInfo kvdi;
     ktxVulkanDeviceInfo_Construct(&kvdi, vk->device.physical_device, vk->device, vk->queue, vk->cmdPool, nullptr);
 
-    auto images = static_cast<kaki::Image*>(malloc(count * sizeof(kaki::Image)));
-    std::vector<uint8_t> buffer;
-
-    for(int i = 0; i < count; i++) {
-        new (&images[i]) kaki::Image();
-
-        archive(buffer);
-
+    for(auto i : iter) {
         ktxTexture* kTexture;
-        KTX_error_code result = ktxTexture_CreateFromMemory(buffer.data(), buffer.size(), KTX_TEXTURE_CREATE_NO_FLAGS, &kTexture);
+        KTX_error_code result = ktxTexture_CreateFromMemory(data[i].data.data(), data[i].data.size(), KTX_TEXTURE_CREATE_NO_FLAGS, &kTexture);
         assert (result == KTX_SUCCESS);
 
         ktxVulkanTexture texture;
@@ -73,6 +65,4 @@ void* kaki::loadImages(flecs::entity &parent, size_t count, std::span<uint8_t> d
 
 
     ktxVulkanDeviceInfo_Destruct(&kvdi);
-
-    return static_cast<void*>(images);
 }

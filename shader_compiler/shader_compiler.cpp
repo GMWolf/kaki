@@ -145,9 +145,10 @@ int main(int argc, char* argv[])
         package.tables = {kaki::Package::Table {
                 .entityFirst = 0,
                 .entityCount = 1,
-                .types = {{"kaki::gfx::ShaderModule", {}}},
-                .typeData = {
-                        {0,static_cast<uint64_t>(outData.tellp())}
+                .components = {kaki::Package::Component{
+                    .type = {"kaki::gfx::ShaderModule"},
+                    .data  = {{0, static_cast<uint64_t>(outData.tellp())}},
+                    },
                 },
         }};
 

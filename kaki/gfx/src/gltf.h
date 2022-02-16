@@ -50,5 +50,5 @@ namespace kaki {
         archive(mesh.name, mesh.primitives);
     }
 
-    void* loadGltfs(flecs::entity& parent, size_t count, std::span<uint8_t> data);
+    void loadGltfs(flecs::iter iter, AssetData* data, void* p_gltf);
 }

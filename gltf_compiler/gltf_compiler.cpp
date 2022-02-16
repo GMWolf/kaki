@@ -127,12 +127,10 @@ void writeGltfEntity(kaki::Package& package, const std::string& name, Buffers& b
     package.tables.push_back(kaki::Package::Table{
         .entityFirst = first,
         .entityCount = 1,
-        .types = {
-                {"kaki::gfx::Gltf", {}}
-        },
-        .typeData = {
-                {static_cast<uint64_t>(dataOffset), static_cast<uint64_t>(outData.tellp() - dataOffset)},
-        },
+        .components = {kaki::Package::Component{
+          .type = {"kaki::gfx::Gltf"},
+          .data = {{static_cast<uint64_t>(dataOffset), static_cast<uint64_t>(outData.tellp() - dataOffset)}},
+        }},
     });
 }
 
@@ -141,31 +139,26 @@ void writeMeshes(kaki::Package& package, std::span<Mesh> meshes, std::ostream& o
     auto first = package.entities.size();
     auto dataOffset = outData.tellp();
 
+    auto& table = package.tables.emplace_back(kaki::Package::Table{
+            .entityFirst = first,
+            .entityCount = meshes.size(),
+            .components = {
+                    kaki::Package::Component{.type = {kaki::Package::TypeId::ChildOf, 0u}},
+                    kaki::Package::Component{.type = {"kaki::gfx::Mesh", {}}}
+            }
+    });
+
     {
         cereal::BinaryOutputArchive dataArchive(outData);
         for (auto& mesh: meshes) {
             package.entities.push_back({mesh.name});
+
+            auto& data = table.components[1].data.emplace_back();
+            data.offset = static_cast<uint64_t>(outData.tellp());
             dataArchive(mesh);
+            data.size = static_cast<uint64_t>(outData.tellp()) - data.offset;
         }
     }
-
-    auto childofType = kaki::Package::Type {
-        .typeId = kaki::Package::TypeId::ChildOf,
-        .object = 0u, //
-    };
-
-    package.tables.push_back(kaki::Package::Table{
-        .entityFirst = first,
-        .entityCount = meshes.size(),
-        .types = {
-                {kaki::Package::TypeId::ChildOf, 0u}, //Child of the gltf entity (entity 0 in package)
-                {"kaki::gfx::Mesh", {}}
-        },
-        .typeData = {
-                {0, 0},
-                {static_cast<uint64_t>(dataOffset), static_cast<uint64_t>((outData.tellp() - dataOffset))},
-        },
-    });
 }
 
 void writeImages(kaki::Package& package, std::span<cgltf_image> images, const char* inputPath, std::ostream& outData) {
@@ -174,34 +167,40 @@ void writeImages(kaki::Package& package, std::span<cgltf_image> images, const ch
         auto first = package.entities.size();
         auto dataStart = outData.tellp();
 
-        {
-            cereal::BinaryOutputArchive dataArchive(outData);
+        auto& table = package.tables.emplace_back(kaki::Package::Table{
+                .entityFirst = first,
+                .entityCount = images.size(),
+                .components = {
+                        kaki::Package::Component{.type = {kaki::Package::TypeId::ChildOf, 0u}},
+                        kaki::Package::Component{.type = {"kaki::gfx::Image", {}}}
+                }
+        });
 
+        {
             for (auto &t: images) {
                 package.entities.push_back({t.name});
                 char path[1024];
                 cgltf_combine_paths(path, inputPath, t.uri);
                 printf("%s: %s\n", t.name, path);
+
                 std::ifstream input(path, std::ios::binary);
-                std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(input), {});
-                dataArchive(buffer);
+
+                auto& data = table.components[1].data.emplace_back();
+                data.offset = static_cast<uint64_t>(outData.tellp());
+
+                const size_t len = 4096;
+                char buf[len];
+                while(!input.eof()) {
+                    input.read(buf, len);
+                    int nBytesRead = input.gcount();
+                    if(nBytesRead <= 0)
+                        break;
+                    outData.write(buf, nBytesRead);
+                }
+                input.close();
+                data.size = static_cast<uint64_t>(outData.tellp()) - data.offset;
             }
         }
-
-        kaki::Package::Table table{
-                .entityFirst = first,
-                .entityCount = images.size(),
-                .types = {
-                        {kaki::Package::TypeId::ChildOf, 0u}, //Child of the gltf entity (entity 0 in package)
-                        {"kaki::gfx::Image",             {}}
-                },
-                .typeData = {
-                        {0, 0},
-                        {static_cast<uint64_t>(dataStart),static_cast<uint64_t>(outData.tellp() - dataStart)},
-                },
-        };
-
-        package.tables.emplace_back(std::move(table));
     }
 }
 

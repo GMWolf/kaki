@@ -14,9 +14,9 @@
 
 namespace fs = std::filesystem;
 
-bool isChildof(const kaki::Package::Type& type) {
-    return std::holds_alternative<kaki::Package::TypeId>(type.typeId)
-           && std::get<kaki::Package::TypeId>(type.typeId) == kaki::Package::TypeId::ChildOf;
+bool isChildof(const kaki::Package::Component& component) {
+    return std::holds_alternative<kaki::Package::TypeId>(component.type.typeId)
+           && std::get<kaki::Package::TypeId>(component.type.typeId) == kaki::Package::TypeId::ChildOf;
 }
 
 void mergePackages(kaki::Package& out, kaki::Package& in) {
@@ -29,20 +29,23 @@ void mergePackages(kaki::Package& out, kaki::Package& in) {
 
     for(size_t i = tableOffset; i < out.tables.size(); i++) {
         out.tables[i].entityFirst += entitiesOffset;
-        for(auto& type : out.tables[i].types) {
-            if(uint64_t* id = std::get_if<uint64_t>(&type.typeId)) {
+
+        for(auto& component : out.tables[i].components) {
+            if(uint64_t* id = std::get_if<uint64_t>(&component.type.typeId)) {
                 *id += entitiesOffset;
             }
-            if (type.object) {
-                if (uint64_t *id = std::get_if<uint64_t>(&*type.object)) {
+            if (component.type.object) {
+                if (uint64_t *id = std::get_if<uint64_t>(&*component.type.object)) {
                     *id += entitiesOffset;
                 }
             }
         }
+
         auto& table = out.tables[i];
-        if (std::find_if(table.types.begin(), table.types.end(), isChildof) == table.types.end()) {
-            table.types.insert(table.types.begin(), kaki::Package::Type{kaki::Package::TypeId::ChildOf, 0u});
-            table.typeData.insert(table.typeData.begin(), kaki::Package::Data{});
+        if (std::find_if(table.components.begin(), table.components.end(), isChildof) == table.components.end()) {
+            table.components.insert(table.components.begin(), kaki::Package::Component{
+                .type = {kaki::Package::TypeId::ChildOf, 0u}
+            });
         }
     }
 }
@@ -62,13 +65,13 @@ static bool compareType(const kaki::Package::Type& a, const kaki::Package::Type&
 struct TableTypeCompare {
 
     bool operator()(const kaki::Package::Table& a, const kaki::Package::Table& b) {
-        if (a.types.size() != b.types.size()) {
-            return a.types.size() < b.types.size();
+        if (a.components.size() != b.components.size()) {
+            return a.components.size() < b.components.size();
         }
 
-        for(int i = 0; i < a.types.size(); i++) {
-            if (!typesEqual(a.types[i], b.types[i])) {
-                return compareType(a.types[i], b.types[i]);
+        for(int i = 0; i < a.components.size(); i++) {
+            if (!typesEqual(a.components[i].type, b.components[i].type)) {
+                return compareType(a.components[i].type, b.components[i].type);
             }
         }
         return false;
@@ -76,12 +79,12 @@ struct TableTypeCompare {
 };
 
 bool tableTypesEqual(const kaki::Package::Table& a, const kaki::Package::Table& b) {
-    if (a.types.size() != b.types.size()) {
+    if (a.components.size() != b.components.size()) {
         return false;
     }
 
-    for(int i = 0; i < a.types.size(); i++) {
-        if (!typesEqual(a.types[i], b.types[i])) {
+    for(int i = 0; i < a.components.size(); i++) {
+        if (!typesEqual(a.components[i].type, b.components[i].type)) {
             return false;
         }
     }
@@ -131,8 +134,7 @@ int main(int argc, char* argv[]) {
         .tables = {kaki::Package::Table{
             .entityFirst = 0,
             .entityCount = 1,
-            .types = {},
-            .typeData = {},
+            .components = {},
         }
         },
         .dataFile = outData.substr(outData.find_last_of("/\\") + 1),
@@ -155,9 +157,11 @@ int main(int argc, char* argv[]) {
             std::ifstream dataInput(dataInputPath, std::ios::binary);
 
             for (auto &table: inPackage.tables) {
-                for (auto & t : table.typeData) {
-                    if (t.size > 0) {
-                        t.offset += dataOutput.tellp();
+                for (auto & c : table.components) {
+                    for(auto& d : c.data) {
+                        if (d.size > 0) {
+                            d.offset += dataOutput.tellp();
+                        }
                     }
                 }
             }

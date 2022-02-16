@@ -40,11 +40,15 @@ namespace kaki {
             uint64_t size;
         };
 
+        struct Component {
+            Type type;
+            std::vector<Data> data;
+        };
+
         struct Table {
             uint64_t entityFirst;
             uint64_t entityCount;
-            std::vector<Type> types;
-            std::vector<Data> typeData;
+            std::vector<Component> components;
         };
 
         std::vector<Table> tables;
@@ -64,11 +68,16 @@ namespace kaki {
     }
 
     template<class Archive>
+    void serialize(Archive& archive, Package::Component& entry) {
+        archive(cereal::make_nvp("type", entry.type));
+        archive(cereal::make_nvp("data", entry.data));
+    }
+
+    template<class Archive>
     void serialize(Archive& archive, Package::Table& table) {
         archive(cereal::make_nvp("first", table.entityFirst));
         archive(cereal::make_nvp("size", table.entityCount));
-        archive(cereal::make_nvp("types", table.types));
-        archive(cereal::make_nvp("data", table.typeData));
+        archive(cereal::make_nvp("components", table.components));
     }
 
     template<class Archive>

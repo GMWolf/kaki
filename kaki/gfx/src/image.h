@@ -20,5 +20,5 @@ namespace kaki {
     };
 
 
-    void* loadImages(flecs::entity& parent, size_t count, std::span<uint8_t> data);
+    void loadImages(flecs::iter iter, AssetData* data, void* pimages);
 }

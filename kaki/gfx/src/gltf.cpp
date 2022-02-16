@@ -62,23 +62,20 @@ namespace kaki {
     }
 
 
-    void* loadGltfs(flecs::entity &parent, size_t count, std::span<uint8_t> data) {
-        membuf buf(data);
-        std::istream bufStream(&buf);
-        cereal::BinaryInputArchive archive(bufStream);
+    void loadGltfs(flecs::iter iter, AssetData* data, void* p_gltf) {
 
-        const VkGlobals& vk = *parent.world().get<VkGlobals>();
+        const VkGlobals& vk = *iter.world().get<VkGlobals>();
 
-        auto gltfs = static_cast<Gltf*>(malloc(count * sizeof(Gltf)));
+        Gltf* gltfs = static_cast<Gltf*>(p_gltf);
+        for(auto i : iter) {
+            membuf buf(data[i].data);
+            std::istream bufStream(&buf);
+            cereal::BinaryInputArchive archive(bufStream);
 
-        for(int i = 0; i < count; i++) {
-            new (&gltfs[i]) Gltf();
             gltfs[i].positionBuffer = loadBuffer<glm::vec3>(vk, archive);
             gltfs[i].normalBuffer = loadBuffer<glm::vec3>(vk, archive);
             gltfs[i].uvBuffer = loadBuffer<glm::vec2>(vk, archive);
             gltfs[i].indexBuffer = loadBuffer<uint32_t>(vk, archive);
         }
-
-        return static_cast<void*>(gltfs);
     }
 }

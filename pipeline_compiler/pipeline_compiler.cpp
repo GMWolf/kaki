@@ -41,10 +41,11 @@ int main(int argc, char* argv[]) {
             .tables = {kaki::Package::Table{
                     .entityFirst = 0,
                     .entityCount = 1,
-                    .types = {{"kaki::gfx::Pipeline"}},
-                    .typeData = {
-                            {0, static_cast<uint64_t>(outputData.tellp())},
-                            },
+                    .components = { {
+                        .type = {"kaki::gfx::Pipeline"},
+                        .data = {{0, static_cast<uint64_t>(outputData.tellp())}},
+                    }
+                    },
             }
             },
             .dataFile = outputDataFile.filename(),

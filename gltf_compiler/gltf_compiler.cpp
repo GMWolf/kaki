@@ -18,6 +18,7 @@
 struct Buffers {
     std::vector<glm::vec3> position;
     std::vector<glm::vec3> normal;
+    std::vector<glm::vec4> tangents;
     std::vector<glm::vec2> texcoord;
     std::vector<uint32_t> indices;
 };
@@ -94,6 +95,10 @@ Mesh loadMeshData(cgltf_mesh* mesh, Buffers& buffers) {
                 size_t offset = buffers.texcoord.size();
                 buffers.texcoord.resize(offset + attribute.data->count);
                 cgltf_accessor_unpack_floats(attribute.data, &buffers.texcoord[offset].x, 2 * attribute.data->count);
+            } else if (attribute.type == cgltf_attribute_type_tangent) {
+                size_t offset = buffers.tangents.size();
+                buffers.tangents.resize(offset + attribute.data->count);
+                cgltf_accessor_unpack_floats(attribute.data, &buffers.tangents[offset].x, 4 * attribute.data->count);
             }
         }
     }
@@ -117,6 +122,7 @@ void writeGltfEntity(kaki::Package& package, const std::string& name, Buffers& b
 
         saveBuffer(buffers.position, archive);
         saveBuffer(buffers.normal, archive);
+        saveBuffer(buffers.tangents, archive);
         saveBuffer(buffers.texcoord, archive);
         saveBuffer(buffers.indices, archive);
 

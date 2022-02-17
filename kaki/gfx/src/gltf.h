@@ -18,6 +18,7 @@ namespace kaki {
             struct {
                 VkBuffer positionBuffer;
                 VkBuffer normalBuffer;
+                VkBuffer tangentBuffer;
                 VkBuffer uvBuffer;
             };
         };
@@ -25,6 +26,7 @@ namespace kaki {
         VkBuffer indexBuffer;
         VmaAllocation positionBufferAllocation;
         VmaAllocation normalBufferAllocation;
+        VmaAllocation tangentBufferAllocation;
         VmaAllocation uvBufferAllocation;
     };
 

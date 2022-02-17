@@ -8,6 +8,7 @@ struct Transform {
 
 layout(location = 0) in vec2 UV;
 layout(location = 1) in vec3 NORMAL;
+layout(location = 2) in vec4 TANGENT;
 
 layout(push_constant) uniform constants {
     mat4 proj;

@@ -64,6 +64,11 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
             },
             {
                 .binding = 2,
+                .stride = 16,
+                .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+            },
+            {
+                .binding = 3,
                 .stride = 8,
                 .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
             }
@@ -85,6 +90,12 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
             {
                 .location = 2,
                 .binding = 2,
+                .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+                .offset = 0,
+            },
+            {
+                .location = 3,
+                .binding = 3,
                 .format = VK_FORMAT_R32G32_SFLOAT,
                 .offset = 0,
             }
@@ -94,9 +105,9 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-            .vertexBindingDescriptionCount = 3,
+            .vertexBindingDescriptionCount = 4,
             .pVertexBindingDescriptions = bindings,
-            .vertexAttributeDescriptionCount = 3,
+            .vertexAttributeDescriptionCount = 4,
             .pVertexAttributeDescriptions = attributes,
     };
 

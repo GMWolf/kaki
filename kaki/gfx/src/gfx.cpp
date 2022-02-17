@@ -482,7 +482,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
             auto gltf = gltfE.get<kaki::Gltf>();
 
             VkDeviceSize offsets[4]{0, 0, 0, 0};
-            vkCmdBindVertexBuffers(vk.cmd[vk.currentFrame], 0, 3, gltf->buffers, offsets);
+            vkCmdBindVertexBuffers(vk.cmd[vk.currentFrame], 0, 4, gltf->buffers, offsets);
             vkCmdBindIndexBuffer(vk.cmd[vk.currentFrame], gltf->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
             for(auto i : it) {

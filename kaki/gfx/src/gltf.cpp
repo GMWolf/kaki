@@ -6,8 +6,9 @@
 #include <cstdio>
 #include <span>
 #include "vk.h"
-#include "glm/vec3.hpp"
-#include "glm/vec2.hpp"
+#include <glm/vec3.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
 #include "membuf.h"
 #include <fstream>
 #include <cereal/archives/binary.hpp>
@@ -74,6 +75,7 @@ namespace kaki {
 
             gltfs[i].positionBuffer = loadBuffer<glm::vec3>(vk, archive);
             gltfs[i].normalBuffer = loadBuffer<glm::vec3>(vk, archive);
+            gltfs[i].tangentBuffer = loadBuffer<glm::vec4>(vk, archive);
             gltfs[i].uvBuffer = loadBuffer<glm::vec2>(vk, archive);
             gltfs[i].indexBuffer = loadBuffer<uint32_t>(vk, archive);
         }

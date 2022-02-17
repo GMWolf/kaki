@@ -33,6 +33,10 @@ set(ENABLE_CTEST OFF)
 add_subdirectory(external/glslang)
 
 set(SHADERC_SKIP_TESTS ON CACHE BOOL "" FORCE)
+set(SHADERC_SKIP_INSTALL ON CACHE BOOL "" FORCE)
+set(SHADERC_SKIP_EXAMPLES ON CACHE BOOL "" FORCE)
+set(SHADERC_SKIP_COPYRIGHT_CHECK ON CACHE BOOL "" FORCE)
+
 add_subdirectory(external/shaderc)
 
 add_library(spirv-reflect external/SPIRV-Reflect/spirv_reflect.h external/SPIRV-Reflect/spirv_reflect.c)
@@ -67,20 +71,3 @@ compile_gltf(test-gltf SOURCES SciFiHelmet/SciFiHelmet.gltf)
 compile_pipeline(apipeline pipeline.json)
 make_package(testpackage SOURCES shader.vert.shd shader.frag.shd SciFiHelmet/SciFiHelmet.gltf.json apipeline.json)
 add_dependencies(test testpackage)
-
-add_custom_command(
-        OUTPUT kaki.ktx2
-        COMMAND toktx --genmipmap kaki.ktx2 ${CMAKE_CURRENT_LIST_DIR}/kaki.png
-        DEPENDS kaki.png
-        USES_TERMINAL
-)
-
-add_custom_command(
-        OUTPUT SciFiHelmet/SciFiHelmet_BaseColor.ktx2
-        COMMAND toktx --genmipmap SciFiHelmet/SciFiHelmet_BaseColor.ktx2 ${CMAKE_CURRENT_LIST_DIR}/SciFiHelmet/SciFiHelmet_BaseColor.png
-        DEPENDS SciFiHelmet/SciFiHelmet_BaseColor.png
-        USES_TERMINAL
-)
-
-add_custom_target(textures DEPENDS kaki.ktx2 SciFiHelmet/SciFiHelmet_BaseColor.ktx2)
-add_dependencies(test textures)

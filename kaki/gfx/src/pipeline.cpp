@@ -102,7 +102,6 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
     };
 
 
-
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
             .vertexBindingDescriptionCount = 4,

@@ -35,7 +35,10 @@ int main() {
 
     world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
         .mesh = package.lookup("SciFiHelmet_gltf::SciFiHelmet"),
-        .image = package.lookup("SciFiHelmet_gltf::SciFiHelmet_BaseColor"),
+        .albedo = package.lookup("SciFiHelmet_gltf::SciFiHelmet_BaseColor"),
+        .normal = package.lookup("SciFiHelmet_gltf::SciFiHelmet_Normal"),
+        .metallicRoughness = package.lookup("SciFiHelmet_gltf::SciFiHelmet_MetallicRoughness"),
+        .ao = package.lookup("SciFiHelmet_gltf::SciFiHelmet_AmbientOcclusion"),
     }).set(kaki::Transform{
         .position = {0,0,0},
         .scale = 1,

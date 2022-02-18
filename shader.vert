@@ -9,6 +9,7 @@ layout(location = 3) in vec2 UV;
 layout(location = 0) out vec2 UV_OUT;
 layout(location = 1) out vec3 NORMAL_OUT;
 layout(location = 2) out vec4 TANGENT_OUT;
+layout(location = 3) out vec3 VIEW_DIRECTION;
 
 struct Transform {
     vec3 position;
@@ -18,8 +19,9 @@ struct Transform {
 
 layout(push_constant) uniform constants {
     mat4 proj;
+    vec3 viewPos; float pad0;
     Transform transform;
-    vec3 color;
+    vec3 light; float pad1;
 };
 
 vec3 rotate(vec3 vec, vec4 quat) {
@@ -37,4 +39,5 @@ void main() {
     UV_OUT = UV;
     NORMAL_OUT = rotate(NORMAL, transform.orientation);
     TANGENT_OUT = vec4(rotate(TANGENT.xyz, transform.orientation), TANGENT.w);
+    VIEW_DIRECTION = pos - viewPos;
 }

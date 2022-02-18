@@ -470,8 +470,6 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
         glm::mat4 proj = glm::perspective(camera.fov, aspect, 0.01f, 1000.0f);
         glm::mat4 view = cameraTransform.inverse().matrix();
         glm::mat4 viewProj = proj * view;
-        vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,
-                           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(viewProj), &viewProj);
 
 
         entity.world().filter_builder<kaki::Transform, kaki::MeshFilter>().term<kaki::internal::MeshInstance>(flecs::Wildcard).build()
@@ -487,7 +485,10 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
             for(auto i : it) {
                 auto& mesh = meshInstances[i];
-                auto image = filters[i].image.get<kaki::Image>();
+                auto albedoImage = filters[i].albedo.get<kaki::Image>();
+                auto normalImage = filters[i].normal.get<kaki::Image>();
+                auto metallicRoughnessImage = filters[i].metallicRoughness.get<kaki::Image>();
+                auto aoImage = filters[i].ao.get<kaki::Image>();
                 auto& transform = transforms[i];
 
                 if (!descSetLayouts.empty()) {
@@ -502,10 +503,11 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
                     std::vector<VkDescriptorSet> descriptorSets(descSetLayouts.size());
                     vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
 
-                    ShaderInput inputs[]{{
-                                                 .name = "tex",
-                                                 .imageView = image->view,
-                                         },
+                    ShaderInput inputs[]{
+                        {"albedoTexture", albedoImage->view},
+                        {"normalTexture", normalImage->view},
+                        {"metallicRoughnessTexture", metallicRoughnessImage->view},
+                        {"aoTexture", aoImage->view},
                     };
 
                     updateDescSets(vk, descriptorSets, *pipeline, inputs);
@@ -515,13 +517,22 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
                                             0, descriptorSets.size(), descriptorSets.data(), 0, nullptr);
                 }
 
-                glm::vec3 color = {1, 1, 1};
+                struct Pc {
+                    glm::mat4 proj;
+                    glm::vec3 viewPos; float pad0;
+                    kaki::Transform transform;
+                    glm::vec3 light; float pad1;
+                } pc;
+
+                pc.proj = viewProj;
+                pc.viewPos = cameraTransform.position;
+                pc.transform = transform;
+                pc.light = glm::normalize(glm::vec3(1, -0.5, 1));
+
+
                 vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,
-                                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(proj),
-                                   sizeof(transform), &transform);
-                vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,
-                                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                                   sizeof(proj) + sizeof(transform), sizeof(color), &color);
+                                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+                                   sizeof(Pc), &pc);
 
                 for (auto &prim: mesh.primitives) {
                     vkCmdDrawIndexed(vk.cmd[vk.currentFrame], prim.indexCount, 1, prim.indexOffset, prim.vertexOffset,

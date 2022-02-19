@@ -15,25 +15,21 @@ int main() {
     flecs::world world;
 
     world.import<kaki::core>();
-
     world.import<kaki::windowing>();
+
     auto window = world.entity("window").set<kaki::Window>(kaki::Window{
         .width = 1280,
         .height = 720,
         .title = "Test kaki app",
     }).set<kaki::Input>({});
+
     world.import<kaki::gfx>();
 
     auto package = kaki::loadPackage(world, "testpackage.json");
+    auto scene = world.entity("scene").is_a(package.lookup("SciFiHelmet::Scene"));
+    scene.lookup("SciFiHelmet").add<Control>();
 
-
-    auto camera = world.entity("Camera").is_a(package.lookup("Camera"));
-    world.entity().is_a(package.lookup("SciFiHelmet"))
-        .add<Control>();
-
-
-
-    world.system<kaki::Transform>().term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
+    world.system<kaki::Transform>("Control system").term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
         auto* input = window.get<kaki::Input>();
 
         if (input->keyDown('D')) {

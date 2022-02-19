@@ -18,6 +18,9 @@
 #include <span>
 #include <algorithm>
 #include <iterator>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 struct Buffers {
     std::vector<glm::vec3> position;
@@ -229,7 +232,7 @@ kaki::Package::Data writeTransform(const cgltf_node* node, std::ostream& outData
 }
 
 template<std::ranges::range Range>
-void writeMeshNodes(kaki::Package& package, uint64_t firstMesh, uint64_t firstImage, cgltf_data* cgltfData, Range&& nodes, std::ostream& outData) {
+void writeMeshNodes(kaki::Package& package, uint64_t parentEntity, uint64_t firstMesh, uint64_t firstImage, cgltf_data* cgltfData, Range&& nodes, std::ostream& outData) {
 
     auto nodeCount = std::ranges::distance(nodes);
 
@@ -245,14 +248,15 @@ void writeMeshNodes(kaki::Package& package, uint64_t firstMesh, uint64_t firstIm
             .referenceOffset = 0,
             .components = {
                     kaki::Package::Component{.type = {"flecs::core::Prefab"}},
+                    kaki::Package::Component{.type = {kaki::Package::TypeId::ChildOf, parentEntity}},
                     kaki::Package::Component{.type = {"kaki::core::Transform", {}}},
                     kaki::Package::Component{.type = {"kaki::core::Transform", {}, true}},
                     kaki::Package::Component{.type = {"kaki::gfx::MeshFilter", {}}},
             },
     };
 
-    auto& transformData = table.components[1].data;
-    auto& meshData = table.components[3].data;
+    auto& transformData = table.components[2].data;
+    auto& meshData = table.components[4].data;
 
     for(cgltf_node* node : nodes) {
         package.entities.push_back({node->name});
@@ -281,7 +285,7 @@ void writeMeshNodes(kaki::Package& package, uint64_t firstMesh, uint64_t firstIm
 }
 
 template<std::ranges::range Range>
-void writeCameraNodes(kaki::Package& package, Range&& nodes, std::ostream& outData) {
+void writeCameraNodes(kaki::Package& package, uint64_t parentEntity, Range&& nodes, std::ostream& outData) {
 
     auto nodeCount = std::ranges::distance(nodes);
 
@@ -297,14 +301,15 @@ void writeCameraNodes(kaki::Package& package, Range&& nodes, std::ostream& outDa
             .referenceOffset = 0,
             .components = {
                     kaki::Package::Component{.type = {"flecs::core::Prefab"}},
+                    kaki::Package::Component{.type = {kaki::Package::TypeId::ChildOf, parentEntity}},
                     kaki::Package::Component{.type = {"kaki::core::Transform", {}}},
                     kaki::Package::Component{.type = {"kaki::core::Transform", {}, true}},
                     kaki::Package::Component{.type = {"kaki::gfx::Camera", {}}},
             },
     };
 
-    auto& transformData = table.components[1].data;
-    auto& cameraData = table.components[3].data;
+    auto& transformData = table.components[2].data;
+    auto& cameraData = table.components[4].data;
 
     for(cgltf_node* node : nodes) {
         package.entities.push_back({node->name});
@@ -329,12 +334,33 @@ static bool hasCamera(cgltf_node* node) {
     return node->camera;
 }
 
-void writeNodes(kaki::Package& package, uint64_t firstMesh, uint64_t firstImage, cgltf_data* cgltfData, std::span<cgltf_node*> nodes, std::ostream& outData) {
+void writeNodes(kaki::Package& package, uint64_t parent, uint64_t firstMesh, uint64_t firstImage, cgltf_data* cgltfData, std::span<cgltf_node*> nodes, std::ostream& outData) {
 
-    writeMeshNodes(package, firstMesh, firstImage, cgltfData, nodes | std::views::filter(hasMesh), outData);
-    writeCameraNodes(package, nodes | std::views::filter(hasCamera), outData);
+    writeMeshNodes(package, parent, firstMesh, firstImage, cgltfData, nodes | std::views::filter(hasMesh), outData);
+    writeCameraNodes(package, parent, nodes | std::views::filter(hasCamera), outData);
+
+}
 
 
+void writeScene(kaki::Package& package, uint64_t firstMesh, uint64_t firstImage, cgltf_data* data, cgltf_scene* scene, std::ostream& outData) {
+
+    kaki::Package::Table table {
+            .entityFirst = package.entities.size(),
+            .entityCount = 1,
+            .referenceOffset = 0,
+            .components = {
+                    kaki::Package::Component{.type = {kaki::Package::TypeId::ChildOf, 0u}},
+                    kaki::Package::Component{.type = {"flecs::core::Prefab"}},
+            },
+    };
+
+    uint64_t id = table.entityFirst;
+
+    package.entities.push_back({scene->name});
+
+    package.tables.push_back(std::move(table));
+
+    writeNodes(package, id, firstMesh, firstImage, data, std::span(scene->nodes, scene->nodes_count), outData);
 }
 
 int main(int argc, char* argv[]) {
@@ -344,12 +370,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    const std::string inputPath = argv[1];
+    const fs::path inputPath = argv[1];
     const std::string outputPath = argv[2];
     const std::string binOutputPath = outputPath + ".bin";
 
-    auto assetName = inputPath.substr(inputPath.find_last_of("/\\") + 1);
-    std::replace(assetName.begin(), assetName.end(), '.', '_');
+    auto assetName = inputPath.stem();
 
     cgltf_options options = {};
     cgltf_data* data{};
@@ -388,7 +413,7 @@ int main(int argc, char* argv[]) {
     writeMeshes(package, meshes, outData);
     auto imageRefStart = package.entities.size();
     writeImages(package, std::span(data->images, data->images_count), inputPath.c_str(), outData);
-    writeNodes(package, meshRefStart, imageRefStart, data, std::span(data->scene->nodes, data->scene->nodes_count), outData);
+    writeScene(package, meshRefStart, imageRefStart, data, data->scene, outData);
 
     std::ofstream os(outputPath);
     cereal::JSONOutputArchive archive( os );

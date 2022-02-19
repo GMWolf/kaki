@@ -532,7 +532,6 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
                 pc.transform = transform;
                 pc.light = glm::normalize(glm::vec3(1, -0.5, -1));
 
-
                 vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,
                                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
                                    sizeof(Pc), &pc);

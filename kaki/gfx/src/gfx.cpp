@@ -22,6 +22,15 @@
 #include <kaki/transform.h>
 #include <membuf.h>
 
+namespace kaki::internal {
+    struct MeshInstance {
+        uint32_t indexOffset;
+        uint32_t vertexOffset;
+        uint32_t indexCount;
+    };
+}
+
+
 static VkRenderPass createRenderPass(VkDevice device, VkFormat format) {
     VkAttachmentDescription attachment {
         .flags = 0,
@@ -131,6 +140,13 @@ static bool createGlobals(flecs::world& world) {
     }
 
     vkb::DeviceBuilder deviceBuilder{phys_ret.value()};
+
+    VkPhysicalDeviceRobustness2FeaturesEXT rbfeatures {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
+        .nullDescriptor = VK_TRUE,
+    };
+
+    deviceBuilder.add_pNext(&rbfeatures);
 
     auto dev_ret = deviceBuilder.build();
 
@@ -283,13 +299,13 @@ static bool createGlobals(flecs::world& world) {
         VkDescriptorPoolSize descriptorPoolSize[]{
                 VkDescriptorPoolSize{
                         .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                        .descriptorCount = 32,
+                        .descriptorCount = 1024,
                 }
         };
 
         VkDescriptorPoolCreateInfo descPoolInfo{
                 .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-                .maxSets = 32,
+                .maxSets = 1024,
                 .poolSizeCount = 1,
                 .pPoolSizes = descriptorPoolSize,
         };
@@ -487,7 +503,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
             vkCmdBindIndexBuffer(vk.cmd[vk.currentFrame], gltf->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
             for(auto i : it) {
-                auto& mesh = meshInstances[i];
+                kaki::internal::MeshInstance& mesh = meshInstances[i];
                 auto albedoImage = flecs::entity(world, filters[i].albedo).get<kaki::Image>();
                 auto normalImage = flecs::entity(world, filters[i].normal).get<kaki::Image>();
                 auto metallicRoughnessImage = flecs::entity(world, filters[i].metallicRoughness).get<kaki::Image>();
@@ -508,9 +524,9 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
                     ShaderInput inputs[]{
                         {"albedoTexture", albedoImage->view},
-                        {"normalTexture", normalImage->view},
-                        {"metallicRoughnessTexture", metallicRoughnessImage->view},
-                        {"aoTexture", aoImage->view},
+                        {"normalTexture", normalImage ? normalImage->view : VK_NULL_HANDLE},
+                        {"metallicRoughnessTexture", metallicRoughnessImage ? metallicRoughnessImage->view : VK_NULL_HANDLE},
+                        {"aoTexture", aoImage ? aoImage->view : VK_NULL_HANDLE},
                     };
 
                     updateDescSets(vk, descriptorSets, *pipeline, inputs);
@@ -536,10 +552,9 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
                                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
                                    sizeof(Pc), &pc);
 
-                for (auto &prim: mesh.primitives) {
-                    vkCmdDrawIndexed(vk.cmd[vk.currentFrame], prim.indexCount, 1, prim.indexOffset, prim.vertexOffset,
-                                     0);
-                }
+
+                vkCmdDrawIndexed(vk.cmd[vk.currentFrame], mesh.indexCount, 1, mesh.indexOffset, mesh.vertexOffset, 0);
+
             }
 
         });
@@ -593,15 +608,10 @@ static void UpdateMeshInstance(flecs::iter iter, kaki::MeshFilter* meshFilters) 
         auto mesh =  flecs::entity(iter.world(), meshFilters[i].mesh).get<kaki::Mesh>();
         auto gltf = flecs::entity(iter.world(), meshFilters[i].mesh).get_object(flecs::ChildOf);
 
-        std::vector<kaki::internal::MeshInstance::Primitive> prims(mesh->primitives.size());
-        for(int i = 0; i < mesh->primitives.size(); i++) {
-            prims[i].indexOffset = mesh->primitives[i].indexOffset;
-            prims[i].vertexOffset = mesh->primitives[i].vertexOffset;
-            prims[i].indexCount = mesh->primitives[i].indexCount;
-        }
-
-        iter.entity(i).set<kaki::internal::MeshInstance>(gltf, kaki::internal::MeshInstance{
-            .primitives = prims,
+        iter.entity(i).set<kaki::internal::MeshInstance>(gltf, kaki::internal::MeshInstance {
+            .indexOffset = mesh->primitives[meshFilters[i].primitiveIndex].indexOffset,
+            .vertexOffset = mesh->primitives[meshFilters[i].primitiveIndex].vertexOffset,
+            .indexCount = mesh->primitives[meshFilters[i].primitiveIndex].indexCount,
         } );
     }
 }
@@ -696,10 +706,12 @@ kaki::gfx::gfx(flecs::world &world) {
                 std::istream bufStream(&buf);
                 cereal::BinaryInputArchive archive(bufStream);
 
+                uint32_t primitiveIndex;
                 uint64_t meshRef, albedoRef, normalRef, mrRef, aoRef;
-                archive(meshRef, albedoRef, normalRef, mrRef, aoRef);
+                archive(meshRef, primitiveIndex, albedoRef, normalRef, mrRef, aoRef);
 
                 filters[i].mesh = data->entityRefs[meshRef];
+                filters[i].primitiveIndex = primitiveIndex;
                 filters[i].albedo = data->entityRefs[albedoRef];
                 filters[i].normal = data->entityRefs[normalRef];
                 filters[i].metallicRoughness = data->entityRefs[mrRef];
@@ -726,6 +738,7 @@ kaki::gfx::gfx(flecs::world &world) {
 
     world.component<MeshFilter>()
             .member("mesh", ecs_id(ecs_entity_t))
+            .member<uint32_t>("index")
             .member("albedo", ecs_id(ecs_entity_t))
             .member("normal", ecs_id(ecs_entity_t))
             .member("metallicRoughness", ecs_id(ecs_entity_t))

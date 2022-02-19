@@ -29,6 +29,8 @@ int main() {
     auto scene = world.entity("scene").is_a(package.lookup("SciFiHelmet::Scene"));
     scene.lookup("SciFiHelmet").add<Control>();
 
+    auto sponza = world.entity("sponza").is_a(package.lookup("Sponza::Sponza"));
+
     world.system<kaki::Transform>("Control system").term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
         auto* input = window.get<kaki::Input>();
 

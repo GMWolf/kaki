@@ -18,19 +18,23 @@ void kaki::loadImages(flecs::iter iter, AssetData* data, void* pimages) {
     ktxVulkanDeviceInfo_Construct(&kvdi, vk->device.physical_device, vk->device, vk->queue, vk->cmdPool, nullptr);
 
     for(auto i : iter) {
-        ktxTexture* kTexture;
-        KTX_error_code result = ktxTexture_CreateFromMemory(data[i].data.data(), data[i].data.size(), KTX_TEXTURE_CREATE_NO_FLAGS, &kTexture);
+        ktxTexture2* kTexture;
+        KTX_error_code result = ktxTexture2_CreateFromMemory(data[i].data.data(), data[i].data.size(), KTX_TEXTURE_CREATE_NO_FLAGS, &kTexture);
         assert (result == KTX_SUCCESS);
 
+        if (ktxTexture2_NeedsTranscoding(kTexture)) {
+            ktxTexture2_TranscodeBasis(kTexture, KTX_TTF_BC7_RGBA, 0);
+        }
+
         ktxVulkanTexture texture;
-        result = ktxTexture_VkUploadEx(kTexture, &kvdi, &texture,
+        result = ktxTexture2_VkUploadEx(kTexture, &kvdi, &texture,
                                        VK_IMAGE_TILING_OPTIMAL,
                                        VK_IMAGE_USAGE_SAMPLED_BIT,
                                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         assert (result == KTX_SUCCESS);
 
-        ktxTexture_Destroy(kTexture);
+        ktxTexture_Destroy(ktxTexture(kTexture));
 
         VkImageSubresourceRange imageRange {
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,

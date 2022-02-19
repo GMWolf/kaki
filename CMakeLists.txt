@@ -53,6 +53,7 @@ target_compile_definitions(glm INTERFACE GLM_FORCE_QUAT_DATA_XYZW)
 
 add_subdirectory(external/KTX-Software)
 
+
 add_library(cgltf INTERFACE)
 target_include_directories(cgltf INTERFACE external/cgltf)
 
@@ -68,6 +69,7 @@ target_link_libraries(test PRIVATE flecs_static)
 
 compile_shader(test-shader SOURCES shader.vert shader.frag)
 compile_gltf(test-gltf SOURCES SciFiHelmet/SciFiHelmet.gltf)
+compile_gltf(test-sponza SOURCES sponza/Sponza.gltf)
 compile_pipeline(apipeline pipeline.json)
-make_package(testpackage SOURCES shader.vert.shd shader.frag.shd SciFiHelmet/SciFiHelmet.gltf.json apipeline.json)
+make_package(testpackage SOURCES shader.vert.shd shader.frag.shd SciFiHelmet/SciFiHelmet.gltf.json apipeline.json sponza/Sponza.gltf.json)
 add_dependencies(test testpackage)

@@ -16,22 +16,13 @@ namespace kaki {
 
     struct MeshFilter {
         flecs::entity_t mesh;
+        uint32_t primitiveIndex;
+
         flecs::entity_t albedo;
         flecs::entity_t normal;
         flecs::entity_t metallicRoughness;
         flecs::entity_t ao;
     };
-
-    namespace internal {
-        struct MeshInstance {
-            struct Primitive {
-                uint32_t indexOffset;
-                uint32_t vertexOffset;
-                uint32_t indexCount;
-            };
-            std::vector<Primitive> primitives;
-        };
-    }
 
     struct gfx {
         explicit gfx(flecs::world& world);

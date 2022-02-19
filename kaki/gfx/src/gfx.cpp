@@ -530,7 +530,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
                 pc.proj = viewProj;
                 pc.viewPos = cameraTransform.position;
                 pc.transform = transform;
-                pc.light = glm::normalize(glm::vec3(1, -0.5, 1));
+                pc.light = glm::normalize(glm::vec3(1, -0.5, -1));
 
 
                 vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,
@@ -619,6 +619,9 @@ kaki::gfx::gfx(flecs::world &world) {
     world.component<kaki::ShaderModule>();
     world.component<kaki::MeshFilter>();
 
+    world.component<kaki::Camera>()
+            .member<float>("yfov");
+
     world.component<kaki::DependsOn>().add(flecs::Acyclic);
 
     world.entity("GltfLoader").set<ComponentAssetHandler, Gltf>({
@@ -702,6 +705,21 @@ kaki::gfx::gfx(flecs::world &world) {
                 filters[i].normal = data->entityRefs[normalRef];
                 filters[i].metallicRoughness = data->entityRefs[mrRef];
                 filters[i].ao = data->entityRefs[aoRef];
+            }
+
+        }
+    });
+
+    world.entity("CameraLoader").set<ComponentAssetHandler, Camera>({
+        .load = [](flecs::iter iter, AssetData* data, void* pfilters) {
+            auto cameras = static_cast<Camera*>(pfilters);
+
+            for(auto i : iter) {
+                membuf buf(data[i].data);
+                std::istream bufStream(&buf);
+                cereal::BinaryInputArchive archive(bufStream);
+
+                archive(cameras[i].fov);
             }
 
         }

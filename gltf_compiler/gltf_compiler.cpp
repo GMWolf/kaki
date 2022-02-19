@@ -214,14 +214,34 @@ void writeImages(kaki::Package& package, std::span<cgltf_image> images, const ch
     }
 }
 
+kaki::Package::Data writeTransform(const cgltf_node* node, std::ostream& outData) {
+
+    cereal::BinaryOutputArchive dataArchive(outData);
+
+    kaki::Package::Data data{};
+    data.offset = outData.tellp();
+    dataArchive(node->translation[0], node->translation[1], node->translation[2]);
+    dataArchive(node->scale[0]);
+    dataArchive(node->rotation[3], node->rotation[0], node->rotation[1], node->rotation[2]);
+    data.size = (uint64_t)outData.tellp() - data.offset;
+
+    return data;
+}
+
 template<std::ranges::range Range>
 void writeMeshNodes(kaki::Package& package, uint64_t firstMesh, uint64_t firstImage, cgltf_data* cgltfData, Range&& nodes, std::ostream& outData) {
+
+    auto nodeCount = std::ranges::distance(nodes);
+
+    if (nodeCount == 0) {
+        return;
+    }
 
     cereal::BinaryOutputArchive dataArchive(outData);
 
     kaki::Package::Table table {
             .entityFirst = package.entities.size(),
-            .entityCount = std::ranges::distance(nodes),
+            .entityCount = nodeCount,
             .referenceOffset = 0,
             .components = {
                     kaki::Package::Component{.type = {"flecs::core::Prefab"}},
@@ -231,18 +251,13 @@ void writeMeshNodes(kaki::Package& package, uint64_t firstMesh, uint64_t firstIm
             },
     };
 
-    auto& transformData = table.components[2].data;
+    auto& transformData = table.components[1].data;
     auto& meshData = table.components[3].data;
 
     for(cgltf_node* node : nodes) {
         package.entities.push_back({node->name});
 
-        auto& td = transformData.emplace_back();
-        td.offset = outData.tellp();
-        dataArchive(node->translation[0], node->translation[1], node->translation[2]);
-        dataArchive(node->scale[0]);
-        dataArchive(node->rotation[0], node->rotation[1], node->rotation[2], node->rotation[3]);
-        td.size = (uint64_t)outData.tellp() - td.offset;
+        transformData.emplace_back(writeTransform(node, outData));
 
         auto& md = meshData.emplace_back();
         md.offset = outData.tellp();
@@ -265,15 +280,60 @@ void writeMeshNodes(kaki::Package& package, uint64_t firstMesh, uint64_t firstIm
 
 }
 
+template<std::ranges::range Range>
+void writeCameraNodes(kaki::Package& package, Range&& nodes, std::ostream& outData) {
+
+    auto nodeCount = std::ranges::distance(nodes);
+
+    if (nodeCount == 0) {
+        return;
+    }
+
+    cereal::BinaryOutputArchive dataArchive(outData);
+
+    kaki::Package::Table table {
+            .entityFirst = package.entities.size(),
+            .entityCount = nodeCount,
+            .referenceOffset = 0,
+            .components = {
+                    kaki::Package::Component{.type = {"flecs::core::Prefab"}},
+                    kaki::Package::Component{.type = {"kaki::core::Transform", {}}},
+                    kaki::Package::Component{.type = {"kaki::core::Transform", {}, true}},
+                    kaki::Package::Component{.type = {"kaki::gfx::Camera", {}}},
+            },
+    };
+
+    auto& transformData = table.components[1].data;
+    auto& cameraData = table.components[3].data;
+
+    for(cgltf_node* node : nodes) {
+        package.entities.push_back({node->name});
+        transformData.emplace_back(writeTransform(node, outData));
+
+        kaki::Package::Data& cd = cameraData.emplace_back();
+        cd.offset = outData.tellp();
+        dataArchive(node->camera->data.perspective.yfov);
+        cd.size = (uint64_t)outData.tellp() - cd.offset;
+    }
+
+    package.tables.emplace_back(std::move(table));
+
+}
+
+
 static bool hasMesh(cgltf_node* node) {
     return node->mesh;
 }
 
+static bool hasCamera(cgltf_node* node) {
+    return node->camera;
+}
 
 void writeNodes(kaki::Package& package, uint64_t firstMesh, uint64_t firstImage, cgltf_data* cgltfData, std::span<cgltf_node*> nodes, std::ostream& outData) {
 
-    auto meshNodes = nodes | std::views::filter([](cgltf_node* n) {return n->mesh!=nullptr;});
-    writeMeshNodes(package, firstMesh, firstImage, cgltfData, meshNodes, outData);
+    writeMeshNodes(package, firstMesh, firstImage, cgltfData, nodes | std::views::filter(hasMesh), outData);
+    writeCameraNodes(package, nodes | std::views::filter(hasCamera), outData);
+
 
 }
 

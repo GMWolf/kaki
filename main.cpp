@@ -26,18 +26,12 @@ int main() {
 
     auto package = kaki::loadPackage(world, "testpackage.json");
 
-    auto camera = world.entity("camera");
-    camera.set(kaki::Camera{
-        .fov = glm::radians(75.0f),
-    }).set(kaki::Transform {
-        .position = {0,0,5},
-        .scale = 1,
-        .orientation = glm::quatLookAt(glm::vec3{0,0,-1}, glm::vec3{0,1,0}),
-    });
 
-
+    auto camera = world.entity("Camera").is_a(package.lookup("Camera"));
     world.entity().is_a(package.lookup("SciFiHelmet"))
         .add<Control>();
+
+
 
     world.system<kaki::Transform>().term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
         auto* input = window.get<kaki::Input>();

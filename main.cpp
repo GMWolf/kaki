@@ -6,6 +6,7 @@
 #include <kaki/window.h>
 #include <kaki/asset.h>
 #include <kaki/transform.h>
+#include "kaki/core.h"
 
 struct Control{};
 
@@ -13,8 +14,9 @@ int main() {
 
     flecs::world world;
 
-    world.import<kaki::windowing>();
+    world.import<kaki::core>();
 
+    world.import<kaki::windowing>();
     auto window = world.entity("window").set<kaki::Window>(kaki::Window{
         .width = 1280,
         .height = 720,

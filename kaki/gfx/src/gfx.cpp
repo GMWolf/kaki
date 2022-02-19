@@ -681,42 +681,6 @@ kaki::gfx::gfx(flecs::world &world) {
         }
     }).add<DependsOn>(shaderModuleLoader);
 
-    ecs_struct_desc_t vec3Desc {
-            .entity = {.name = "vec3"},
-            .members = {
-                    {"x", ecs_id(ecs_f32_t)},
-                    {"y", ecs_id(ecs_f32_t)},
-                    {"z", ecs_id(ecs_f32_t)}
-            }
-    };
-
-    auto vec3 = ecs_struct_init(world.m_world, &vec3Desc);
-
-    ecs_struct_desc_t vec4Desc {
-            .entity = {.name = "vec4"},
-            .members = {
-                    {"x", ecs_id(ecs_f32_t)},
-                    {"y", ecs_id(ecs_f32_t)},
-                    {"z", ecs_id(ecs_f32_t)},
-                    {"w", ecs_id(ecs_f32_t)},
-            }
-    };
-
-    auto vec4 = ecs_struct_init(world.m_world, &vec4Desc);
-
-    ecs_entity_t t = world.component<Transform>().id();
-
-    ecs_struct_desc_t transformDesc {
-        .entity = {.entity = t },
-        .members = {
-                { .name = "position", .type = vec3 },
-                { .name = "scale", .type = ecs_id(ecs_f32_t)},
-                { .name = "rotation", .type = vec4},
-        }
-    };
-    ecs_struct_init(world, &transformDesc);
-
-
     createGlobals(world);
     world.system<VkGlobals>("Render system").kind(flecs::OnStore).each(render);
 

@@ -14,6 +14,10 @@
 #include <cereal/types/string.hpp>
 #include <kaki/package.h>
 #include <cereal_ext.h>
+#include <ranges>
+#include <span>
+#include <algorithm>
+#include <iterator>
 
 struct Buffers {
     std::vector<glm::vec3> position;
@@ -210,6 +214,69 @@ void writeImages(kaki::Package& package, std::span<cgltf_image> images, const ch
     }
 }
 
+template<std::ranges::range Range>
+void writeMeshNodes(kaki::Package& package, uint64_t firstMesh, uint64_t firstImage, cgltf_data* cgltfData, Range&& nodes, std::ostream& outData) {
+
+    cereal::BinaryOutputArchive dataArchive(outData);
+
+    kaki::Package::Table table {
+            .entityFirst = package.entities.size(),
+            .entityCount = std::ranges::distance(nodes),
+            .referenceOffset = 0,
+            .components = {
+                    kaki::Package::Component{.type = {"flecs::core::Prefab"}},
+                    kaki::Package::Component{.type = {"kaki::core::Transform", {}}},
+                    kaki::Package::Component{.type = {"kaki::core::Transform", {}, true}},
+                    kaki::Package::Component{.type = {"kaki::gfx::MeshFilter", {}}},
+            },
+    };
+
+    auto& transformData = table.components[2].data;
+    auto& meshData = table.components[3].data;
+
+    for(cgltf_node* node : nodes) {
+        package.entities.push_back({node->name});
+
+        auto& td = transformData.emplace_back();
+        td.offset = outData.tellp();
+        dataArchive(node->translation[0], node->translation[1], node->translation[2]);
+        dataArchive(node->scale[0]);
+        dataArchive(node->rotation[0], node->rotation[1], node->rotation[2], node->rotation[3]);
+        td.size = (uint64_t)outData.tellp() - td.offset;
+
+        auto& md = meshData.emplace_back();
+        md.offset = outData.tellp();
+        uint64_t meshEntity = firstMesh + std::distance(cgltfData->meshes, node->mesh);
+        auto albedoImage = node->mesh->primitives[0].material->pbr_metallic_roughness.base_color_texture.texture->image;
+        auto normalImage = node->mesh->primitives[0].material->normal_texture.texture->image;
+        auto mrImage = node->mesh->primitives[0].material->pbr_metallic_roughness.metallic_roughness_texture.texture->image;
+        auto aoImage = node->mesh->primitives[0].material->occlusion_texture.texture->image;
+
+        uint64_t albedoEntity = firstImage + std::distance(cgltfData->images, albedoImage);
+        uint64_t normalEntity = firstImage + std::distance(cgltfData->images, normalImage);
+        uint64_t mrEntity = firstImage + std::distance(cgltfData->images, mrImage);
+        uint64_t aoEntity = firstImage + std::distance(cgltfData->images, aoImage);
+
+        dataArchive(meshEntity, albedoEntity, normalEntity, mrEntity, aoEntity);
+        md.size = (uint64_t)outData.tellp() - md.offset;
+    }
+
+    package.tables.emplace_back(std::move(table));
+
+}
+
+static bool hasMesh(cgltf_node* node) {
+    return node->mesh;
+}
+
+
+void writeNodes(kaki::Package& package, uint64_t firstMesh, uint64_t firstImage, cgltf_data* cgltfData, std::span<cgltf_node*> nodes, std::ostream& outData) {
+
+    auto meshNodes = nodes | std::views::filter([](cgltf_node* n) {return n->mesh!=nullptr;});
+    writeMeshNodes(package, firstMesh, firstImage, cgltfData, meshNodes, outData);
+
+}
+
 int main(int argc, char* argv[]) {
 
     if (argc < 3) {
@@ -257,8 +324,11 @@ int main(int argc, char* argv[]) {
     std::ofstream outData(binOutputPath, std::ios::binary | std::ios::out);
 
     writeGltfEntity(package, assetName, buffers, outData);
+    auto meshRefStart = package.entities.size();
     writeMeshes(package, meshes, outData);
+    auto imageRefStart = package.entities.size();
     writeImages(package, std::span(data->images, data->images_count), inputPath.c_str(), outData);
+    writeNodes(package, meshRefStart, imageRefStart, data, std::span(data->scene->nodes, data->scene->nodes_count), outData);
 
     std::ofstream os(outputPath);
     cereal::JSONOutputArchive archive( os );

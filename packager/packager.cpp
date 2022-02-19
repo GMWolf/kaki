@@ -29,6 +29,7 @@ void mergePackages(kaki::Package& out, kaki::Package& in) {
 
     for(size_t i = tableOffset; i < out.tables.size(); i++) {
         out.tables[i].entityFirst += entitiesOffset;
+        out.tables[i].referenceOffset += entitiesOffset;
 
         for(auto& component : out.tables[i].components) {
             if(uint64_t* id = std::get_if<uint64_t>(&component.type.typeId)) {

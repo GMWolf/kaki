@@ -380,6 +380,9 @@ void updateDescSets( kaki::VkGlobals& vk, std::span<VkDescriptorSet> descSets, c
 
 
 static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
+
+    auto world = entity.world();
+
     vkWaitForFences(vk.device, 1, &vk.cmdBufFence[vk.currentFrame], true, UINT64_MAX);
 
     vkResetDescriptorPool(vk.device, vk.descriptorPools[vk.currentFrame], 0);
@@ -485,10 +488,10 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
             for(auto i : it) {
                 auto& mesh = meshInstances[i];
-                auto albedoImage = filters[i].albedo.get<kaki::Image>();
-                auto normalImage = filters[i].normal.get<kaki::Image>();
-                auto metallicRoughnessImage = filters[i].metallicRoughness.get<kaki::Image>();
-                auto aoImage = filters[i].ao.get<kaki::Image>();
+                auto albedoImage = flecs::entity(world, filters[i].albedo).get<kaki::Image>();
+                auto normalImage = flecs::entity(world, filters[i].normal).get<kaki::Image>();
+                auto metallicRoughnessImage = flecs::entity(world, filters[i].metallicRoughness).get<kaki::Image>();
+                auto aoImage = flecs::entity(world, filters[i].ao).get<kaki::Image>();
                 auto& transform = transforms[i];
 
                 if (!descSetLayouts.empty()) {
@@ -588,8 +591,8 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 static void UpdateMeshInstance(flecs::iter iter, kaki::MeshFilter* meshFilters) {
     for(auto i : iter) {
 
-        auto mesh = meshFilters[i].mesh.get<kaki::Mesh>();
-        auto gltf = meshFilters[i].mesh.get_object(flecs::ChildOf);
+        auto mesh =  flecs::entity(iter.world(), meshFilters[i].mesh).get<kaki::Mesh>();
+        auto gltf = flecs::entity(iter.world(), meshFilters[i].mesh).get_object(flecs::ChildOf);
 
         std::vector<kaki::internal::MeshInstance::Primitive> prims(mesh->primitives.size());
         for(int i = 0; i < mesh->primitives.size(); i++) {
@@ -614,6 +617,7 @@ kaki::gfx::gfx(flecs::world &world) {
     world.component<kaki::Pipeline>();
     world.component<kaki::Gltf>();
     world.component<kaki::ShaderModule>();
+    world.component<kaki::MeshFilter>();
 
     world.component<kaki::DependsOn>().add(flecs::Acyclic);
 
@@ -680,6 +684,35 @@ kaki::gfx::gfx(flecs::world &world) {
 
         }
     }).add<DependsOn>(shaderModuleLoader);
+
+    world.entity("MeshFilterLoader").set<ComponentAssetHandler, MeshFilter>({
+        .load = [](flecs::iter iter, AssetData* data, void* pfilters) {
+            auto filters = static_cast<MeshFilter*>(pfilters);
+
+            for(auto i : iter) {
+                membuf buf(data[i].data);
+                std::istream bufStream(&buf);
+                cereal::BinaryInputArchive archive(bufStream);
+
+                uint64_t meshRef, albedoRef, normalRef, mrRef, aoRef;
+                archive(meshRef, albedoRef, normalRef, mrRef, aoRef);
+
+                filters[i].mesh = data->entityRefs[meshRef];
+                filters[i].albedo = data->entityRefs[albedoRef];
+                filters[i].normal = data->entityRefs[normalRef];
+                filters[i].metallicRoughness = data->entityRefs[mrRef];
+                filters[i].ao = data->entityRefs[aoRef];
+            }
+
+        }
+    });
+
+    world.component<MeshFilter>()
+            .member("mesh", ecs_id(ecs_entity_t))
+            .member("albedo", ecs_id(ecs_entity_t))
+            .member("normal", ecs_id(ecs_entity_t))
+            .member("metallicRoughness", ecs_id(ecs_entity_t))
+            .member("ao", ecs_id(ecs_entity_t));
 
     createGlobals(world);
     world.system<VkGlobals>("Render system").kind(flecs::OnStore).each(render);

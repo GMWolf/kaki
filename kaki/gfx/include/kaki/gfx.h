@@ -15,11 +15,11 @@ namespace kaki {
     };
 
     struct MeshFilter {
-        flecs::entity mesh;
-        flecs::entity albedo;
-        flecs::entity normal;
-        flecs::entity metallicRoughness;
-        flecs::entity ao;
+        flecs::entity_t mesh;
+        flecs::entity_t albedo;
+        flecs::entity_t normal;
+        flecs::entity_t metallicRoughness;
+        flecs::entity_t ao;
     };
 
     namespace internal {

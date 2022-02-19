@@ -22,7 +22,6 @@ namespace kaki {
         struct Entity {
             std::string name;
         };
-        std::vector<Entity> entities;
 
         enum class TypeId {
             ChildOf,
@@ -33,6 +32,7 @@ namespace kaki {
         struct Type {
             EntityRef typeId;
             std::optional<EntityRef> object;
+            bool override = false;
         };
 
         struct Data {
@@ -48,9 +48,11 @@ namespace kaki {
         struct Table {
             uint64_t entityFirst;
             uint64_t entityCount;
+            uint64_t referenceOffset;
             std::vector<Component> components;
         };
 
+        std::vector<Entity> entities;
         std::vector<Table> tables;
         std::string dataFile;
     };
@@ -65,6 +67,7 @@ namespace kaki {
     void serialize(Archive& archive, Package::Type& type) {
         archive(cereal::make_nvp("id", type.typeId));
         archive(cereal::make_nvp("object", type.object));
+        archive(cereal::make_nvp("override", type.override));
     }
 
     template<class Archive>
@@ -77,6 +80,7 @@ namespace kaki {
     void serialize(Archive& archive, Package::Table& table) {
         archive(cereal::make_nvp("first", table.entityFirst));
         archive(cereal::make_nvp("size", table.entityCount));
+        archive(cereal::make_nvp("refoffset", table.referenceOffset));
         archive(cereal::make_nvp("components", table.components));
     }
 

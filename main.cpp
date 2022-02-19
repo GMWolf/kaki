@@ -35,17 +35,9 @@ int main() {
         .orientation = glm::quatLookAt(glm::vec3{0,0,-1}, glm::vec3{0,1,0}),
     });
 
-    world.entity().set<kaki::MeshFilter>(kaki::MeshFilter{
-        .mesh = package.lookup("SciFiHelmet_gltf::SciFiHelmet"),
-        .albedo = package.lookup("SciFiHelmet_gltf::SciFiHelmet_BaseColor"),
-        .normal = package.lookup("SciFiHelmet_gltf::SciFiHelmet_Normal"),
-        .metallicRoughness = package.lookup("SciFiHelmet_gltf::SciFiHelmet_MetallicRoughness"),
-        .ao = package.lookup("SciFiHelmet_gltf::SciFiHelmet_AmbientOcclusion"),
-    }).set(kaki::Transform{
-        .position = {0,0,0},
-        .scale = 1,
-        .orientation = {},
-    }).add<Control>();
+
+    world.entity().is_a(package.lookup("SciFiHelmet"))
+        .add<Control>();
 
     world.system<kaki::Transform>().term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
         auto* input = window.get<kaki::Input>();

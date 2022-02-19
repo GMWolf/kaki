@@ -72,6 +72,10 @@ static flecs::id_t resolveComponentType(flecs::world& world, std::span<flecs::en
                                         const kaki::Package::Type& type) {
     auto r = resolveEntity(world, entities, type.typeId);
 
+    if (type.override) {
+        r |= ECS_OVERRIDE;
+    }
+
     if (type.object) {
         auto o = resolveEntity(world, entities, type.object.value());
         return world.pair(r, o);
@@ -101,6 +105,7 @@ void callAssetHandlers(flecs::entity root) {
                 .term(assetType)
                 .term<kaki::AssetData>(assetType)
                 .term(flecs::ChildOf, root).set(flecs::Self | flecs::SuperSet, flecs::ChildOf)
+                .term(flecs::Prefab).oper(flecs::Optional)
                 .build();
 
         // Iterate the handlers
@@ -119,8 +124,6 @@ void callAssetHandlers(flecs::entity root) {
         }
 
     });
-
-
 }
 
 flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package &package, std::span<uint8_t> dataFile) {
@@ -135,7 +138,7 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
         entities.insert(entities.end(), entitiesTmp, entitiesTmp + entityCount);
     }
 
-    // Move entities to tables, includeing AssetData components
+    // Move entities to tables, including AssetData components
     for(auto& table : package.tables) {
         ecs_bulk_desc_t bulkDesc{};
         bulkDesc.count = static_cast<int32_t>(table.entityCount);
@@ -157,12 +160,12 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
 
             if (!component.data.empty()) {
                 assert(component.data.size() == table.entityCount);
-                auto name = e.name();
                 bulkDesc.ids[componentId] = world.pair(world.component<AssetData>(), e);
                 auto* assetData = static_cast<AssetData*>(alloca(sizeof(AssetData) * table.entityCount));
                 for(int i = 0; i < table.entityCount; i++) {
                     auto& cdata = component.data[i];
                     assetData[i].data = dataFile.subspan(cdata.offset, cdata.size);
+                    assetData[i].entityRefs = std::span(entities).subspan(table.referenceOffset);
                 }
                 bulkDesc.data[componentId] = assetData;
 

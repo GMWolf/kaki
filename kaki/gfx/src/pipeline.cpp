@@ -144,7 +144,7 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
             .rasterizerDiscardEnable = false,
             .polygonMode = VK_POLYGON_MODE_FILL,
             .cullMode = VK_CULL_MODE_BACK_BIT,
-            .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+            .frontFace = VK_FRONT_FACE_CLOCKWISE,
             .depthBiasEnable = false,
             .depthBiasConstantFactor = 0.0f,
             .depthBiasClamp = 0.0f,

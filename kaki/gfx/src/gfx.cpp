@@ -421,7 +421,7 @@ static glm::mat4 perspective(float vertical_fov, float aspect_ratio, float n, fl
                                 x,    0.0f,  0.0f, 0.0f,
                                 0.0f,    y,  0.0f, 0.0f,
                                 0.0f, 0.0f,     A,    B,
-                                0.0f, 0.0f, -1.0f, 0.0f,
+                                0.0f, 0.0f, 1.0f, 0.0f,
                         });
 
     if (inverse)

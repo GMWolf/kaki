@@ -27,7 +27,7 @@ int main() {
 
     auto package = kaki::loadPackage(world, "testpackage.json");
     auto scene = world.entity("scene").is_a(package.lookup("SciFiHelmet::Scene"));
-    scene.lookup("SciFiHelmet").add<Control>();
+    scene.lookup("Camera").add<Control>();
 
     //auto sponzaPackage = kaki::loadPackage(world, "sponza/Sponza.gltf.json");
     auto sponza = world.entity("sponza").is_a(package.lookup("Sponza::Sponza"));
@@ -35,18 +35,32 @@ int main() {
     world.system<kaki::Transform>("Control system").term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
         auto* input = window.get<kaki::Input>();
 
+        glm::vec3 d(0);
+        float r = 0;
+        float s = 2 * entity.delta_time();
         if (input->keyDown('D')) {
-            transform.position.x -= entity.delta_time() * 10;
+            d += s * glm::vec3(1, 0, 0);
         }
         if (input->keyDown('A')) {
-            transform.position.x += entity.delta_time() * 10;
+            d += s * glm::vec3(-1, 0, 0);
         }
         if (input->keyDown('W')) {
-            transform.position.z += entity.delta_time() * 10;
+            d += s * glm::vec3(0, 0, 1);
         }
         if (input->keyDown('S')) {
-            transform.position.z -= entity.delta_time() * 10;
+            d += s * glm::vec3(0, 0, -1);
         }
+        if (input->keyDown('E')) {
+            r += 1 * entity.delta_time();
+        }
+        if (input->keyDown('Q')) {
+            r -=1 * entity.delta_time();
+        }
+
+        transform.orientation *= glm::quat(glm::vec3(0, r, 0));
+
+        transform.position += transform.orientation * d;
+
     });
 
     world.set(flecs::rest::Rest{});

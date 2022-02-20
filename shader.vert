@@ -24,7 +24,8 @@ layout(push_constant) uniform constants {
     vec3 light; float pad1;
 };
 
-vec3 rotate(vec3 vec, vec4 quat) {
+vec3 rotate(vec3 vec, vec4 q) {
+    vec4 quat = q.yzwx;
     vec3 t = 2 * cross(quat.xyz, vec);
     return vec + quat.w * t + cross(quat.xyz, t);
 }

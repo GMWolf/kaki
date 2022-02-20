@@ -1,0 +1,5 @@
+add_subdirectory(gltf_compiler)
+add_subdirectory(packager)
+add_subdirectory(pipeline_compiler)
+add_subdirectory(shader_compiler)
+add_subdirectory(asset_build)

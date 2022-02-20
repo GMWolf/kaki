@@ -12,7 +12,7 @@ function(compile_gltf targetName)
                 OUTPUT ${source}.json ${source}.json.bin
                 COMMAND gltf_compiler ARGS ${CMAKE_CURRENT_LIST_DIR}/${source} ${source}.json
                 DEPENDS "${CMAKE_CURRENT_LIST_DIR}/${source}" gltf_compiler
-                #DEPFILE ${source}.d
+                DEPFILE ${source}.json.d
                 USES_TERMINAL
         )
         list(APPEND outputFiles ${source}.bin)

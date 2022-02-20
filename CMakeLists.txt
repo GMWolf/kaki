@@ -45,7 +45,7 @@ target_include_directories(spirv-reflect PUBLIC external/SPIRV-Reflect)
 add_library(rapidjson INTERFACE)
 target_include_directories(rapidjson INTERFACE external/rapidjson/include)
 
-add_library(cereal INTERFACE kaki/common/include/overloaded.h)
+add_library(cereal INTERFACE kaki/common/include/overloaded.h tools/asset_build/asset_build.cpp)
 target_include_directories(cereal INTERFACE external/cereal/include)
 
 add_subdirectory(external/glm)
@@ -59,10 +59,7 @@ add_library(cgltf INTERFACE)
 target_include_directories(cgltf INTERFACE external/cgltf)
 
 add_subdirectory(kaki)
-add_subdirectory(shader_compiler)
-add_subdirectory(gltf_compiler)
-add_subdirectory(pipeline_compiler)
-add_subdirectory(packager)
+add_subdirectory(tools)
 
 add_executable(test main.cpp)
 target_link_libraries(test PRIVATE kaki-gfx)

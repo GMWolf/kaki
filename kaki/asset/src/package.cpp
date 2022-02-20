@@ -161,7 +161,7 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
             if (!component.data.empty()) {
                 assert(component.data.size() == table.entityCount);
                 bulkDesc.ids[componentId] = world.pair(world.component<AssetData>(), e);
-                auto* assetData = static_cast<AssetData*>(alloca(sizeof(AssetData) * table.entityCount));
+                auto* assetData = static_cast<AssetData*>(malloc(sizeof(AssetData) * table.entityCount));
                 for(int i = 0; i < table.entityCount; i++) {
                     auto& cdata = component.data[i];
                     assetData[i].data = dataFile.subspan(cdata.offset, cdata.size);
@@ -174,6 +174,12 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
         }
 
         ecs_bulk_init( world.c_ptr(), &bulkDesc );
+
+        for(auto i = 0; i < ECS_MAX_ADD_REMOVE; i++) {
+            if (bulkDesc.data[i]) {
+                free(bulkDesc.data[i]);
+            }
+        }
     }
 
     // Name entities

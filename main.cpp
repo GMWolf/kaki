@@ -9,7 +9,7 @@
 #include "kaki/core.h"
 
 struct Control{};
-
+struct Rotate{};
 int main() {
 
     flecs::world world;
@@ -28,6 +28,7 @@ int main() {
     auto package = kaki::loadPackage(world, "testpackage.json");
     auto scene = world.entity("scene").is_a(package.lookup("SciFiHelmet::Scene"));
     scene.lookup("Camera").add<Control>();
+    scene.lookup("SciFiHelmet").add<Rotate>();
 
     //auto sponzaPackage = kaki::loadPackage(world, "sponza/Sponza.gltf.json");
     auto sponza = world.entity("sponza").is_a(package.lookup("Sponza::Sponza"));
@@ -61,6 +62,10 @@ int main() {
 
         transform.position += transform.orientation * d;
 
+    });
+
+    world.system<kaki::Transform>("Rotate system").term<Rotate>().each([&](flecs::entity entity, kaki::Transform& transform) {
+        transform.orientation *= glm::quat(glm::vec3(0, entity.delta_time() * 0.5, 0));
     });
 
     world.set(flecs::rest::Rest{});

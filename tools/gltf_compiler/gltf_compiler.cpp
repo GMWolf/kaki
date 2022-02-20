@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <iterator>
 #include <filesystem>
+#include <regex>
 
 namespace fs = std::filesystem;
 
@@ -478,6 +479,8 @@ int main(int argc, char* argv[]) {
     const std::string outputPath = argv[2];
     const std::string binOutputPath = outputPath + ".bin";
 
+    std::vector<std::string> deps;
+
     auto assetName = inputPath.stem();
 
     cgltf_options options = {};
@@ -487,6 +490,14 @@ int main(int argc, char* argv[]) {
     if (result != cgltf_result_success) {
         fprintf(stderr, "Failed to load gltf file: %s\n", inputPath.c_str());
         return 1;
+    }
+
+    for(auto& buffer : std::span(data->buffers, data->buffers_count)) {
+        if (buffer.uri) {
+            char path[1024];
+            cgltf_combine_paths(path, inputPath.c_str(), buffer.uri);
+            deps.emplace_back(path);
+        }
     }
 
     result = cgltf_load_buffers(&options, data, inputPath.c_str());
@@ -505,6 +516,7 @@ int main(int argc, char* argv[]) {
     for(auto& image : std::span(data->images, data->images_count)) {
         char path[1024];
         cgltf_combine_paths(path, inputPath.c_str(), image.uri);
+        deps.emplace_back(path);
     }
 
     kaki::Package package;
@@ -522,6 +534,17 @@ int main(int argc, char* argv[]) {
     std::ofstream os(outputPath);
     cereal::JSONOutputArchive archive( os );
     archive(package);
+
+    {
+        std::ofstream depsos(outputPath + ".d");
+        std::regex whitespaceRegex("\\s");
+        depsos << outputPath.c_str() << " :";
+
+        for(auto& d : deps) {
+            auto escapedPath = std::regex_replace(d, whitespaceRegex, "\\$&");
+            depsos << " " << escapedPath;
+        }
+    }
 
     return 0;
 }

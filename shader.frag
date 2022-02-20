@@ -107,9 +107,12 @@ void main() {
     vec3 bitangent = TANGENT.w * cross(NORMAL, TANGENT.xyz);
 
     vec3 tnormal = texture(normalTexture, UV).xyz * 2.0 - 1.0;
+    tnormal.y *= -1;
+    tnormal.z = sqrt(1 - dot(tnormal.xy, tnormal.xy));
+
     //vec3 normal = normalize(tnormal.x * TANGENT.xyz + tnormal.y * bitangent + tnormal.z * NORMAL);
     vec3 normal = mat3(normalize(TANGENT.xyz), normalize(bitangent), normalize(NORMAL)) * tnormal;
-    normal.y *= -1;
+    //normal.y *= -1;
 
     //normal = NORMAL;
     vec2 metallicRoughness = texture(metallicRoughnessTexture, UV).bg;
@@ -125,13 +128,11 @@ void main() {
 
     LightFragment l;
     l.lightDirection = light;
-    l.radiance = vec3(2, 1.7, 1.5);
+    l.radiance = 3 * vec3(2, 1.7, 1.5);
 
     vec3 v = normalize(VIEW_DIRECTION);
 
-    vec3 c = pbrColor(m, l, v) + albedo * ao * vec3(0.03, 0.03, 0.05);
-
-    c = albedo;
+    vec3 c = pbrColor(m, l, v) + albedo * vec3(0.03, 0.03, 0.05);
 
     outColor = vec4(c, 1);
 }

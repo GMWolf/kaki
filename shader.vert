@@ -40,5 +40,5 @@ void main() {
     UV_OUT = UV;
     NORMAL_OUT = rotate(NORMAL, transform.orientation);
     TANGENT_OUT = vec4(rotate(TANGENT.xyz, transform.orientation), TANGENT.w);
-    VIEW_DIRECTION = pos - viewPos;
+    VIEW_DIRECTION = normalize(pos - viewPos);
 }

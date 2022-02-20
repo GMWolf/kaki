@@ -31,6 +31,9 @@ namespace kaki::internal {
 }
 
 
+flecs::query<kaki::MeshFilter> meshQuery;
+
+
 static VkRenderPass createRenderPass(VkDevice device, VkFormat format) {
     VkAttachmentDescription attachment {
         .flags = 0,
@@ -394,6 +397,15 @@ void updateDescSets( kaki::VkGlobals& vk, std::span<VkDescriptorSet> descSets, c
     vkUpdateDescriptorSets(vk.device, writeCount, descSetWrites.data(), 0, nullptr);
 }
 
+template<class T>
+std::optional<flecs::column<T>> selectColumn(flecs::iter iter, std::initializer_list<size_t> indices) {
+    for(auto i : indices) {
+        if (iter.is_set(i)) {
+            return iter.term<T>(i);
+        }
+    }
+    return std::nullopt;
+}
 
 static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
@@ -483,7 +495,11 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     vkCmdSetViewport(vk.cmd[vk.currentFrame], 0, 1, &viewport);
     vkCmdSetScissor(vk.cmd[vk.currentFrame], 0, 1, &scissor);
 
-    entity.world().each([&](const kaki::Camera& camera, const kaki::Transform& cameraTransform) {
+    //auto cameraFilter = world.filter_builder<const kaki::Camera, const kaki::Transform>()
+    //        .arg(2).id<kaki::Transform, kaki::WorldSpace>()
+    //        .build();
+
+    world.each([&](const kaki::Camera& camera, const kaki::Transform& cameraTransform) {
 
         float aspect = (float)vk.swapchain.extent.width / (float)vk.swapchain.extent.height;
         glm::mat4 proj = glm::perspective(camera.fov, aspect, 0.01f, 1000.0f);
@@ -491,11 +507,13 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
         glm::mat4 viewProj = proj * view;
 
 
-        entity.world().filter_builder<kaki::Transform, kaki::MeshFilter>().term<kaki::internal::MeshInstance>(flecs::Wildcard).build()
-        .iter([&](flecs::iter& it, kaki::Transform* transforms, kaki::MeshFilter* filters) {
 
-            auto meshInstances = it.term<kaki::internal::MeshInstance>(3);
-            auto gltfE = it.pair(3).object();
+        meshQuery.iter([&](flecs::iter& it, kaki::MeshFilter* filters) {
+
+            auto transforms = it.term<kaki::Transform>(3);
+
+            auto meshInstances = it.term<kaki::internal::MeshInstance>(2);
+            auto gltfE = it.pair(2).object();
             auto gltf = gltfE.get<kaki::Gltf>();
 
             VkDeviceSize offsets[4]{0, 0, 0, 0};
@@ -745,6 +763,14 @@ kaki::gfx::gfx(flecs::world &world) {
             .member("ao", ecs_id(ecs_entity_t));
 
     createGlobals(world);
+
+
+    //TODO: support world space queries
+    meshQuery = world.query_builder<kaki::MeshFilter>()
+            .term<kaki::internal::MeshInstance>(flecs::Wildcard)
+            .term<kaki::Transform>().set(flecs::Self | flecs::SuperSet, flecs::ChildOf)
+            .build();
+
     world.system<VkGlobals>("Render system").kind(flecs::OnStore).each(render);
 
     world.trigger<MeshFilter>().event(flecs::OnSet).iter(UpdateMeshInstance);

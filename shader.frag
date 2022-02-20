@@ -111,6 +111,7 @@ void main() {
     vec3 normal = mat3(normalize(TANGENT.xyz), normalize(bitangent), normalize(NORMAL)) * tnormal;
     normal.y *= -1;
 
+    //normal = NORMAL;
     vec2 metallicRoughness = texture(metallicRoughnessTexture, UV).bg;
 
     float ao = texture(aoTexture, UV).r;

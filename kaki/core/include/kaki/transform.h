@@ -11,10 +11,14 @@
 
 namespace kaki {
 
+    struct WorldSpace {};
+
     struct Transform {
         glm::vec3 position {};
         float scale {1};
         glm::quat orientation {};
+
+        [[nodiscard]] Transform apply(const Transform& base) const;
 
         [[nodiscard]] Transform inverse() const;
         [[nodiscard]] glm::mat4 matrix() const;

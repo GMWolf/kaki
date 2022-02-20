@@ -23,3 +23,11 @@ glm::mat4 kaki::Transform::matrix() const {
     mat[3] = position;
     return mat;
 }
+
+kaki::Transform kaki::Transform::apply(const kaki::Transform &base) const{
+    Transform result;
+    result.position = position + (orientation * (base.position * scale));
+    result.orientation = orientation * base.orientation;
+    result.scale = scale * base.scale;
+    return result;
+}

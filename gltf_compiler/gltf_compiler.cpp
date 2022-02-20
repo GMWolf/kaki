@@ -319,19 +319,15 @@ void writeMultiPrimitiveMeshNodesPrimitives(kaki::Package& package, uint64_t par
             .components = {
                     kaki::Package::Component{.type = {"flecs::core::Prefab"}},
                     kaki::Package::Component{.type = {kaki::Package::TypeId::ChildOf, parentEntity}},
-                    kaki::Package::Component{.type = {"kaki::core::Transform", {}}},
-                    kaki::Package::Component{.type = {"kaki::core::Transform", {}, true}},
                     kaki::Package::Component{.type = {"kaki::gfx::MeshFilter", {}}},
             },
     };
 
-    auto& transformData = table.components[2].data;
-    auto& meshData = table.components[4].data;
+    auto& meshData = table.components[2].data;
 
     for(cgltf_primitive& primitive : std::span(mesh->primitives, mesh->primitives_count)) {
         package.entities.push_back({""});
 
-        transformData.push_back(writeTransform(outData));
         meshData.emplace_back(writeMeshFilter(mesh, primitive, firstMesh, firstImage, cgltfData, outData));
     }
 
@@ -359,13 +355,18 @@ void writeMultiPrimitiveMeshNodes(kaki::Package& package, uint64_t parentEntity,
             },
     };
 
-    package.tables.emplace_back(table);
+
+    auto& transformData = table.components[2].data;
 
     for(cgltf_node* node : nodes) {
         package.entities.push_back({node->name ? node->name : ""});
+        transformData.emplace_back(writeTransform(node, outData));
     }
 
     uint64_t it = table.entityFirst;
+
+    package.tables.emplace_back(std::move(table));
+
     for(cgltf_node* node : nodes) {
         writeMultiPrimitiveMeshNodesPrimitives(package, it, firstMesh, firstImage, cgltfData, node->mesh, outData);
         it ++;

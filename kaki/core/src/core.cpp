@@ -8,6 +8,24 @@
 #include <cereal/archives/binary.hpp>
 #include <kaki/asset.h>
 #include <kaki/vec_cereal.h>
+#include <optional>
+
+template <class T>
+using optionalColumn = std::optional<flecs::column<T>>;
+
+
+void applyTransformHeirarchy(flecs::iter iter, flecs::column<kaki::Transform> worldTransform, flecs::column<kaki::Transform> transform, optionalColumn<kaki::Transform> parentTransform) {
+
+    if (parentTransform) {
+        for (auto i: iter) {
+            worldTransform[i] = parentTransform.value()[i].apply(transform[i]);
+        }
+    } else {
+        for (auto i: iter) {
+            worldTransform[i] = transform[i];
+        }
+    }
+}
 
 kaki::core::core(flecs::world &world) {
 
@@ -32,7 +50,19 @@ kaki::core::core(flecs::world &world) {
             .member("scale", scale)
             .member("orientation", quat);
 
+    //world.component<Transform>()
+    //        .add(flecs::With, world.pair<Transform, WorldSpace>());
 
     world.entity("TransformLoader").set<ComponentAssetHandler, Transform>(serializeComponentAssetHandler<Transform>());
+
+    world.system("TransformSystem").kind(flecs::PostUpdate)
+        .term<Transform, WorldSpace>().inout(flecs::Out)
+        .term<Transform>().inout(flecs::In)
+        .term<Transform>().super(flecs::ChildOf, flecs::Cascade).oper(flecs::Optional).inout(flecs::In)
+        .iter([](flecs::iter iter) {
+            optionalColumn<Transform> parentTransform = iter.is_set(3) ? iter.term<Transform>(3) : optionalColumn<Transform>();
+            applyTransformHeirarchy(iter, iter.term<Transform>(1), iter.term<Transform>(2), parentTransform);
+        });
+
 }
 

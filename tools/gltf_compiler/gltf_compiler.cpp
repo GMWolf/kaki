@@ -197,7 +197,10 @@ void writeImages(kaki::Package& package, std::span<cgltf_image> images, const ch
                 cgltf_combine_paths(path, inputPath, t.uri);
                 printf("%s: %s\n", t.name, path);
 
-                std::ifstream input(path, std::ios::binary);
+                fs::path p(path);
+                p.replace_extension(".ktx2");
+
+                std::ifstream input(p, std::ios::binary);
 
                 auto& data = table.components[1].data.emplace_back();
                 data.offset = static_cast<uint64_t>(outData.tellp());
@@ -516,7 +519,8 @@ int main(int argc, char* argv[]) {
     for(auto& image : std::span(data->images, data->images_count)) {
         char path[1024];
         cgltf_combine_paths(path, inputPath.c_str(), image.uri);
-        deps.emplace_back(path);
+        fs::path p(path);
+        deps.emplace_back(p.replace_extension(".ktx2").string());
     }
 
     kaki::Package package;

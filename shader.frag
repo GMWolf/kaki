@@ -103,11 +103,18 @@ vec3 pbrColor(PBRFragment f, LightFragment l, vec3 viewDirection) {
 void main() {
 
 
-    vec3 albedo = texture(albedoTexture, UV).rgb;
+    vec4 albedoA = texture(albedoTexture, UV).rgba;
+
+    if (albedoA.a < 0.25) {
+        discard;
+    }
+
+    vec3 albedo = albedoA.rgb;
+
     vec3 bitangent = TANGENT.w * cross(NORMAL, TANGENT.xyz);
 
     vec3 tnormal = texture(normalTexture, UV).xyz * 2.0 - 1.0;
-    tnormal.y *= -1;
+    //tnormal.y *= -1;
     tnormal.z = sqrt(1 - dot(tnormal.xy, tnormal.xy));
 
     //vec3 normal = normalize(tnormal.x * TANGENT.xyz + tnormal.y * bitangent + tnormal.z * NORMAL);

@@ -50,6 +50,8 @@ target_include_directories(cereal INTERFACE external/cereal/include)
 
 add_subdirectory(external/glm)
 target_compile_definitions(glm INTERFACE GLM_FORCE_QUAT_DATA_XYZW)
+target_compile_definitions(glm INTERFACE GLM_FORCE_LEFT_HANDED)
+target_compile_definitions(glm INTERFACE GLM_FORCE_DEPTH_ZERO_TO_ONE)
 
 add_subdirectory(external/KTX-Software)
 

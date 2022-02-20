@@ -407,6 +407,37 @@ std::optional<flecs::column<T>> selectColumn(flecs::iter iter, std::initializer_
     return std::nullopt;
 }
 
+static glm::mat4 perspective(float vertical_fov, float aspect_ratio, float n, float f, glm::mat4 *inverse = nullptr)
+{
+    float fov_rad = vertical_fov;
+    float focal_length = 1.0f / std::tan(fov_rad / 2.0f);
+
+    float x  =  focal_length / aspect_ratio;
+    float y  = -focal_length;
+    float A  = n / (f - n);
+    float B  = f * A;
+
+    glm::mat4 projection({
+                                x,    0.0f,  0.0f, 0.0f,
+                                0.0f,    y,  0.0f, 0.0f,
+                                0.0f, 0.0f,     A,    B,
+                                0.0f, 0.0f, -1.0f, 0.0f,
+                        });
+
+    if (inverse)
+    {
+        *inverse = glm::mat4({
+                                    1/x,  0.0f, 0.0f,  0.0f,
+                                    0.0f,  1/y, 0.0f,  0.0f,
+                                    0.0f, 0.0f, 0.0f, -1.0f,
+                                    0.0f, 0.0f,  1/B,   A/B,
+                            });
+    }
+
+    return glm::transpose( projection );
+}
+
+
 static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
     auto world = entity.world();
@@ -433,7 +464,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     VkClearValue clearValue = {};
     clearValue.color = clearColor;
 
-    VkClearDepthStencilValue clearDepth {1.0f, 0};
+    VkClearDepthStencilValue clearDepth {0.0f, 0};
     VkClearValue depthClearValue {
         .depthStencil = clearDepth,
     };
@@ -502,11 +533,9 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     world.each([&](const kaki::Camera& camera, const kaki::Transform& cameraTransform) {
 
         float aspect = (float)vk.swapchain.extent.width / (float)vk.swapchain.extent.height;
-        glm::mat4 proj = glm::perspective(camera.fov, aspect, 0.01f, 1000.0f);
+        glm::mat4 proj = perspective(camera.fov, aspect, 0.01f, 100.0f);
         glm::mat4 view = cameraTransform.inverse().matrix();
         glm::mat4 viewProj = proj * view;
-
-
 
         meshQuery.iter([&](flecs::iter& it, kaki::MeshFilter* filters) {
 

@@ -131,6 +131,7 @@ void main() {
 
     vec3 c = pbrColor(m, l, v) + albedo * ao * vec3(0.03, 0.03, 0.05);
 
+    c = albedo;
 
     outColor = vec4(c, 1);
 }

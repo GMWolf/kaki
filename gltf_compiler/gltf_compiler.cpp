@@ -225,7 +225,7 @@ kaki::Package::Data writeTransform(const cgltf_node* node, std::ostream& outData
     data.offset = outData.tellp();
     dataArchive(node->translation[0], node->translation[1], node->translation[2]);
     dataArchive(node->scale[0]);
-    dataArchive(node->rotation[3], node->rotation[0], node->rotation[1], node->rotation[2]);
+    dataArchive(node->rotation[0], node->rotation[1], node->rotation[2], node->rotation[3]);
     data.size = (uint64_t)outData.tellp() - data.offset;
 
     return data;

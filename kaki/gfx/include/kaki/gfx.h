@@ -22,6 +22,7 @@ namespace kaki {
         flecs::entity_t normal;
         flecs::entity_t metallicRoughness;
         flecs::entity_t ao;
+        flecs::entity_t emissive;
     };
 
     struct gfx {

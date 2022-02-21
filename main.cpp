@@ -30,6 +30,9 @@ int main() {
     scene.lookup("Camera").add<Control>();
     scene.lookup("SciFiHelmet").add<Rotate>();
 
+    auto dhscene = world.entity("dhscene").is_a(package.lookup("DamagedHelmet::Scene"));
+    dhscene.lookup("damagedHelmet").add<Rotate>();
+
     //auto sponzaPackage = kaki::loadPackage(world, "sponza/Sponza.gltf.json");
     auto sponza = world.entity("sponza").is_a(package.lookup("Sponza::Sponza"));
 
@@ -65,7 +68,7 @@ int main() {
     });
 
     world.system<kaki::Transform>("Rotate system").term<Rotate>().each([&](flecs::entity entity, kaki::Transform& transform) {
-        transform.orientation *= glm::quat(glm::vec3(0, entity.delta_time() * 0.5, 0));
+        transform.orientation = glm::quat(glm::vec3(0, entity.delta_time() * 0.5, 0)) * transform.orientation;
     });
 
     world.set(flecs::rest::Rest{});

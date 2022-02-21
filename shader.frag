@@ -22,6 +22,7 @@ layout(set = 0, binding = 0) uniform sampler2D albedoTexture;
 layout(set = 0, binding = 1) uniform sampler2D normalTexture;
 layout(set = 0, binding = 2) uniform sampler2D metallicRoughnessTexture;
 layout(set = 0, binding = 3) uniform sampler2D aoTexture;
+layout(set = 0, binding = 4) uniform sampler2D emissiveTexture;
 layout(location = 0) out vec4 outColor;
 
 #define PI 3.14159265358979
@@ -122,7 +123,7 @@ void main() {
     //normal.y *= -1;
 
     //normal = NORMAL;
-    vec2 metallicRoughness = texture(metallicRoughnessTexture, UV).bg;
+    vec2 metallicRoughness = texture(metallicRoughnessTexture, UV).rg;
 
     float ao = texture(aoTexture, UV).r;
 
@@ -139,7 +140,7 @@ void main() {
 
     vec3 v = normalize(VIEW_DIRECTION);
 
-    vec3 c = pbrColor(m, l, v) + albedo * vec3(0.03, 0.03, 0.05);
+    vec3 c = pbrColor(m, l, v) + albedo * ao * vec3(0.018, 0.018, 0.022) + texture(emissiveTexture, UV).rgb;
 
     outColor = vec4(c, 1);
 }

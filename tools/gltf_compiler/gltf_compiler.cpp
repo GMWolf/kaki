@@ -265,14 +265,16 @@ kaki::Package::Data writeMeshFilter(cgltf_mesh* mesh, cgltf_primitive& primitive
     auto normalImage = primitive.material->normal_texture.texture ? primitive.material->normal_texture.texture->image : nullptr;
     auto mrImage = primitive.material->pbr_metallic_roughness.metallic_roughness_texture.texture ? primitive.material->pbr_metallic_roughness.metallic_roughness_texture.texture->image : nullptr;
     auto aoImage = primitive.material->occlusion_texture.texture ? primitive.material->occlusion_texture.texture->image : nullptr;
+    auto emissiveImage = primitive.material->emissive_texture.texture ? primitive.material->emissive_texture.texture->image : nullptr;
 
     uint32_t primitiveIndex = std::distance(mesh->primitives, &primitive);
     uint64_t albedoEntity = firstImage + std::distance(cgltfData->images, albedoImage);
     uint64_t normalEntity = normalImage ? firstImage + std::distance(cgltfData->images, normalImage) : 0;
     uint64_t mrEntity = mrImage ? firstImage + std::distance(cgltfData->images, mrImage) : 0;
     uint64_t aoEntity = aoImage ? firstImage + std::distance(cgltfData->images, aoImage) : 0;
+    uint64_t emissiveEntity = emissiveImage ? firstImage + std::distance(cgltfData->images, emissiveImage) : 0;
 
-    dataArchive(meshEntity, primitiveIndex, albedoEntity, normalEntity, mrEntity, aoEntity);
+    dataArchive(meshEntity, primitiveIndex, albedoEntity, normalEntity, mrEntity, aoEntity, emissiveEntity);
     md.size = (uint64_t)outData.tellp() - md.offset;
 
     return md;

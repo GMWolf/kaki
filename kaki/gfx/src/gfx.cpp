@@ -119,7 +119,7 @@ static bool createSwapChain(kaki::VkGlobals& vk) {
     vkb::SwapchainBuilder swapchainBuilder { vk.device };
     auto swap_ret = swapchainBuilder
             .set_old_swapchain(vk.swapchain)
-            .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+            .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
             .set_image_usage_flags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
             .build();
 
@@ -599,6 +599,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
                 auto normalImage = flecs::entity(world, filters[i].normal).get<kaki::Image>();
                 auto metallicRoughnessImage = flecs::entity(world, filters[i].metallicRoughness).get<kaki::Image>();
                 auto aoImage = flecs::entity(world, filters[i].ao).get<kaki::Image>();
+                auto emissiveImage = flecs::entity(world, filters[i].emissive).get<kaki::Image>();
                 auto& transform = transforms[i];
 
                 if (!descSetLayouts.empty()) {
@@ -618,6 +619,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
                         {"normalTexture", normalImage ? normalImage->view : VK_NULL_HANDLE},
                         {"metallicRoughnessTexture", metallicRoughnessImage ? metallicRoughnessImage->view : VK_NULL_HANDLE},
                         {"aoTexture", aoImage ? aoImage->view : VK_NULL_HANDLE},
+                        {"emissiveTexture", emissiveImage? emissiveImage->view : VK_NULL_HANDLE},
                     };
 
                     updateDescSets(vk, descriptorSets, *pipeline, inputs);
@@ -798,8 +800,8 @@ kaki::gfx::gfx(flecs::world &world) {
                 cereal::BinaryInputArchive archive(bufStream);
 
                 uint32_t primitiveIndex;
-                uint64_t meshRef, albedoRef, normalRef, mrRef, aoRef;
-                archive(meshRef, primitiveIndex, albedoRef, normalRef, mrRef, aoRef);
+                uint64_t meshRef, albedoRef, normalRef, mrRef, aoRef, emissiveRef;
+                archive(meshRef, primitiveIndex, albedoRef, normalRef, mrRef, aoRef, emissiveRef);
 
                 filters[i].mesh = data->entityRefs[meshRef];
                 filters[i].primitiveIndex = primitiveIndex;
@@ -807,6 +809,7 @@ kaki::gfx::gfx(flecs::world &world) {
                 filters[i].normal = data->entityRefs[normalRef];
                 filters[i].metallicRoughness = data->entityRefs[mrRef];
                 filters[i].ao = data->entityRefs[aoRef];
+                filters[i].emissive = data->entityRefs[emissiveRef];
             }
 
         }
@@ -833,7 +836,8 @@ kaki::gfx::gfx(flecs::world &world) {
             .member("albedo", ecs_id(ecs_entity_t))
             .member("normal", ecs_id(ecs_entity_t))
             .member("metallicRoughness", ecs_id(ecs_entity_t))
-            .member("ao", ecs_id(ecs_entity_t));
+            .member("ao", ecs_id(ecs_entity_t))
+            .member("emissive", ecs_id(ecs_entity_t));
 
     createGlobals(world);
 

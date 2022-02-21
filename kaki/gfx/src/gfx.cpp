@@ -115,62 +115,10 @@ VkFramebuffer createFrameBuffer(VkDevice device, VkRenderPass pass, VkImageView 
 }
 
 
-static bool createGlobals(flecs::world& world) {
-    vkb::InstanceBuilder builder;
-    auto inst_ret = builder.set_app_name("Kaki application")
-            .request_validation_layers()
-            .use_default_debug_messenger()
-            .build();
-
-    if (!inst_ret) {
-        fprintf(stderr, "Failed to initialize vulkan instance.\n");
-        return false;
-    }
-
-    vkb::Instance vkb_inst = inst_ret.value();
-
-    VkSurfaceKHR surface = world.lookup("window").get<kaki::Window>()->createSurface(vkb_inst);
-
-    vkb::PhysicalDeviceSelector selector{ vkb_inst };
-    auto phys_ret = selector.set_surface(surface)
-            .set_minimum_version(1,2)
-            .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
-            .select();
-
-    if (!phys_ret) {
-        fprintf(stderr, "Failed to select physical device.\n");
-        return false;
-    }
-
-    vkb::DeviceBuilder deviceBuilder{phys_ret.value()};
-
-    VkPhysicalDeviceRobustness2FeaturesEXT rbfeatures {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
-        .nullDescriptor = VK_TRUE,
-    };
-
-    deviceBuilder.add_pNext(&rbfeatures);
-
-    auto dev_ret = deviceBuilder.build();
-
-    if (!dev_ret) {
-        fprintf(stderr, "Failed to crate device.\n");
-        return false;
-    }
-
-    vkb::Device vkbDevice = dev_ret.value();
-
-    auto graphics_queue_ret = vkbDevice.get_queue(vkb::QueueType::graphics);
-
-    if(!graphics_queue_ret) {
-        fprintf(stderr, "Failed to get graphics queue.\n");
-        return false;
-    }
-
-    VkQueue queue = graphics_queue_ret.value();
-
-    vkb::SwapchainBuilder swapchainBuilder { vkbDevice };
+static bool createSwapChain(kaki::VkGlobals& vk) {
+    vkb::SwapchainBuilder swapchainBuilder { vk.device };
     auto swap_ret = swapchainBuilder
+            .set_old_swapchain(vk.swapchain)
             .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
             .set_image_usage_flags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
             .build();
@@ -180,63 +128,22 @@ static bool createGlobals(flecs::world& world) {
         return false;
     }
 
-    kaki::VkGlobals vk;
+    vkb::destroy_swapchain(vk.swapchain);
     vk.swapchain = swap_ret.value();
-    vk.instance = vkb_inst.instance;
-    vk.device = vkbDevice;
-    vk.queue = queue;
+    vk.imageViews = vk.swapchain.get_image_views().value();
 
-    VmaAllocatorCreateInfo allocatorInfo = {
-            .physicalDevice = vk.device.physical_device,
-            .device = vk.device,
-            .instance = vk.instance
-    };
-    vmaCreateAllocator(&allocatorInfo, &vk.allocator);
+    return true;
+}
 
-
-    VkSemaphoreCreateInfo semaphoreCreateInfo {
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = 0
-    };
-
-    for(int i = 0; i < kaki::VkGlobals::framesInFlight; i++) {
-        vkCreateSemaphore(vk.device, &semaphoreCreateInfo, nullptr, &vk.imageAvailableSemaphore[i]);
-        vkCreateSemaphore(vk.device, &semaphoreCreateInfo, nullptr, &vk.renderCompleteSemaphores[i]);
+static void createFrameBuffer(kaki::VkGlobals& vk) {
+    for(int i = 0; i < vk.swapchain.image_count; i++) {
+        vk.framebuffer[i] = createFrameBuffer(vk.device, vk.renderPass, vk.imageViews[i], vk.depthBufferView, vk.swapchain.extent.width, vk.swapchain.extent.height);
     }
+}
 
-    VkFenceCreateInfo fenceCreateInfo {
-            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = VK_FENCE_CREATE_SIGNALED_BIT
-    };
-
-    for(auto & i : vk.cmdBufFence) {
-        vkCreateFence(vk.device, &fenceCreateInfo, nullptr, &i);
-    }
-
-    VkCommandPoolCreateInfo poolInfo{
-            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT |
-                     VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-            .queueFamilyIndex = vk.device.get_queue_index(vkb::QueueType::graphics).value(),
-    };
-
-    vkCreateCommandPool(vk.device, &poolInfo, nullptr, &vk.cmdPool);
-
-    VkCommandBufferAllocateInfo cmdAllocInfo {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            .commandPool = vk.cmdPool,
-            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            .commandBufferCount = static_cast<uint32_t>(kaki::VkGlobals::framesInFlight),
-    };
-
-    vkAllocateCommandBuffers(vk.device, &cmdAllocInfo, vk.cmd);
-
-    vk.renderPass = createRenderPass(vk.device, vk.swapchain.image_format);
-
+static void createDepthBuffer(kaki::VkGlobals& vk) {
     {
-        uint32_t queueIndex = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+        uint32_t queueIndex = vk.device.get_queue_index(vkb::QueueType::graphics).value();
 
         VkImageCreateInfo imageCreateInfo {
                 .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -293,10 +200,124 @@ static bool createGlobals(flecs::world& world) {
         vkCreateImageView(vk.device, &viewInfo, nullptr, &vk.depthBufferView);
 
     }
+}
 
-    for(int i = 0; i < vk.swapchain.image_count; i++) {
-        vk.framebuffer[i] = createFrameBuffer(vk.device, vk.renderPass, vk.swapchain.get_image_views()->at(i), vk.depthBufferView, vk.swapchain.extent.width, vk.swapchain.extent.height);
+static bool createGlobals(flecs::world& world) {
+    vkb::InstanceBuilder builder;
+    auto inst_ret = builder.set_app_name("Kaki application")
+            .request_validation_layers()
+            .use_default_debug_messenger()
+            .build();
+
+    if (!inst_ret) {
+        fprintf(stderr, "Failed to initialize vulkan instance.\n");
+        return false;
     }
+
+    vkb::Instance vkb_inst = inst_ret.value();
+
+    VkSurfaceKHR surface = world.lookup("window").get<kaki::Window>()->createSurface(vkb_inst);
+
+    vkb::PhysicalDeviceSelector selector{ vkb_inst };
+    auto phys_ret = selector.set_surface(surface)
+            .set_minimum_version(1,2)
+            .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
+            .select();
+
+    if (!phys_ret) {
+        fprintf(stderr, "Failed to select physical device.\n");
+        return false;
+    }
+
+    vkb::DeviceBuilder deviceBuilder{phys_ret.value()};
+
+    VkPhysicalDeviceRobustness2FeaturesEXT rbfeatures {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
+        .nullDescriptor = VK_TRUE,
+    };
+
+    deviceBuilder.add_pNext(&rbfeatures);
+
+    auto dev_ret = deviceBuilder.build();
+
+    if (!dev_ret) {
+        fprintf(stderr, "Failed to crate device.\n");
+        return false;
+    }
+
+    vkb::Device vkbDevice = dev_ret.value();
+
+    auto graphics_queue_ret = vkbDevice.get_queue(vkb::QueueType::graphics);
+
+    if(!graphics_queue_ret) {
+        fprintf(stderr, "Failed to get graphics queue.\n");
+        return false;
+    }
+
+    VkQueue queue = graphics_queue_ret.value();
+
+    kaki::VkGlobals vk {};
+    vk.instance = vkb_inst.instance;
+    vk.device = vkbDevice;
+    vk.queue = queue;
+
+    if (!createSwapChain(vk)) {
+        return false;
+    }
+
+
+    VmaAllocatorCreateInfo allocatorInfo = {
+            .physicalDevice = vk.device.physical_device,
+            .device = vk.device,
+            .instance = vk.instance
+    };
+    vmaCreateAllocator(&allocatorInfo, &vk.allocator);
+
+
+    VkSemaphoreCreateInfo semaphoreCreateInfo {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0
+    };
+
+    for(int i = 0; i < kaki::VkGlobals::framesInFlight; i++) {
+        vkCreateSemaphore(vk.device, &semaphoreCreateInfo, nullptr, &vk.imageAvailableSemaphore[i]);
+        vkCreateSemaphore(vk.device, &semaphoreCreateInfo, nullptr, &vk.renderCompleteSemaphores[i]);
+    }
+
+    VkFenceCreateInfo fenceCreateInfo {
+            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = VK_FENCE_CREATE_SIGNALED_BIT
+    };
+
+    for(auto & i : vk.cmdBufFence) {
+        vkCreateFence(vk.device, &fenceCreateInfo, nullptr, &i);
+    }
+
+    VkCommandPoolCreateInfo poolInfo{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT |
+                     VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+            .queueFamilyIndex = vk.device.get_queue_index(vkb::QueueType::graphics).value(),
+    };
+
+    vkCreateCommandPool(vk.device, &poolInfo, nullptr, &vk.cmdPool);
+
+    VkCommandBufferAllocateInfo cmdAllocInfo {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = vk.cmdPool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = static_cast<uint32_t>(kaki::VkGlobals::framesInFlight),
+    };
+
+    vkAllocateCommandBuffers(vk.device, &cmdAllocInfo, vk.cmd);
+
+    vk.renderPass = createRenderPass(vk.device, vk.swapchain.image_format);
+
+    createDepthBuffer(vk);
+
+    createFrameBuffer(vk);
 
     {
         VkDescriptorPoolSize descriptorPoolSize[]{
@@ -438,6 +459,27 @@ static glm::mat4 perspective(float vertical_fov, float aspect_ratio, float n, fl
 }
 
 
+
+void recreate_swapchain(kaki::VkGlobals& vk) {
+
+    vkDeviceWaitIdle(vk.device);
+
+    for(auto framebuffer : std::span(vk.framebuffer, vk.swapchain.image_count)) {
+        vkDestroyFramebuffer(vk.device, framebuffer, nullptr);
+    }
+
+    vk.swapchain.destroy_image_views(vk.imageViews);
+
+    vkDestroyImageView(vk.device, vk.depthBufferView, nullptr);
+    vmaDestroyImage(vk.allocator, vk.depthBuffer, vk.depthBufferAlloc);
+
+
+    createSwapChain(vk);
+    createDepthBuffer(vk);
+    createFrameBuffer(vk);
+}
+
+
 static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
     auto world = entity.world();
@@ -452,9 +494,11 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     auto acquire = vkAcquireNextImageKHR(vk.device, vk.swapchain, UINT64_MAX, vk.imageAvailableSemaphore[vk.currentFrame], nullptr, &imageIndex);
 
     if (acquire == VK_ERROR_OUT_OF_DATE_KHR || acquire == VK_SUBOPTIMAL_KHR ){
-
+        recreate_swapchain (vk);
+        return;
     } else if (acquire != VK_SUCCESS) {
         fprintf(stderr, "Error acquiring swapchain image.\n");
+        return;
     }
 
     static float time = 0;

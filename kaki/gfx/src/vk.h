@@ -31,6 +31,7 @@ namespace kaki {
 
         VkRenderPass renderPass {};
         VkFramebuffer framebuffer[10] {};
+        std::vector<VkImageView> imageViews;
 
         VkDescriptorPool descriptorPools[framesInFlight];
         VkSampler sampler;

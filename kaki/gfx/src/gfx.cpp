@@ -21,6 +21,10 @@
 #include "gltf.h"
 #include <kaki/transform.h>
 #include <membuf.h>
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>
+#include "imgui_theme.h"
 
 namespace kaki::internal {
     struct MeshInstance {
@@ -102,7 +106,7 @@ VkFramebuffer createFrameBuffer(VkDevice device, VkRenderPass pass, VkImageView 
     VkFramebufferCreateInfo createInfo {
         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
         .renderPass = pass,
-        .attachmentCount = 2,
+        .attachmentCount = static_cast<uint32_t>((depth == VK_NULL_HANDLE) ? 1 : 2),
         .pAttachments = views,
         .width = width,
         .height = height,
@@ -138,6 +142,7 @@ static bool createSwapChain(kaki::VkGlobals& vk) {
 static void createFrameBuffer(kaki::VkGlobals& vk) {
     for(int i = 0; i < vk.swapchain.image_count; i++) {
         vk.framebuffer[i] = createFrameBuffer(vk.device, vk.renderPass, vk.imageViews[i], vk.depthBufferView, vk.swapchain.extent.width, vk.swapchain.extent.height);
+        vk.imguiFrameBuffer[i] = createFrameBuffer(vk.device, vk.imguiRenderPass, vk.imageViews[i], VK_NULL_HANDLE, vk.swapchain.extent.width, vk.swapchain.extent.height);
     }
 }
 
@@ -216,7 +221,9 @@ static bool createGlobals(flecs::world& world) {
 
     vkb::Instance vkb_inst = inst_ret.value();
 
-    VkSurfaceKHR surface = world.lookup("window").get<kaki::Window>()->createSurface(vkb_inst);
+
+    auto window = world.lookup("window").get<kaki::Window>();
+    VkSurfaceKHR surface = window->createSurface(vkb_inst);
 
     vkb::PhysicalDeviceSelector selector{ vkb_inst };
     auto phys_ret = selector.set_surface(surface)
@@ -317,6 +324,43 @@ static bool createGlobals(flecs::world& world) {
 
     createDepthBuffer(vk);
 
+    // Create the imgui Render Pass
+    {
+        VkAttachmentDescription attachment = {};
+        attachment.format = vk.swapchain.image_format;
+        attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        VkAttachmentReference color_attachment = {};
+        color_attachment.attachment = 0;
+        color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        VkSubpassDescription subpass = {};
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &color_attachment;
+        VkSubpassDependency dependency = {};
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass = 0;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = 0;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        VkRenderPassCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        info.attachmentCount = 1;
+        info.pAttachments = &attachment;
+        info.subpassCount = 1;
+        info.pSubpasses = &subpass;
+        info.dependencyCount = 1;
+        info.pDependencies = &dependency;
+        VkResult err = vkCreateRenderPass(vk.device, &info, nullptr, &vk.imguiRenderPass);
+    }
+
+
     createFrameBuffer(vk);
 
     {
@@ -355,8 +399,86 @@ static bool createGlobals(flecs::world& world) {
         vkCreateSampler(vk.device, &samplerCreateInfo, nullptr, &vk.sampler);
     }
 
-    world.set<kaki::VkGlobals>(vk);
 
+    {
+        VkDescriptorPoolSize pool_sizes[] =
+                {
+                        { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+                        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+                        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+                        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+                        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+                        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+                        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+                        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+                        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+                        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+                        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+                };
+        VkDescriptorPoolCreateInfo pool_info = {};
+        pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
+        pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
+        pool_info.pPoolSizes = pool_sizes;
+        vkCreateDescriptorPool(vk.device, &pool_info, nullptr, &vk.imguiDescPool);
+    }
+
+
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    // Setup Dear ImGui style
+    //ImguiTheme();
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)window->handle, true);
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.Instance = vk.instance;
+    init_info.PhysicalDevice = vk.device.physical_device;
+    init_info.Device = vk.device.device;
+    init_info.QueueFamily = vk.device.get_queue_index(vkb::QueueType::graphics).value();
+    init_info.Queue = vk.queue;
+    init_info.PipelineCache = nullptr;
+    init_info.DescriptorPool = vk.imguiDescPool;
+    init_info.Subpass = 0;
+    init_info.MinImageCount = 2;
+    init_info.ImageCount = vk.swapchain.image_count;
+    init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    init_info.Allocator = nullptr;
+
+    ImGui_ImplVulkan_Init(&init_info, vk.imguiRenderPass);
+
+    {
+        // Use any command queue
+        VkCommandBuffer command_buffer = vk.cmd[0];
+
+        vkResetCommandBuffer(command_buffer, 0);
+
+        VkCommandBufferBeginInfo begin_info = {};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(command_buffer, &begin_info);
+
+        ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+
+        VkSubmitInfo end_info = {};
+        end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        end_info.commandBufferCount = 1;
+        end_info.pCommandBuffers = &command_buffer;
+        vkEndCommandBuffer(command_buffer);
+
+        vkQueueSubmit(vk.queue, 1, &end_info, VK_NULL_HANDLE);
+
+        vkDeviceWaitIdle(vk.device);
+
+        ImGui_ImplVulkan_DestroyFontUploadObjects();
+    }
+
+    world.set<kaki::VkGlobals>(vk);
     return true;
 }
 
@@ -467,6 +589,11 @@ void recreate_swapchain(kaki::VkGlobals& vk) {
     for(auto framebuffer : std::span(vk.framebuffer, vk.swapchain.image_count)) {
         vkDestroyFramebuffer(vk.device, framebuffer, nullptr);
     }
+
+    for(auto framebuffer : std::span(vk.imguiFrameBuffer, vk.swapchain.image_count)) {
+        vkDestroyFramebuffer(vk.device, framebuffer, nullptr);
+    }
+
 
     vk.swapchain.destroy_image_views(vk.imageViews);
 
@@ -655,6 +782,46 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
     vkCmdEndRenderPass(vk.cmd[vk.currentFrame]);
 
+    {
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::Begin("hi");
+
+        ImGui::End();
+
+        ImGui::Begin("hello");
+
+        ImGui::End();
+
+        ImGui::Render();
+
+        VkRenderPassBeginInfo renderPassBeginInfo2{
+                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+                .renderPass = vk.imguiRenderPass,
+                .framebuffer = vk.imguiFrameBuffer[imageIndex],
+                .renderArea = {
+                        .offset = {
+                                .x = 0,
+                                .y = 0,
+                        },
+                        .extent = {
+                                .width = vk.swapchain.extent.width,
+                                .height = vk.swapchain.extent.height,
+                        }
+                },
+                .clearValueCount = 1,
+                .pClearValues = clearValues,
+        };
+
+        vkCmdBeginRenderPass(vk.cmd[vk.currentFrame], &renderPassBeginInfo2, VK_SUBPASS_CONTENTS_INLINE);
+
+
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vk.cmd[vk.currentFrame]);
+
+        vkCmdEndRenderPass(vk.cmd[vk.currentFrame]);
+    }
     vkEndCommandBuffer(vk.cmd[vk.currentFrame]);
 
     VkPipelineStageFlags waitStages[] = {

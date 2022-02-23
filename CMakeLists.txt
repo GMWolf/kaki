@@ -58,6 +58,21 @@ add_subdirectory(external/KTX-Software)
 add_library(cgltf INTERFACE)
 target_include_directories(cgltf INTERFACE external/cgltf)
 
+add_library(imgui external/imgui/imgui.h
+        external/imgui/imgui.cpp
+        external/imgui/imgui_draw.cpp
+        external/imgui/imgui_widgets.cpp
+        external/imgui/imgui_tables.cpp)
+target_include_directories(imgui PUBLIC external/imgui)
+
+add_library(imgui_glfw external/imgui/backends/imgui_impl_glfw.h external/imgui/backends/imgui_impl_glfw.cpp)
+target_include_directories(imgui_glfw PUBLIC external/imgui/backends)
+target_link_libraries(imgui_glfw PRIVATE imgui)
+
+add_library(imgui_vk external/imgui/backends/imgui_impl_vulkan.h external/imgui/backends/imgui_impl_vulkan.cpp)
+target_include_directories(imgui_vk PUBLIC external/imgui/backends)
+target_link_libraries(imgui_vk PRIVATE imgui)
+
 add_subdirectory(kaki)
 add_subdirectory(tools)
 

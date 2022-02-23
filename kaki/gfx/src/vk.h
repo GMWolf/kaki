@@ -30,10 +30,13 @@ namespace kaki {
         VkCommandBuffer cmd[framesInFlight] {};
 
         VkRenderPass renderPass {};
+        VkRenderPass imguiRenderPass {};
         VkFramebuffer framebuffer[10] {};
+        VkFramebuffer imguiFrameBuffer[10] {};
         std::vector<VkImageView> imageViews;
 
         VkDescriptorPool descriptorPools[framesInFlight];
+        VkDescriptorPool imguiDescPool;
         VkSampler sampler;
 
         VkImage depthBuffer;

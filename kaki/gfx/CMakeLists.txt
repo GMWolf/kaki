@@ -22,11 +22,11 @@ add_library(kaki-gfx
         src/vk.h
         src/vma_impl.cpp
         src/window.cpp
-        )
+        src/imgui_theme.h)
 
 target_link_libraries(kaki-gfx PUBLIC kaki-gfx-interface kaki-core kaki-asset)
 target_link_libraries(kaki-gfx PUBLIC flecs_static cereal glm)
-target_link_libraries(kaki-gfx PRIVATE vulkan vk-bootstrap glfw VulkanMemoryAllocator rapidjson ktx_read)
+target_link_libraries(kaki-gfx PRIVATE vulkan vk-bootstrap glfw VulkanMemoryAllocator rapidjson ktx_read imgui imgui_glfw imgui_vk)
 
 target_compile_options(ktx_read PRIVATE -O3)
 

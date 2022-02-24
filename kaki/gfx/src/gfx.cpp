@@ -788,9 +788,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("hi");
         kaki::entityTree(world);
-        ImGui::End();
 
         ImGui::Render();
 

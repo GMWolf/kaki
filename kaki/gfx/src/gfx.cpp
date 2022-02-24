@@ -25,6 +25,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 #include "imgui_theme.h"
+#include "entity_tree.h"
 
 namespace kaki::internal {
     struct MeshInstance {
@@ -788,11 +789,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
         ImGui::NewFrame();
 
         ImGui::Begin("hi");
-
-        ImGui::End();
-
-        ImGui::Begin("hello");
-
+        kaki::entityTree(world);
         ImGui::End();
 
         ImGui::Render();

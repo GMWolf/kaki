@@ -9,14 +9,17 @@
 #include <optional>
 #include <vector>
 #include <glm/vec2.hpp>
-#include "vk.h"
 #include <functional>
 #include <flecs.h>
+#include <vk_mem_alloc.h>
 
 namespace kaki {
 
+    struct VkGlobals;
+
     struct RenderGraph {
         constexpr static uint32_t maxSwapchainSize = 8;
+        constexpr static uint32_t maxAttachmentCount = 8;
 
         struct Image {
             VkImage image;
@@ -28,8 +31,10 @@ namespace kaki {
         struct Pass {
             VkRenderPass renderPass;
             VkFramebuffer framebuffer[maxSwapchainSize];
+            VkClearValue clearValues[maxAttachmentCount];
             VkRenderPassBeginInfo beginInfo[maxSwapchainSize];
-            std::function<void(flecs::world&)> callback;
+
+            std::function<void(flecs::world&, VkCommandBuffer)> callback;
         };
 
         std::vector<Image> images;
@@ -41,7 +46,7 @@ namespace kaki {
     struct RenderGraphBuilder {
 
         struct Image {
-            glm::uvec2 size;
+            VkExtent2D size;
             VkFormat format;
         };
 
@@ -59,7 +64,7 @@ namespace kaki {
             Pass& depth(uint32_t image);
             Pass& depthClear(uint32_t image, const VkClearDepthStencilValue& clearValue);
 
-            std::function<void(flecs::world&)> callback;
+            std::function<void(flecs::world&, VkCommandBuffer)> callback;
         };
 
         std::vector<Pass> passes;
@@ -67,11 +72,14 @@ namespace kaki {
 
         uint32_t image(Image image);
 
-        Pass& pass(std::function<void(flecs::world&)>&& callback);
+        Pass& pass(std::function<void(flecs::world&, VkCommandBuffer)>&& callback);
 
         RenderGraph build(VkGlobals& vk) const;
-
     };
 
+    void destroyGraph(kaki::VkGlobals& vk, RenderGraph& graph);
 
+    void runGraph(flecs::world& world, RenderGraph& graph, uint32_t swapchainIndex, VkCommandBuffer cmd);
+
+    using GraphScript = RenderGraph(*)(VkGlobals& vk);
 }

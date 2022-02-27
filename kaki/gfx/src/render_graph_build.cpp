@@ -5,6 +5,7 @@
 #include "render_graph.h"
 #include "vk_mem_alloc.h"
 #include <glm/glm.hpp>
+#include "vk.h"
 
 namespace kaki {
 
@@ -68,8 +69,8 @@ namespace kaki {
                 .imageType = VK_IMAGE_TYPE_2D,
                 .format = imageInfo.format,
                 .extent = {
-                        .width = imageInfo.size.x,
-                        .height = imageInfo.size.y,
+                        .width = imageInfo.size.width,
+                        .height = imageInfo.size.height,
                         .depth = 1,
                 },
                 .mipLevels = 1,
@@ -94,9 +95,13 @@ namespace kaki {
 
             if (usages[index] & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
                 createImageView(vk, image.image, imageInfo.format, VK_IMAGE_ASPECT_COLOR_BIT, &image.colorView);
+            } else {
+                image.colorView = VK_NULL_HANDLE;
             }
             if (usages[index] & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
                 createImageView(vk, image.image, imageInfo.format, VK_IMAGE_ASPECT_DEPTH_BIT, &image.depthView);
+            } else {
+                image.depthView = VK_NULL_HANDLE;
             }
         }
     }
@@ -115,11 +120,11 @@ namespace kaki {
                 return vk.swapchain.extent;
             }
             auto& image = graph.images[a.image];
-            return {image.size.x, image.size.y};
+            return image.size;
         }
         if (pass.depthAttachment) {
             auto& image = graph.images[pass.depthAttachment->image];
-            return {image.size.x, image.size.y};
+            return image.size;
         }
 
         return {};
@@ -230,7 +235,7 @@ namespace kaki {
                     .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
                     .colorAttachmentCount = static_cast<uint32_t>(passInfo.colorAttachments.size()),
                     .pColorAttachments = attachmentReferences.data(),
-                    .pDepthStencilAttachment = &attachmentReferences.back(),
+                    .pDepthStencilAttachment = passInfo.depthAttachment.has_value() ? &attachmentReferences.back() : nullptr,
             };
 
 
@@ -257,7 +262,7 @@ namespace kaki {
                 std::vector<VkImageView> views(
                         passInfo.colorAttachments.size() + (passInfo.depthAttachment.has_value() ? 1 : 0));
 
-                for (auto attachmentIndex = 0; passIndex < passInfo.colorAttachments.size(); attachmentIndex++) {
+                for (auto attachmentIndex = 0; attachmentIndex < passInfo.colorAttachments.size(); attachmentIndex++) {
                     auto &attachment = passInfo.colorAttachments[attachmentIndex];
                     views[attachmentIndex] = getColorImageView(vk, rg, attachment.image, swapchainIndex);
                 }
@@ -289,17 +294,16 @@ namespace kaki {
             auto& pass = rg.passes[passIndex];
             auto& passInfo = graph.passes[passIndex];
             uint32_t attachmentCount = passInfo.colorAttachments.size() + (passInfo.depthAttachment.has_value() ? 1 : 0);
-            std::vector<VkClearValue> clearValues(attachmentCount);
 
             for(uint32_t attachmentIndex = 0; attachmentIndex < passInfo.colorAttachments.size(); attachmentIndex++) {
                 auto& attachment = passInfo.colorAttachments[attachmentIndex];
                 if (attachment.clear.has_value()) {
-                    clearValues[attachmentIndex] = attachment.clear.value();
+                    pass.clearValues[attachmentIndex] = attachment.clear.value();
                 }
             }
 
             if (passInfo.depthAttachment && passInfo.depthAttachment->clear.has_value()) {
-                clearValues.back() = passInfo.depthAttachment->clear.value();
+                pass.clearValues[attachmentCount - 1] = passInfo.depthAttachment->clear.value();
             }
 
             for(uint32_t swapchainIndex = 0; swapchainIndex < vk.swapchain.image_count; swapchainIndex++) {
@@ -311,8 +315,8 @@ namespace kaki {
                             .offset = {0, 0},
                             .extent = vk.swapchain.extent
                     },
-                    .clearValueCount = static_cast<uint32_t>(clearValues.size()),
-                    .pClearValues = clearValues.data(),
+                    .clearValueCount = attachmentCount,
+                    .pClearValues = pass.clearValues,
                 };
             }
         }

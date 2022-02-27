@@ -17,7 +17,7 @@ namespace kaki {
         std::vector<DescriptorSet> descriptorSets;
     };
 
-    Pipeline createPipeline(VkDevice device, VkRenderPass renderpass, const kaki::ShaderModule* vertexModule, const kaki::ShaderModule* fragmentModule);
+    Pipeline createPipeline(VkDevice device, VkRenderPass renderpass, const ShaderModule* vertexModule, const ShaderModule* fragmentModule);
 }
 
 #endif //KAKI_PIPELINE_H

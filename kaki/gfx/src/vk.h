@@ -9,6 +9,7 @@
 #include <vulkan/vulkan.h>
 #include "pipeline.h"
 #include <vk_mem_alloc.h>
+#include "render_graph.h"
 
 namespace kaki {
 
@@ -16,6 +17,8 @@ namespace kaki {
         VkInstance instance{};
         vkb::Device device{};
         vkb::Swapchain swapchain;
+        std::vector<VkImageView> imageViews;
+
         VkQueue queue{};
 
         VmaAllocator allocator;
@@ -29,19 +32,12 @@ namespace kaki {
         VkCommandPool cmdPool {};
         VkCommandBuffer cmd[framesInFlight] {};
 
-        VkRenderPass renderPass {};
-        VkRenderPass imguiRenderPass {};
-        VkFramebuffer framebuffer[10] {};
-        VkFramebuffer imguiFrameBuffer[10] {};
-        std::vector<VkImageView> imageViews;
-
         VkDescriptorPool descriptorPools[framesInFlight];
         VkDescriptorPool imguiDescPool;
         VkSampler sampler;
 
-        VkImage depthBuffer;
-        VkImageView depthBufferView;
-        VmaAllocation depthBufferAlloc;
+        GraphScript script;
+        RenderGraph graph;
     };
 
 }

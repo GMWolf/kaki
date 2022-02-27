@@ -25,6 +25,14 @@ namespace kaki {
         flecs::entity_t emissive;
     };
 
+    namespace internal {
+        struct MeshInstance {
+            uint32_t indexOffset;
+            uint32_t vertexOffset;
+            uint32_t indexCount;
+        };
+    }
+
     struct gfx {
         explicit gfx(flecs::world& world);
     };

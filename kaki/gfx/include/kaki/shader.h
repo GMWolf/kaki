@@ -39,7 +39,7 @@ namespace kaki {
         archive(descSet.index, descSet.bindingNames, descSet.bindings);
     }
 
-    kaki::ShaderModule loadShaderModule(VkDevice device, cereal::BinaryInputArchive& archive);
+    ShaderModule loadShaderModule(VkDevice device, cereal::BinaryInputArchive& archive);
 }
 
 template<class Archive>

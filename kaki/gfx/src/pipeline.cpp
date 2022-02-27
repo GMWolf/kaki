@@ -5,6 +5,7 @@
 #include "pipeline.h"
 #include "shader.h"
 #include <span>
+#include "renderpass.h"
 
 static VkPipelineLayout createPipelineLayout(VkDevice device, std::span<const kaki::ShaderModule*> modules)
 {

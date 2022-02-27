@@ -22,7 +22,7 @@ add_library(kaki-gfx
         src/vk.h
         src/vma_impl.cpp
         src/window.cpp
-        src/imgui_theme.h src/entity_tree.h)
+        src/imgui_theme.h src/entity_tree.h src/render_graph_build.cpp)
 
 target_link_libraries(kaki-gfx PUBLIC kaki-gfx-interface kaki-core kaki-asset)
 target_link_libraries(kaki-gfx PUBLIC flecs_static cereal glm)

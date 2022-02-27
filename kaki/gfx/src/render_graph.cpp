@@ -40,3 +40,14 @@ kaki::RenderGraphBuilder::Pass::depthClear(uint32_t image, const VkClearDepthSte
     };
     return *this;
 }
+
+uint32_t kaki::RenderGraphBuilder::image(kaki::RenderGraphBuilder::Image image) {
+    images.push_back(image);
+    return images.size() - 1;
+}
+
+kaki::RenderGraphBuilder::Pass &kaki::RenderGraphBuilder::pass(std::function<void(flecs::world&)>&& callback) {
+    return passes.emplace_back(Pass{
+        .callback = callback,
+    });
+}

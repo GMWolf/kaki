@@ -129,6 +129,10 @@ void callAssetHandlers(flecs::entity root) {
 flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package &package, std::span<uint8_t> dataFile) {
 
     std::vector<ecs_entity_t> entities;
+    std::vector<flecs::Identifier> entityNames;
+
+    auto nameIdentifier = world.pair<flecs::Identifier>(flecs::Name);
+
     // Instanciate the entities
     {
         auto entityCount = package.entities.size();
@@ -136,6 +140,11 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
         entitiesBulkDesc.count = static_cast<int32_t >(entityCount);
         auto entitiesTmp = ecs_bulk_init(world.c_ptr(), &entitiesBulkDesc);
         entities.insert(entities.end(), entitiesTmp, entitiesTmp + entityCount);
+    }
+
+    entityNames.resize(package.entities.size());
+    for(size_t i = 0; i < package.entities.size(); i++) {
+        entityNames[i].value = ecs_os_strdup( package.entities[i].name.c_str());
     }
 
     // Move entities to tables, including AssetData components
@@ -148,6 +157,13 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
 
         void* data[ECS_MAX_ADD_REMOVE]{};
         bulkDesc.data = data;
+
+        {
+            bulkDesc.ids[componentId] = nameIdentifier;
+            bulkDesc.data[componentId] = entityNames.data() + table.entityFirst;
+            componentId++;
+        }
+
 
         for (auto& component : table.components) {
 
@@ -176,15 +192,16 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
         ecs_bulk_init( world.c_ptr(), &bulkDesc );
 
         for(auto i = 0; i < ECS_MAX_ADD_REMOVE; i++) {
-            if (bulkDesc.data[i]) {
+            if (bulkDesc.data[i] && bulkDesc.ids[i] != nameIdentifier) {
                 free(bulkDesc.data[i]);
             }
+
         }
     }
 
-    // Name entities
-    for(int i = 0; i < package.entities.size(); i++) {
-        flecs::entity(world, entities[i]).set_name(package.entities[i].name.c_str());
+    // free entity names
+    for(auto& i : entityNames) {
+        ecs_os_free(i.value);
     }
 
     // Call asset handles

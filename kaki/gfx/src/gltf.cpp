@@ -15,6 +15,7 @@
 #include <cereal/types/vector.hpp>
 #include <cereal/types/string.hpp>
 #include <span>
+#include "geometry_buffer.h"
 
 namespace cereal {
 
@@ -33,39 +34,20 @@ namespace cereal {
 namespace kaki {
     
     template<class T, class Archive>
-    VkBuffer loadBuffer(const VkGlobals& vk, Archive& archive) {
+    void loadBuffer(T* ptr, size_t count, Archive& archive) {
 
         size_t numElements = 0;
         archive( cereal::make_size_tag( numElements ) );
-
-        VkBufferCreateInfo bufferInfo = {};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = numElements * sizeof(T);
-        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-
-        VmaAllocationCreateInfo vmaAllocInfo = {};
-        vmaAllocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU; // TODO use a staging buffer
-
-        VkBuffer buffer;
-        VmaAllocation alloc;
-
-        vmaCreateBuffer(vk.allocator, &bufferInfo, &vmaAllocInfo,
-                        &buffer,
-                        &alloc,
-                        nullptr);
-
-        void* bufferData;
-        vmaMapMemory(vk.allocator, alloc, &bufferData);
-        archive( cereal::binary_data( bufferData, numElements * sizeof(T) ) );
-        vmaUnmapMemory(vk.allocator, alloc);
-
-        return buffer;
+        assert(numElements == count);
+        archive( cereal::binary_data( ptr, count * sizeof(T) ) );
     }
 
 
     void loadGltfs(flecs::iter iter, AssetData* data, void* p_gltf) {
 
-        const VkGlobals& vk = *iter.world().get<VkGlobals>();
+        VkGlobals& vk = *iter.world().get_mut<VkGlobals>();
+
+        GeometryBuffers& geomBuffer = vk.geometry;
 
         Gltf* gltfs = static_cast<Gltf*>(p_gltf);
         for(auto i : iter) {
@@ -73,11 +55,18 @@ namespace kaki {
             std::istream bufStream(&buf);
             cereal::BinaryInputArchive archive(bufStream);
 
-            gltfs[i].positionBuffer = loadBuffer<glm::vec3>(vk, archive);
-            gltfs[i].normalBuffer = loadBuffer<glm::vec3>(vk, archive);
-            gltfs[i].tangentBuffer = loadBuffer<glm::vec4>(vk, archive);
-            gltfs[i].uvBuffer = loadBuffer<glm::vec2>(vk, archive);
-            gltfs[i].indexBuffer = loadBuffer<uint32_t>(vk, archive);
+            size_t indexCount, vertexCount;
+            archive(indexCount, vertexCount);
+
+            auto meshAlloc = allocMesh(geomBuffer, vertexCount, indexCount);
+            assert(meshAlloc.has_value());
+            gltfs[i].meshAlloc = *meshAlloc;
+
+            loadBuffer(geomBuffer.positions + meshAlloc->vertexOffset, vertexCount, archive);
+            loadBuffer(geomBuffer.normals + meshAlloc->vertexOffset, vertexCount, archive);
+            loadBuffer(geomBuffer.tangents + meshAlloc->vertexOffset, vertexCount, archive);
+            loadBuffer(geomBuffer.texcoords + meshAlloc->vertexOffset, vertexCount, archive);
+            loadBuffer(geomBuffer.indices + meshAlloc->indexOffset, indexCount, archive);
         }
     }
 }

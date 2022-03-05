@@ -10,6 +10,7 @@
 #include "pipeline.h"
 #include <vk_mem_alloc.h>
 #include "render_graph.h"
+#include "geometry_buffer.h"
 
 namespace kaki {
 
@@ -35,6 +36,8 @@ namespace kaki {
         VkDescriptorPool descriptorPools[framesInFlight];
         VkDescriptorPool imguiDescPool;
         VkSampler sampler;
+
+        GeometryBuffers geometry;
 
         GraphScript script;
         RenderGraph graph;

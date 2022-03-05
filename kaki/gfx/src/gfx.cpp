@@ -63,7 +63,6 @@ static bool createGlobals(flecs::world& world) {
 
     vkb::Instance vkb_inst = inst_ret.value();
 
-
     auto window = world.lookup("window").get<kaki::Window>();
     VkSurfaceKHR surface = window->createSurface(vkb_inst);
 
@@ -281,6 +280,8 @@ static bool createGlobals(flecs::world& world) {
     vk.script = kaki::graphScript;
     vk.graph = graphScript(vk);
 
+    kaki::allocGeometryBuffer(vk.allocator, vk.geometry, 3 * 1024 * 1024, 1024 * 1024);
+
     world.set<kaki::VkGlobals>(vk);
     return true;
 }
@@ -371,11 +372,13 @@ static void UpdateMeshInstance(flecs::iter iter, kaki::MeshFilter* meshFilters) 
     for(auto i : iter) {
 
         auto mesh =  flecs::entity(iter.world(), meshFilters[i].mesh).get<kaki::Mesh>();
-        auto gltf = flecs::entity(iter.world(), meshFilters[i].mesh).get_object(flecs::ChildOf);
+        auto gltfEntity = flecs::entity(iter.world(), meshFilters[i].mesh).get_object(flecs::ChildOf);
 
-        iter.entity(i).set<kaki::internal::MeshInstance>(gltf, kaki::internal::MeshInstance {
-            .indexOffset = mesh->primitives[meshFilters[i].primitiveIndex].indexOffset,
-            .vertexOffset = mesh->primitives[meshFilters[i].primitiveIndex].vertexOffset,
+        auto gltf = gltfEntity.get<kaki::Gltf>();
+
+        iter.entity(i).set(kaki::internal::MeshInstance {
+            .indexOffset = mesh->primitives[meshFilters[i].primitiveIndex].indexOffset + gltf->meshAlloc.indexOffset,
+            .vertexOffset = mesh->primitives[meshFilters[i].primitiveIndex].vertexOffset + gltf->meshAlloc.vertexOffset,
             .indexCount = mesh->primitives[meshFilters[i].primitiveIndex].indexCount,
         } );
     }
@@ -398,7 +401,7 @@ kaki::gfx::gfx(flecs::world &world) {
 
     world.component<kaki::DependsOn>().add(flecs::Acyclic);
 
-    world.entity("GltfLoader").set<ComponentAssetHandler, Gltf>({
+    auto gltfLoader = world.entity("GltfLoader").set<ComponentAssetHandler, Gltf>({
         .load = loadGltfs,
     });
 
@@ -426,7 +429,7 @@ kaki::gfx::gfx(flecs::world &world) {
                 archive(meshes[i]);
             }
         }
-    });
+    }).add<DependsOn>(gltfLoader);
 
     world.entity("ImageLoader").set<ComponentAssetHandler, Image>({
         .load = loadImages,

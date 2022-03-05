@@ -9,25 +9,12 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include <cereal/types/vector.hpp>
+#include "geometry_buffer.h"
 
 namespace kaki {
 
     struct Gltf {
-        union {
-            VkBuffer buffers[3];
-            struct {
-                VkBuffer positionBuffer;
-                VkBuffer normalBuffer;
-                VkBuffer tangentBuffer;
-                VkBuffer uvBuffer;
-            };
-        };
-
-        VkBuffer indexBuffer;
-        VmaAllocation positionBufferAllocation;
-        VmaAllocation normalBufferAllocation;
-        VmaAllocation tangentBufferAllocation;
-        VmaAllocation uvBufferAllocation;
+        MeshAlloc meshAlloc;
     };
 
     struct Mesh {

@@ -90,6 +90,8 @@ Mesh loadMeshData(cgltf_mesh* mesh, Buffers& buffers) {
             buffers.indices.push_back(cgltf_accessor_read_index(primitive.indices, index));
         }
 
+        bool hasTangent = false;
+
         for(auto& attribute : std::span(primitive.attributes, primitive.attributes_count)) {
             if (attribute.type == cgltf_attribute_type_position) {
                 size_t offset = buffers.position.size();
@@ -107,7 +109,12 @@ Mesh loadMeshData(cgltf_mesh* mesh, Buffers& buffers) {
                 size_t offset = buffers.tangents.size();
                 buffers.tangents.resize(offset + attribute.data->count);
                 cgltf_accessor_unpack_floats(attribute.data, &buffers.tangents[offset].x, 4 * attribute.data->count);
+                hasTangent = true;
             }
+        }
+
+        if (!hasTangent) {
+            buffers.tangents.resize(buffers.position.size());
         }
     }
 
@@ -127,6 +134,17 @@ void writeGltfEntity(kaki::Package& package, const std::string& name, Buffers& b
     auto dataOffset = outData.tellp();
     {
         cereal::BinaryOutputArchive archive(outData);
+
+        size_t indexCount = buffers.indices.size();
+        size_t vertexCount = buffers.position.size();
+
+        archive(indexCount, vertexCount);
+
+        assert(buffers.position.size() == vertexCount);
+        assert(buffers.normal.size() == vertexCount);
+        assert(buffers.tangents.size() == vertexCount);
+        assert(buffers.texcoord.size() == vertexCount);
+
 
         saveBuffer(buffers.position, archive);
         saveBuffer(buffers.normal, archive);

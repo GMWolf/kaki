@@ -48,6 +48,7 @@ namespace kaki {
     inline void renderWorld(flecs::world& world, VkCommandBuffer cmd) {
 
         auto& vk = *world.get_mut<VkGlobals>();
+        auto& geometry = vk.geometry;
         auto pipeline = world.lookup("testpackage::pipeline").get<kaki::Pipeline>();
 
         std::vector<VkDescriptorSetLayout> descSetLayouts;
@@ -57,6 +58,12 @@ namespace kaki {
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
 
+
+
+        VkDeviceSize offsets[4]{0, 0, 0, 0};
+        vkCmdBindVertexBuffers(vk.cmd[vk.currentFrame], 0, 4, geometry.vertexBuffers, offsets);
+        vkCmdBindIndexBuffer(vk.cmd[vk.currentFrame], geometry.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
         world.each([&](const kaki::Camera& camera, const kaki::Transform& cameraTransform) {
 
             float aspect = (float)vk.swapchain.extent.width / (float)vk.swapchain.extent.height;
@@ -64,20 +71,11 @@ namespace kaki {
             glm::mat4 view = cameraTransform.inverse().matrix();
             glm::mat4 viewProj = proj * view;
 
-            world.filter_builder<kaki::MeshFilter>()
-                    .term<kaki::internal::MeshInstance>(flecs::Wildcard)
+            world.filter_builder<kaki::MeshFilter, kaki::internal::MeshInstance>()
                     .term<kaki::Transform>().set(flecs::Self | flecs::SuperSet, flecs::ChildOf)
-                    .build().iter([&](flecs::iter& it, kaki::MeshFilter* filters) {
+                    .build().iter([&](flecs::iter& it, kaki::MeshFilter* filters, kaki::internal::MeshInstance* meshInstances) {
 
                 auto transforms = it.term<kaki::Transform>(3);
-
-                auto meshInstances = it.term<kaki::internal::MeshInstance>(2);
-                auto gltfE = it.pair(2).object();
-                auto gltf = gltfE.get<kaki::Gltf>();
-
-                VkDeviceSize offsets[4]{0, 0, 0, 0};
-                vkCmdBindVertexBuffers(vk.cmd[vk.currentFrame], 0, 4, gltf->buffers, offsets);
-                vkCmdBindIndexBuffer(vk.cmd[vk.currentFrame], gltf->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
                 for(auto i : it) {
                     kaki::internal::MeshInstance& mesh = meshInstances[i];

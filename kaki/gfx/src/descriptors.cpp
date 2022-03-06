@@ -21,7 +21,7 @@ namespace kaki {
             switch (descSetInfo.bindings[i].descriptorType) {
                 case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
                     imageInfos[i] = {
-                            .sampler = vk.sampler,
+                            .sampler = input->sampler,
                             .imageView = input->imageView,
                             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                     };

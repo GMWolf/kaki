@@ -64,6 +64,12 @@ kaki::Pipeline kaki::createPipeline(const kaki::VkGlobals& vk, flecs::entity sco
     archive(colorBlendAttachments);
     archive(colorFormats, depthFormat, cullMode, depthCompareOp);
 
+    for(auto& format : colorFormats) {
+        if (format == VK_FORMAT_UNDEFINED) {
+            format = vk.swapchain.image_format;
+        }
+    }
+
     auto renderpass = createCompatRenderPass(vk.device, colorFormats, depthFormat);
 
     auto vertexEntity = scope.lookup(vertexName.c_str());

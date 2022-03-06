@@ -20,5 +20,6 @@
     <mapping directory="$PROJECT_DIR$/external/rapidjson/thirdparty/gtest" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/shaderc" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/vk-bootstrap" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/vulkan-mini-libs-2" vcs="Git" />
   </component>
 </project>

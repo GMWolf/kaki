@@ -42,12 +42,17 @@ kaki::RenderGraphBuilder::Pass::depthClear(uint32_t image, const VkClearDepthSte
     return *this;
 }
 
+kaki::RenderGraphBuilder::Pass &kaki::RenderGraphBuilder::Pass::imageRead(uint32_t image) {
+    imageReads.push_back(image);
+    return *this;
+}
+
 uint32_t kaki::RenderGraphBuilder::image(kaki::RenderGraphBuilder::Image image) {
     images.push_back(image);
     return images.size() - 1;
 }
 
-kaki::RenderGraphBuilder::Pass &kaki::RenderGraphBuilder::pass(std::function<void(flecs::world&, VkCommandBuffer)>&& callback) {
+kaki::RenderGraphBuilder::Pass &kaki::RenderGraphBuilder::pass(std::function<void(flecs::world&, VkCommandBuffer, std::span<VkImageView> images)>&& callback) {
     return passes.emplace_back(Pass{
         .callback = callback,
     });
@@ -76,6 +81,7 @@ void kaki::runGraph(flecs::world &world, RenderGraph &graph, uint32_t swapchainI
     auto& vk = *world.get_mut<VkGlobals>();
 
     for(auto& pass : graph.passes) {
+        pass.beginInfo[swapchainIndex].pClearValues = pass.clearValues.data();
         vkCmdBeginRenderPass(cmd, &pass.beginInfo[swapchainIndex], VK_SUBPASS_CONTENTS_INLINE);
 
         VkViewport viewport {
@@ -94,7 +100,7 @@ void kaki::runGraph(flecs::world &world, RenderGraph &graph, uint32_t swapchainI
         vkCmdSetViewport(vk.cmd[vk.currentFrame], 0, 1, &viewport);
         vkCmdSetScissor(vk.cmd[vk.currentFrame], 0, 1, &scissor);
 
-        pass.callback(world, cmd);
+        pass.callback(world, cmd, pass.images);
         vkCmdEndRenderPass(cmd);
     }
 

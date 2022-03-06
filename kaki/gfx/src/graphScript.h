@@ -45,7 +45,7 @@ namespace kaki {
     }
 
 
-    inline void renderWorld(flecs::world& world, VkCommandBuffer cmd) {
+    inline void renderWorld(flecs::world& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
 
         auto& vk = *world.get_mut<VkGlobals>();
         auto& geometry = vk.geometry;
@@ -101,23 +101,22 @@ namespace kaki {
                         vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
 
                         ShaderInput inputs[]{
-                                {"albedoTexture", albedoImage->view},
-                                {"normalTexture", normalImage ? normalImage->view : VK_NULL_HANDLE},
-                                {"metallicRoughnessTexture", metallicRoughnessImage ? metallicRoughnessImage->view : VK_NULL_HANDLE},
-                                {"aoTexture", aoImage ? aoImage->view : VK_NULL_HANDLE},
-                                {"emissiveTexture", emissiveImage? emissiveImage->view : VK_NULL_HANDLE},
-                                {"positions", VK_NULL_HANDLE, vk.geometry.positionBuffer},
-                                {"normals", VK_NULL_HANDLE, vk.geometry.normalBuffer},
-                                {"tangents", VK_NULL_HANDLE, vk.geometry.tangentBuffer},
-                                {"texcoords", VK_NULL_HANDLE, vk.geometry.texcoordBuffer},
-                                {"drawInfoBuffer", VK_NULL_HANDLE, vk.drawInfoBuffer[vk.currentFrame]},
+                                {"albedoTexture", albedoImage->view, vk.sampler},
+                                {"normalTexture", normalImage ? normalImage->view : VK_NULL_HANDLE, vk.sampler},
+                                {"metallicRoughnessTexture", metallicRoughnessImage ? metallicRoughnessImage->view : VK_NULL_HANDLE, vk.sampler},
+                                {"aoTexture", aoImage ? aoImage->view : VK_NULL_HANDLE, vk.sampler},
+                                {"emissiveTexture", emissiveImage? emissiveImage->view : VK_NULL_HANDLE, vk.sampler},
+                                {"positions", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.positionBuffer},
+                                {"normals", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.normalBuffer},
+                                {"tangents", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.tangentBuffer},
+                                {"texcoords", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.texcoordBuffer},
+                                {"drawInfoBuffer", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.drawInfoBuffer[vk.currentFrame]},
                         };
 
                         updateDescSets(vk, descriptorSets, *pipeline, inputs);
 
                         for(uint32_t d = 0; d < pipeline->descriptorSets.size(); d++) {
-
-                            vkCmdBindDescriptorSets(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                                     pipeline->pipelineLayout,
                                                     pipeline->descriptorSets[d].index, 1, &descriptorSets[d], 0, nullptr);
                         }
@@ -141,18 +140,103 @@ namespace kaki {
                             .material = 0,
                     };
 
-                    vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,
+                    vkCmdPushConstants(cmd, pipeline->pipelineLayout,
                                        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
                                        sizeof(Pc), &pc);
 
 
-                    vkCmdDrawIndexed(vk.cmd[vk.currentFrame], mesh.indexCount, 1, mesh.indexOffset, mesh.vertexOffset, 0);
+                    vkCmdDrawIndexed(cmd, mesh.indexCount, 1, mesh.indexOffset, mesh.vertexOffset, 0);
 
                     drawIndex++;
                 }
 
             });
         });
+    }
+
+    inline static void shade(flecs::world& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
+
+        auto& vk = *world.get_mut<VkGlobals>();
+        auto& geometry = vk.geometry;
+
+        MeshFilter* filter = nullptr;
+        world.each([&](MeshFilter& f) {
+            if (filter == nullptr) {
+                filter = &f;
+            }
+        });
+
+        auto albedoImage = flecs::entity(world, filter->albedo).get<kaki::Image>();
+        auto normalImage = flecs::entity(world, filter->normal).get<kaki::Image>();
+        auto metallicRoughnessImage = flecs::entity(world, filter->metallicRoughness).get<kaki::Image>();
+        auto aoImage = flecs::entity(world, filter->ao).get<kaki::Image>();
+        auto emissiveImage = flecs::entity(world, filter->emissive).get<kaki::Image>();
+
+        ShaderInput inputs[]{
+                {"albedoTexture", albedoImage->view, vk.sampler},
+                {"normalTexture", normalImage ? normalImage->view : VK_NULL_HANDLE, vk.sampler},
+                {"metallicRoughnessTexture", metallicRoughnessImage ? metallicRoughnessImage->view : VK_NULL_HANDLE, vk.sampler},
+                {"aoTexture", aoImage ? aoImage->view : VK_NULL_HANDLE, vk.sampler},
+                {"emissiveTexture", emissiveImage? emissiveImage->view : VK_NULL_HANDLE, vk.sampler},
+                {"positions", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.positionBuffer},
+                {"normals", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.normalBuffer},
+                {"tangents", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.tangentBuffer},
+                {"texcoords", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.texcoordBuffer},
+                {"drawInfoBuffer", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.drawInfoBuffer[vk.currentFrame]},
+                {"visbuffer", images[0], vk.uintSampler},
+                {"indices", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.indexBuffer},
+        };
+
+        auto pipeline = world.lookup("testpackage::shade").get<kaki::Pipeline>();
+
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
+
+        std::vector<VkDescriptorSetLayout> descSetLayouts;
+        for(auto& descSet : pipeline->descriptorSets) {
+            descSetLayouts.push_back(descSet.layout);
+        }
+        std::vector<VkDescriptorSet> descriptorSets(descSetLayouts.size());
+        VkDescriptorSetAllocateInfo descAlloc{
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                .pNext = nullptr,
+                .descriptorPool = vk.descriptorPools[vk.currentFrame],
+                .descriptorSetCount = static_cast<uint32_t>(descSetLayouts.size()),
+                .pSetLayouts = descSetLayouts.data(),
+        };
+        vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
+
+        updateDescSets(vk, descriptorSets, *pipeline, inputs);
+        for(uint32_t d = 0; d < pipeline->descriptorSets.size(); d++) {
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    pipeline->pipelineLayout,
+                                    pipeline->descriptorSets[d].index, 1, &descriptorSets[d], 0, nullptr);
+        }
+
+        struct Pc {
+            glm::mat4 proj{};
+            glm::vec3 viewPos; uint drawId;
+            glm::vec3 light; float pad1;
+            glm::vec2 winSize;
+        } pc;
+
+        world.each([&](const kaki::Camera& camera, const kaki::Transform& cameraTransform) {
+            float aspect = (float) vk.swapchain.extent.width / (float) vk.swapchain.extent.height;
+            glm::mat4 proj = perspective(camera.fov, aspect, 0.01f, 100.0f);
+            glm::mat4 view = cameraTransform.inverse().matrix();
+            pc.proj = proj * view;
+            pc.viewPos = cameraTransform.position;
+        });
+
+        pc.winSize = {vk.swapchain.extent.width, vk.swapchain.extent.height};
+        //pc.proj ;
+        pc.light = -glm::normalize(glm::vec3(0, -1, 0.5));
+
+        vkCmdPushConstants(cmd, pipeline->pipelineLayout,
+                           VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+                           sizeof(Pc), &pc);
+
+        vkCmdDrawIndexed(cmd, 3, 1, 0, 0, 0);
+
     }
 
     inline RenderGraph graphScript(VkGlobals& vk) {
@@ -168,17 +252,22 @@ namespace kaki {
             .format = VK_FORMAT_R32G32_UINT,
         });
 
-        //Draw v buffer
+        // Draw v buffer
         graph.pass(renderWorld)
         .color(visbuffer)
         .depthClear(depthImage, {0.0f, 0});
 
+        // Shade
+        graph.pass(shade)
+        .colorClear(DISPLAY_IMAGE_INDEX, VkClearColorValue{.uint32 = {0, 0, 0, 0}})
+        .imageRead(visbuffer);
+
         //Draw Imgui
-        graph.pass([](flecs::world& world, VkCommandBuffer cmd) {
+        graph.pass([](flecs::world& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
             auto& vk = *world.get_mut<VkGlobals>();
             ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
         })
-        .colorClear(DISPLAY_IMAGE_INDEX, {0.0f, 0.0f, 0.0f, 1.0f});
+        .color(DISPLAY_IMAGE_INDEX);
 
         return graph.build(vk);
     }

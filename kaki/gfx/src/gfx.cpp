@@ -199,6 +199,20 @@ static bool createGlobals(flecs::world& world) {
         };
 
         vkCreateSampler(vk.device, &samplerCreateInfo, nullptr, &vk.sampler);
+
+        VkSamplerCreateInfo samplerCreateInfoUint{
+                .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+                .magFilter = VK_FILTER_NEAREST,
+                .minFilter = VK_FILTER_NEAREST,
+                .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+                .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                .minLod = 0,
+                .maxLod = VK_LOD_CLAMP_NONE,
+        };
+
+        vkCreateSampler(vk.device, &samplerCreateInfoUint, nullptr, &vk.uintSampler);
     }
 
 

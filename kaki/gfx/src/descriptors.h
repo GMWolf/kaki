@@ -10,6 +10,7 @@ namespace kaki {
     struct ShaderInput {
         const char* name;
         VkImageView imageView;
+        VkSampler sampler;
         VkBuffer buffer;
     };
 

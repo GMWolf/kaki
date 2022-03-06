@@ -45,6 +45,7 @@ namespace kaki {
         VkDescriptorPool descriptorPools[framesInFlight];
         VkDescriptorPool imguiDescPool;
         VkSampler sampler;
+        VkSampler uintSampler;
 
         GeometryBuffers geometry;
 

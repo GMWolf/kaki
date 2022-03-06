@@ -1,0 +1,18 @@
+{
+  "vertex": "shade_vert",
+  "fragment": "shade_frag",
+  "attachments" : [
+    {
+      "format": "display",
+      "blend_enable" : false,
+      "src_blend_factor": "one",
+      "dst_blend_factor": "zero",
+      "color_blend_op": "add",
+      "src_alpha_factor": "one",
+      "dst_alpha_factor": "zero",
+      "alpha_blend_op": "add"
+    }
+  ],
+  "cullMode" : "NONE",
+  "depthCompare" : "GREATER_OR_EQUAL"
+}

@@ -12,6 +12,7 @@
 #include <functional>
 #include <flecs.h>
 #include <vk_mem_alloc.h>
+#include <span>
 
 namespace kaki {
 
@@ -31,10 +32,11 @@ namespace kaki {
         struct Pass {
             VkRenderPass renderPass;
             VkFramebuffer framebuffer[maxSwapchainSize];
-            VkClearValue clearValues[maxAttachmentCount];
+            std::vector<VkClearValue> clearValues;
             VkRenderPassBeginInfo beginInfo[maxSwapchainSize];
+            std::vector<VkImageView> images;
 
-            std::function<void(flecs::world&, VkCommandBuffer)> callback;
+            std::function<void(flecs::world&, VkCommandBuffer, std::span<VkImageView> images)> callback;
         };
 
         std::vector<Image> images;
@@ -58,13 +60,15 @@ namespace kaki {
 
             std::vector<Attachment> colorAttachments;
             std::optional<Attachment> depthAttachment;
+            std::vector<uint32_t> imageReads;
 
             Pass& color(uint32_t image);
             Pass& colorClear(uint32_t image, const VkClearColorValue& clearValue);
             Pass& depth(uint32_t image);
             Pass& depthClear(uint32_t image, const VkClearDepthStencilValue& clearValue);
+            Pass& imageRead(uint32_t image);
 
-            std::function<void(flecs::world&, VkCommandBuffer)> callback;
+            std::function<void(flecs::world&, VkCommandBuffer, std::span<VkImageView> images)> callback;
         };
 
         std::vector<Pass> passes;
@@ -72,7 +76,7 @@ namespace kaki {
 
         uint32_t image(Image image);
 
-        Pass& pass(std::function<void(flecs::world&, VkCommandBuffer)>&& callback);
+        Pass& pass(std::function<void(flecs::world&, VkCommandBuffer, std::span<VkImageView> images)>&& callback);
 
         RenderGraph build(VkGlobals& vk) const;
     };

@@ -23,6 +23,10 @@ namespace kaki {
                     usage[attachment.image] |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
                 }
             }
+
+            for (auto& image : pass.imageReads) {
+                usage[image] |= VK_IMAGE_USAGE_SAMPLED_BIT;
+            }
         }
         return usage;
     }
@@ -149,13 +153,18 @@ namespace kaki {
 
     static VkImageLayout getNextLayout(const RenderGraphBuilder& graph, uint32_t passIndex, uint32_t imageIndex) {
         for(; passIndex < graph.passes.size(); passIndex++) {
-            for(auto attachment : graph.passes[passIndex].colorAttachments) {
+            for(auto& attachment : graph.passes[passIndex].colorAttachments) {
                 if (attachment.image == imageIndex) {
                     return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
                 }
             }
             if (graph.passes[passIndex].depthAttachment && graph.passes[passIndex].depthAttachment->image == imageIndex) {
                 return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            }
+            for(auto& image : graph.passes[passIndex].imageReads) {
+                if (image == imageIndex) {
+                    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                }
             }
         }
 
@@ -294,6 +303,7 @@ namespace kaki {
             auto& pass = rg.passes[passIndex];
             auto& passInfo = graph.passes[passIndex];
             uint32_t attachmentCount = passInfo.colorAttachments.size() + (passInfo.depthAttachment.has_value() ? 1 : 0);
+            pass.clearValues.resize(attachmentCount);
 
             for(uint32_t attachmentIndex = 0; attachmentIndex < passInfo.colorAttachments.size(); attachmentIndex++) {
                 auto& attachment = passInfo.colorAttachments[attachmentIndex];
@@ -316,7 +326,7 @@ namespace kaki {
                             .extent = vk.swapchain.extent
                     },
                     .clearValueCount = attachmentCount,
-                    .pClearValues = pass.clearValues,
+                    .pClearValues = pass.clearValues.data(),
                 };
             }
         }
@@ -327,6 +337,9 @@ namespace kaki {
         rg.passes.resize(graph.passes.size());
         for(uint32_t passIndex = 0; passIndex < graph.passes.size(); passIndex++) {
             rg.passes[passIndex].callback = graph.passes[passIndex].callback;
+            for(auto& image : graph.passes[passIndex].imageReads) {
+                rg.passes[passIndex].images.push_back(rg.images[image].colorView);
+            }
         }
         createRenderpasses(vk, graph, rg);
         createFramebuffers(vk, graph, rg);

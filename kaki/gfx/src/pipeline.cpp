@@ -6,18 +6,30 @@
 #include "shader.h"
 #include <span>
 #include "renderpass.h"
+#include <ranges>
 
 static VkPipelineLayout createPipelineLayout(VkDevice device, std::span<const kaki::ShaderModule*> modules)
 {
     std::vector<VkPushConstantRange> pushConstantRanges;
-    std::vector<VkDescriptorSetLayout> descSetLayouts;
-    for(auto m : modules) {
+    std::vector<const kaki::DescriptorSet*> descSets;
+
+    for(auto& m : modules) {
         pushConstantRanges.insert(pushConstantRanges.end(), m->pushConstantRanges.begin(), m->pushConstantRanges.end());
 
         for(auto& descSet : m->descSets) {
-            descSetLayouts.push_back(descSet.layout);
+            descSets.push_back(&descSet);
         }
     }
+
+    std::sort(descSets.begin(), descSets.end(), [](const kaki::DescriptorSet* a, const kaki::DescriptorSet* b) {
+        return a->index < b->index;
+    });
+
+    std::vector<VkDescriptorSetLayout> descSetLayouts(descSets.size());
+    for(auto i : std::views::iota(0u, descSets.size())) {
+        descSetLayouts[i] = descSets[i]->layout;
+    }
+
 
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -52,63 +64,9 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
             }
     };
 
-    VkVertexInputBindingDescription bindings[] = {
-            {
-                    .binding = 0,
-                    .stride = 12,
-                    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
-            },
-            {
-                .binding = 1,
-                .stride = 12,
-                .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
-            },
-            {
-                .binding = 2,
-                .stride = 16,
-                .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
-            },
-            {
-                .binding = 3,
-                .stride = 8,
-                .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
-            }
-    };
-
-    VkVertexInputAttributeDescription attributes[] = {
-            {
-                .location = 0,
-                .binding = 0,
-                .format = VK_FORMAT_R32G32B32_SFLOAT,
-                .offset = 0,
-            },
-            {
-                .location = 1,
-                .binding = 1,
-                .format = VK_FORMAT_R32G32B32_SFLOAT,
-                .offset = 0,
-            },
-            {
-                .location = 2,
-                .binding = 2,
-                .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-                .offset = 0,
-            },
-            {
-                .location = 3,
-                .binding = 3,
-                .format = VK_FORMAT_R32G32_SFLOAT,
-                .offset = 0,
-            }
-    };
-
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-            .vertexBindingDescriptionCount = 4,
-            .pVertexBindingDescriptions = bindings,
-            .vertexAttributeDescriptionCount = 4,
-            .pVertexAttributeDescriptions = attributes,
     };
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{
@@ -229,7 +187,7 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
     vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineInfo, nullptr, &pipeline.pipeline);
     pipeline.pipelineLayout = pipelineLayout;
 
-    for(auto module : modules) {
+    for(auto& module : modules) {
         pipeline.descriptorSets.insert(pipeline.descriptorSets.end(), module->descSets.begin(), module->descSets.end());
     }
 

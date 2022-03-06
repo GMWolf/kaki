@@ -104,13 +104,23 @@ namespace kaki {
                                 {"metallicRoughnessTexture", metallicRoughnessImage ? metallicRoughnessImage->view : VK_NULL_HANDLE},
                                 {"aoTexture", aoImage ? aoImage->view : VK_NULL_HANDLE},
                                 {"emissiveTexture", emissiveImage? emissiveImage->view : VK_NULL_HANDLE},
+                                {"positions", VK_NULL_HANDLE, vk.geometry.positionBuffer},
+                                {"normals", VK_NULL_HANDLE, vk.geometry.normalBuffer},
+                                {"tangents", VK_NULL_HANDLE, vk.geometry.tangentBuffer},
+                                {"texcoords", VK_NULL_HANDLE, vk.geometry.texcoordBuffer},
                         };
 
                         updateDescSets(vk, descriptorSets, *pipeline, inputs);
 
-                        vkCmdBindDescriptorSets(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                                pipeline->pipelineLayout,
-                                                0, descriptorSets.size(), descriptorSets.data(), 0, nullptr);
+                        for(uint32_t d = 0; d < pipeline->descriptorSets.size(); d++) {
+
+                            vkCmdBindDescriptorSets(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                                    pipeline->pipelineLayout,
+                                                    pipeline->descriptorSets[d].index, 1, &descriptorSets[d], 0, nullptr);
+
+                        }
+
+
                     }
 
                     struct Pc {

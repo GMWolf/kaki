@@ -10,6 +10,7 @@
 
 struct Control{};
 struct Rotate{};
+struct Foo{};
 int main() {
 
     flecs::world world;
@@ -25,16 +26,15 @@ int main() {
 
     world.import<kaki::gfx>();
 
-    auto package = kaki::loadPackage(world, "testpackage.json");
-    auto scene = world.entity("scene").is_a(package.lookup("SciFiHelmet::Scene"));
+    auto package = kaki::loadPackage(world, "testpackage.json").add<Foo>();
+    auto scene = world.entity("scene").is_a(package.lookup("SciFiHelmet::Scene")).add<Foo>();
     scene.lookup("Camera").add<Control>();
     scene.lookup("SciFiHelmet").add<Rotate>();
 
-    auto dhscene = world.entity("dhscene").is_a(package.lookup("DamagedHelmet::Scene"));
+    auto dhscene = world.entity("dhscene").is_a(package.lookup("DamagedHelmet::Scene")).add<Foo>();
     dhscene.lookup("damagedHelmet").add<Rotate>();
 
-    //auto sponzaPackage = kaki::loadPackage(world, "sponza/Sponza.gltf.json");
-    auto sponza = world.entity("sponza").is_a(package.lookup("Sponza::Sponza"));
+    auto sponza = world.entity("sponza").is_a(package.lookup("Sponza::Sponza")).add<Foo>();
 
     world.system<kaki::Transform>("Control system").term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
         auto* input = window.get<kaki::Input>();

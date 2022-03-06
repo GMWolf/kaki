@@ -1,15 +1,22 @@
 #version 430
 
-
-layout(location = 0) in vec3 POSITION;
-layout(location = 1) in vec3 NORMAL;
-layout(location = 2) in vec4 TANGENT;
-layout(location = 3) in vec2 UV;
-
 layout(location = 0) out vec2 UV_OUT;
 layout(location = 1) out vec3 NORMAL_OUT;
 layout(location = 2) out vec4 TANGENT_OUT;
 layout(location = 3) out vec3 VIEW_DIRECTION;
+
+layout(set = 1, binding = 0, std430) buffer PositionBlock {
+    float v[];
+} positions;
+layout(set = 1, binding = 1, std430) buffer NormalBlock {
+    float v[];
+} normals;
+layout(set = 1, binding = 2, std430) buffer TangentBlock {
+    float v[];
+} tangents;
+layout(set = 1, binding = 3, std430) buffer TexcoordBlock {
+    float v[];
+} texcoords;
 
 struct Transform {
     vec3 position;
@@ -35,10 +42,16 @@ vec3 applyTransform(vec3 pos, Transform transform) {
 }
 
 void main() {
-    vec3 pos = applyTransform(POSITION, transform);
+
+    vec3 in_pos = vec3(positions.v[gl_VertexIndex * 3 + 0u], positions.v[gl_VertexIndex * 3 + 1u], positions.v[gl_VertexIndex * 3 + 2u]);
+    vec3 in_normal = vec3(normals.v[gl_VertexIndex * 3 + 0u], normals.v[gl_VertexIndex * 3 + 1u], normals.v[gl_VertexIndex * 3 + 2u]);
+    vec4 in_tangent = vec4(tangents.v[gl_VertexIndex * 4 + 0u], tangents.v[gl_VertexIndex * 4 + 1u], tangents.v[gl_VertexIndex * 4 + 2u], tangents.v[gl_VertexIndex * 4 + 3u]);
+    vec2 in_uv = vec2(texcoords.v[gl_VertexIndex * 2 + 0u], texcoords.v[gl_VertexIndex * 2 + 1u]);
+
+    vec3 pos = applyTransform(in_pos, transform);
     gl_Position = proj * vec4(pos , 1.0);
-    UV_OUT = UV;
-    NORMAL_OUT = rotate(NORMAL, transform.orientation);
-    TANGENT_OUT = vec4(rotate(TANGENT.xyz, transform.orientation), TANGENT.w);
+    UV_OUT = in_uv;
+    NORMAL_OUT = rotate(in_normal, transform.orientation);
+    TANGENT_OUT = vec4(rotate(in_tangent.xyz, transform.orientation), in_tangent.w);
     VIEW_DIRECTION = normalize(pos - viewPos);
 }

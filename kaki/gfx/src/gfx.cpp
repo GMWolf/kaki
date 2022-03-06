@@ -67,6 +67,7 @@ static bool createGlobals(flecs::world& world) {
     VkSurfaceKHR surface = window->createSurface(vkb_inst);
 
     vkb::PhysicalDeviceSelector selector{ vkb_inst };
+
     auto phys_ret = selector.set_surface(surface)
             .set_minimum_version(1,2)
             .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
@@ -166,13 +167,17 @@ static bool createGlobals(flecs::world& world) {
                 VkDescriptorPoolSize{
                         .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                         .descriptorCount = 1024,
-                }
+                },
+                VkDescriptorPoolSize{
+                        .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                        .descriptorCount = 1024,
+                },
         };
 
         VkDescriptorPoolCreateInfo descPoolInfo{
                 .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
                 .maxSets = 1024,
-                .poolSizeCount = 1,
+                .poolSizeCount = std::span(descriptorPoolSize).size(),
                 .pPoolSizes = descriptorPoolSize,
         };
 

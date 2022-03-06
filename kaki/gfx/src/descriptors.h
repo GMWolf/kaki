@@ -4,6 +4,7 @@
 
 #pragma once
 #include "vk.h"
+#include "pipeline.h"
 
 namespace kaki {
     struct ShaderInput {

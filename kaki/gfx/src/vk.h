@@ -7,7 +7,6 @@
 
 #include <VkBootstrap.h>
 #include <vulkan/vulkan.h>
-#include "pipeline.h"
 #include <vk_mem_alloc.h>
 #include "render_graph.h"
 #include "geometry_buffer.h"

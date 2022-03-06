@@ -163,9 +163,14 @@ namespace kaki {
             .format = VK_FORMAT_D32_SFLOAT,
         });
 
-        //Draw world
+        auto visbuffer = graph.image({
+            .size = vk.swapchain.extent,
+            .format = VK_FORMAT_R32G32_UINT,
+        });
+
+        //Draw v buffer
         graph.pass(renderWorld)
-        .colorClear(DISPLAY_IMAGE_INDEX, {0.0f, 0.0f, 0.0f, 1.0f})
+        .color(visbuffer)
         .depthClear(depthImage, {0.0f, 0});
 
         //Draw Imgui
@@ -173,7 +178,7 @@ namespace kaki {
             auto& vk = *world.get_mut<VkGlobals>();
             ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
         })
-        .color(DISPLAY_IMAGE_INDEX);
+        .colorClear(DISPLAY_IMAGE_INDEX, {0.0f, 0.0f, 0.0f, 1.0f});
 
         return graph.build(vk);
     }

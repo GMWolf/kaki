@@ -465,26 +465,8 @@ kaki::gfx::gfx(flecs::world &world) {
             auto pipelines = static_cast<Pipeline*>(ppipelines);
 
             for(auto i : iter) {
-                membuf buf(data[i].data);
-                std::istream bufStream(&buf);
-                cereal::BinaryInputArchive archive(bufStream);
-
-                std::string vertexName;
-                std::string fragmentName;
-                archive(vertexName, fragmentName);
-
                 auto parent = iter.entity(i).get_object(flecs::ChildOf);
-
-                auto vertexEntity = parent.lookup(vertexName.c_str());
-                auto fragmentEntity = parent.lookup(fragmentName.c_str());
-
-                auto vertexModule = vertexEntity.get<kaki::ShaderModule>();
-                auto fragmentModule = fragmentEntity.get<kaki::ShaderModule>();
-
-                VkFormat colorFormats[] = {vk.swapchain.image_format};
-                VkRenderPass renderpass = createCompatRenderPass(vk.device, colorFormats, VK_FORMAT_D32_SFLOAT);
-                pipelines[i] = kaki::createPipeline(vk.device, renderpass, vertexModule, fragmentModule);
-                vkDestroyRenderPass(vk.device, renderpass, nullptr);
+                pipelines[i] = kaki::createPipeline(vk, parent, data[i].data);
             }
 
         }

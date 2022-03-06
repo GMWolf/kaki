@@ -30,7 +30,7 @@ float random (in vec2 _st) {
 }
 
 
-layout(location = 0) out vec4 outColor;
+layout(location = 0) out uvec2 outVis;
 void main() {
 
     if (texture(albedoTexture, UV).a < 0.5) {
@@ -41,5 +41,8 @@ void main() {
 
     vec3 c = hsv2rgb(vec3(random(vec2(triId, 1.0)), 0.5 + 0.5 * random(vec2(drawId, 1.0)), 1.0));
 
-    outColor = vec4(c, 1);
+    //outColor = vec4(c, 1);
+
+    outVis.x = drawId;
+    outVis.y = triId;
 }

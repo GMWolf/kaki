@@ -5,7 +5,7 @@
 #ifndef KAKI_PIPELINE_H
 #define KAKI_PIPELINE_H
 
-#include <vulkan/vulkan.h>
+#include "vk.h"
 #include <flecs.h>
 #include "shader.h"
 
@@ -17,7 +17,7 @@ namespace kaki {
         std::vector<DescriptorSet> descriptorSets;
     };
 
-    Pipeline createPipeline(VkDevice device, VkRenderPass renderpass, const ShaderModule* vertexModule, const ShaderModule* fragmentModule);
+    Pipeline createPipeline(const VkGlobals& vk, flecs::entity scope, std::span<uint8_t> pipelineData);
 }
 
 #endif //KAKI_PIPELINE_H

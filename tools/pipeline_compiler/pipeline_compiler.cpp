@@ -9,6 +9,9 @@
 #include <filesystem>
 #include <cereal/archives/binary.hpp>
 #include <cereal/archives/json.hpp>
+#define VK_VALUE_SERIALIZATION_CONFIG_MAIN
+#include <vk_value_serialization.hpp>
+#include <kaki/vk_cereal.h>
 
 namespace fs = std::filesystem;
 
@@ -33,7 +36,37 @@ int main(int argc, char* argv[]) {
         cereal::BinaryOutputArchive dataArchive(outputData);
         std::string vertex = doc["vertex"].GetString();
         std::string fragment = doc["fragment"].GetString();
-        dataArchive(vertex, fragment);
+
+        std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments;
+        std::vector<VkFormat> colorFormats;
+        for(auto& attachment : doc["attachments"].GetArray()) {
+            auto& format = colorFormats.emplace_back();
+            auto& blend = colorBlendAttachments.emplace_back();
+            vk_parse("VkFormat", attachment["format"].GetString(), &format);
+            blend.blendEnable = attachment["blend_enable"].GetBool();
+            vk_parse("VkBlendFactor", attachment["src_blend_factor"].GetString(), &blend.srcColorBlendFactor);
+            vk_parse("VkBlendFactor", attachment["dst_blend_factor"].GetString(), &blend.dstColorBlendFactor);
+            vk_parse("VkBlendOp", attachment["color_blend_op"].GetString(), &blend.colorBlendOp);
+            vk_parse("VkBlendFactor", attachment["src_alpha_factor"].GetString(), &blend.srcAlphaBlendFactor);
+            vk_parse("VkBlendFactor", attachment["dst_alpha_factor"].GetString(), &blend.dstAlphaBlendFactor);
+            vk_parse("VkBlendOp", attachment["alpha_blend_op"].GetString(), &blend.alphaBlendOp);
+            blend.colorWriteMask = VK_COLOR_COMPONENT_A_BIT | VK_COLOR_COMPONENT_R_BIT |
+                                   VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT;
+        }
+
+        std::optional<VkFormat> depthFormat;
+        if (doc.HasMember("depthAttachment")) {
+            VkFormat format;
+            vk_parse("VkFormat", doc["depthAttachment"]["format"].GetString(), &format);
+            depthFormat = format;
+        }
+
+        VkCullModeFlags cullMode;
+        vk_parse("VkCullModeFlags", doc["cullMode"].GetString(), &cullMode);
+        VkCompareOp depthCompareOp;
+        vk_parse("VkCompareOp", doc["depthCompare"].GetString(), &depthCompareOp);
+
+        dataArchive(vertex, fragment, colorBlendAttachments, colorFormats, depthFormat, cullMode, depthCompareOp);
     }
 
     kaki::Package package {

@@ -6,7 +6,10 @@
 #include "shader.h"
 #include <span>
 #include "renderpass.h"
+#include "membuf.h"
 #include <ranges>
+#include <vk_cereal.h>
+#include <cereal/types/optional.hpp>
 
 static VkPipelineLayout createPipelineLayout(VkDevice device, std::span<const kaki::ShaderModule*> modules)
 {
@@ -44,10 +47,33 @@ static VkPipelineLayout createPipelineLayout(VkDevice device, std::span<const ka
     return layout;
 }
 
-kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, const kaki::ShaderModule* vertexModule, const kaki::ShaderModule* fragmentModule) {
+kaki::Pipeline kaki::createPipeline(const kaki::VkGlobals& vk, flecs::entity scope, std::span<uint8_t> pipelineData) {
+
+    membuf buf(pipelineData);
+    std::istream bufStream(&buf);
+    cereal::BinaryInputArchive archive(bufStream);
+
+    std::string vertexName;
+    std::string fragmentName;
+    std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments;
+    std::vector<VkFormat> colorFormats;
+    std::optional<VkFormat> depthFormat;
+    VkCullModeFlags cullMode;
+    VkCompareOp depthCompareOp;
+    archive(vertexName, fragmentName);
+    archive(colorBlendAttachments);
+    archive(colorFormats, depthFormat, cullMode, depthCompareOp);
+
+    auto renderpass = createCompatRenderPass(vk.device, colorFormats, depthFormat);
+
+    auto vertexEntity = scope.lookup(vertexName.c_str());
+    auto fragmentEntity = scope.lookup(fragmentName.c_str());
+
+    auto vertexModule = vertexEntity.get<kaki::ShaderModule>();
+    auto fragmentModule = fragmentEntity.get<kaki::ShaderModule>();
 
     const kaki::ShaderModule* modules[] = {vertexModule, fragmentModule};
-    auto pipelineLayout = createPipelineLayout(device, modules);
+    auto pipelineLayout = createPipelineLayout(vk.device, modules);
 
     VkPipelineShaderStageCreateInfo shaderStageCreateInfo[] {
             {
@@ -102,7 +128,7 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
             .depthClampEnable = false,
             .rasterizerDiscardEnable = false,
             .polygonMode = VK_POLYGON_MODE_FILL,
-            .cullMode = VK_CULL_MODE_BACK_BIT,
+            .cullMode = cullMode,
             .frontFace = VK_FRONT_FACE_CLOCKWISE,
             .depthBiasEnable = false,
             .depthBiasConstantFactor = 0.0f,
@@ -121,25 +147,12 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
             .alphaToOneEnable = false,
     };
 
-
-    VkPipelineColorBlendAttachmentState blendAttachment {
-            .blendEnable = true,
-            .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
-            .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
-            .colorBlendOp = VK_BLEND_OP_ADD,
-            .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-            .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-            .alphaBlendOp = VK_BLEND_OP_ADD,
-            .colorWriteMask = VK_COLOR_COMPONENT_A_BIT | VK_COLOR_COMPONENT_R_BIT |
-                              VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT,
-    };
-
     VkPipelineColorBlendStateCreateInfo colorBlending {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
             .logicOpEnable = false,
             .logicOp = VK_LOGIC_OP_COPY,
-            .attachmentCount = 1,
-            .pAttachments = &blendAttachment,
+            .attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size()),
+            .pAttachments = colorBlendAttachments.data(),
     };
 
     VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
@@ -154,7 +167,7 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
             .depthTestEnable = VK_TRUE,
             .depthWriteEnable = VK_TRUE,
-            .depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL,
+            .depthCompareOp = depthCompareOp,
             .depthBoundsTestEnable = VK_FALSE,
             .stencilTestEnable = VK_FALSE,
             .front = {},
@@ -184,12 +197,14 @@ kaki::Pipeline kaki::createPipeline(VkDevice device, VkRenderPass renderpass, co
 
 
     Pipeline pipeline;
-    vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineInfo, nullptr, &pipeline.pipeline);
+    vkCreateGraphicsPipelines(vk.device, nullptr, 1, &pipelineInfo, nullptr, &pipeline.pipeline);
     pipeline.pipelineLayout = pipelineLayout;
 
     for(auto& module : modules) {
         pipeline.descriptorSets.insert(pipeline.descriptorSets.end(), module->descSets.begin(), module->descSets.end());
     }
+
+    vkDestroyRenderPass(vk.device, renderpass, nullptr);
 
     return pipeline;
 }

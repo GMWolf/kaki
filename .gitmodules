@@ -46,3 +46,6 @@
 [submodule "external/imgui"]
 	path = external/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "external/vulkan-mini-libs-2"]
+	path = external/vulkan-mini-libs-2
+	url = https://github.com/StableCoder/vulkan-mini-libs-2.git

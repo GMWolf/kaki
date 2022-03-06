@@ -73,6 +73,14 @@ add_library(imgui_vk external/imgui/backends/imgui_impl_vulkan.h external/imgui/
 target_include_directories(imgui_vk PUBLIC external/imgui/backends)
 target_link_libraries(imgui_vk PRIVATE imgui)
 
+add_library(vk_mini_libs INTERFACE
+        external/vulkan-mini-libs-2/include/vk_error_code.hpp
+        external/vulkan-mini-libs-2/include/vk_result_to_string.h
+        external/vulkan-mini-libs-2/include/vk_struct_cleanup.h
+        external/vulkan-mini-libs-2/include/vk_struct_compare.h
+        external/vulkan-mini-libs-2/include/vk_value_serialization.hpp)
+target_include_directories(vk_mini_libs INTERFACE external/vulkan-mini-libs-2/include)
+
 add_subdirectory(kaki)
 add_subdirectory(tools)
 

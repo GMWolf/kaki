@@ -24,11 +24,23 @@ struct Transform {
     vec4 orientation;
 };
 
+struct DrawInfo {
+    Transform transform;
+
+    uint indexOffset;
+    uint vertexOffset;
+    uint material;
+    uint pad;
+};
+
+layout(set = 1, binding = 4, std430) buffer DrawInfoBlock {
+    DrawInfo data[];
+} drawInfoBuffer;
+
 layout(push_constant) uniform constants {
     mat4 proj;
-    vec3 viewPos; float pad0;
-    Transform transform;
-    vec3 light; float pad1;
+    vec3 viewPos; uint drawIndex;
+    vec3 light; float pad;
 };
 
 vec3 rotate(vec3 vec, vec4 q) {
@@ -43,15 +55,17 @@ vec3 applyTransform(vec3 pos, Transform transform) {
 
 void main() {
 
+    DrawInfo drawInfo = drawInfoBuffer.data[drawIndex];
+
     vec3 in_pos = vec3(positions.v[gl_VertexIndex * 3 + 0u], positions.v[gl_VertexIndex * 3 + 1u], positions.v[gl_VertexIndex * 3 + 2u]);
     vec3 in_normal = vec3(normals.v[gl_VertexIndex * 3 + 0u], normals.v[gl_VertexIndex * 3 + 1u], normals.v[gl_VertexIndex * 3 + 2u]);
     vec4 in_tangent = vec4(tangents.v[gl_VertexIndex * 4 + 0u], tangents.v[gl_VertexIndex * 4 + 1u], tangents.v[gl_VertexIndex * 4 + 2u], tangents.v[gl_VertexIndex * 4 + 3u]);
     vec2 in_uv = vec2(texcoords.v[gl_VertexIndex * 2 + 0u], texcoords.v[gl_VertexIndex * 2 + 1u]);
 
-    vec3 pos = applyTransform(in_pos, transform);
+    vec3 pos = applyTransform(in_pos, drawInfo.transform);
     gl_Position = proj * vec4(pos , 1.0);
     UV_OUT = in_uv;
-    NORMAL_OUT = rotate(in_normal, transform.orientation);
-    TANGENT_OUT = vec4(rotate(in_tangent.xyz, transform.orientation), in_tangent.w);
+    NORMAL_OUT = rotate(in_normal, drawInfo.transform.orientation);
+    TANGENT_OUT = vec4(rotate(in_tangent.xyz, drawInfo.transform.orientation), in_tangent.w);
     VIEW_DIRECTION = normalize(pos - viewPos);
 }

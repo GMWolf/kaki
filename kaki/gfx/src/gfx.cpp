@@ -114,7 +114,6 @@ static bool createGlobals(flecs::world& world) {
         return false;
     }
 
-
     VmaAllocatorCreateInfo allocatorInfo = {
             .physicalDevice = vk.device.physical_device,
             .device = vk.device,
@@ -286,6 +285,24 @@ static bool createGlobals(flecs::world& world) {
     vk.graph = graphScript(vk);
 
     kaki::allocGeometryBuffer(vk.allocator, vk.geometry, 3 * 1024 * 1024, 1024 * 1024);
+
+    for(uint i = 0; i < vk.framesInFlight; i++)
+    {
+        VkBufferCreateInfo bufferInfo {
+                .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                .size = sizeof(kaki::DrawInfo) * vk.maxDrawCount,
+                .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        };
+
+        VmaAllocationCreateInfo vmaAllocInfo {
+                .usage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+                .requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        };
+
+        vmaCreateBuffer(vk.allocator, &bufferInfo, &vmaAllocInfo, &vk.drawInfoBuffer[i], &vk.drawInfoAlloc[i], nullptr);
+        vmaMapMemory(vk.allocator, vk.drawInfoAlloc[i], (void**)&vk.drawInfos[i]);
+    }
+
 
     world.set<kaki::VkGlobals>(vk);
     return true;

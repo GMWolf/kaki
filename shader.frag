@@ -13,8 +13,7 @@ layout(location = 3) in vec3 VIEW_DIRECTION;
 
 layout(push_constant) uniform constants {
     mat4 proj;
-    vec3 viewPos; float pad0;
-    Transform transform;
+    vec3 viewPos; uint drawId;
     vec3 light; float pad1;
 };
 

@@ -49,7 +49,7 @@ namespace kaki {
 
         auto& vk = *world.get_mut<VkGlobals>();
         auto& geometry = vk.geometry;
-        auto pipeline = world.lookup("testpackage::pipeline").get<kaki::Pipeline>();
+        auto pipeline = world.lookup("testpackage::visibility").get<kaki::Pipeline>();
 
         std::vector<VkDescriptorSetLayout> descSetLayouts;
         for(auto& descSet : pipeline->descriptorSets) {
@@ -70,6 +70,8 @@ namespace kaki {
             glm::mat4 proj = perspective(camera.fov, aspect, 0.01f, 100.0f);
             glm::mat4 view = cameraTransform.inverse().matrix();
             glm::mat4 viewProj = proj * view;
+
+            uint32_t drawIndex = 0;
 
             world.filter_builder<kaki::MeshFilter, kaki::internal::MeshInstance>()
                     .term<kaki::Transform>().set(flecs::Self | flecs::SuperSet, flecs::ChildOf)
@@ -108,6 +110,7 @@ namespace kaki {
                                 {"normals", VK_NULL_HANDLE, vk.geometry.normalBuffer},
                                 {"tangents", VK_NULL_HANDLE, vk.geometry.tangentBuffer},
                                 {"texcoords", VK_NULL_HANDLE, vk.geometry.texcoordBuffer},
+                                {"drawInfoBuffer", VK_NULL_HANDLE, vk.drawInfoBuffer[vk.currentFrame]},
                         };
 
                         updateDescSets(vk, descriptorSets, *pipeline, inputs);
@@ -117,7 +120,6 @@ namespace kaki {
                             vkCmdBindDescriptorSets(vk.cmd[vk.currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                                                     pipeline->pipelineLayout,
                                                     pipeline->descriptorSets[d].index, 1, &descriptorSets[d], 0, nullptr);
-
                         }
 
 
@@ -125,15 +127,19 @@ namespace kaki {
 
                     struct Pc {
                         glm::mat4 proj{};
-                        glm::vec3 viewPos{}; float pad0{};
-                        kaki::Transform transform;
-                        glm::vec3 light{}; float pad1{};
+                        uint drawIndex{};
                     } pc;
 
                     pc.proj = viewProj;
-                    pc.viewPos = cameraTransform.position;
-                    pc.transform = transform;
-                    pc.light = -glm::normalize(glm::vec3(0, -1, 0.5));
+                    pc.drawIndex = drawIndex;
+                    //pc.light = -glm::normalize(glm::vec3(0, -1, 0.5));
+
+                    vk.drawInfos[vk.currentFrame][drawIndex] = {
+                            .transform = transform,
+                            .indexOffset = mesh.indexOffset,
+                            .vertexOffset = mesh.vertexOffset,
+                            .material = 0,
+                    };
 
                     vkCmdPushConstants(vk.cmd[vk.currentFrame], pipeline->pipelineLayout,
                                        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
@@ -142,6 +148,7 @@ namespace kaki {
 
                     vkCmdDrawIndexed(vk.cmd[vk.currentFrame], mesh.indexCount, 1, mesh.indexOffset, mesh.vertexOffset, 0);
 
+                    drawIndex++;
                 }
 
             });

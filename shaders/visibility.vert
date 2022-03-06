@@ -1,9 +1,13 @@
 #version 430
 
-layout(location = 0) in vec3 POSITION;
-layout(location = 3) in vec2 UV;
-
 layout(location = 0) out vec2 UV_OUT;
+
+layout(set = 1, binding = 0, std430) buffer PositionBlock {
+    float v[];
+} positions;
+layout(set = 1, binding = 3, std430) buffer TexcoordBlock {
+    float v[];
+} texcoords;
 
 struct Transform {
     vec3 position;
@@ -11,11 +15,22 @@ struct Transform {
     vec4 orientation;
 };
 
+struct DrawInfo {
+    Transform transform;
+
+    uint indexOffset;
+    uint vertexOffset;
+    uint material;
+    uint pad;
+};
+
+layout(set = 1, binding = 4, std430) buffer DrawInfoBlock {
+    DrawInfo data[];
+} drawInfoBuffer;
+
 layout(push_constant) uniform constants {
     mat4 proj;
-    vec3 viewPos; float pad0;
-    Transform transform;
-    vec3 light; float pad1;
+    uint drawIndex;
 };
 
 vec3 rotate(vec3 vec, vec4 q) {
@@ -29,7 +44,13 @@ vec3 applyTransform(vec3 pos, Transform transform) {
 }
 
 void main() {
-    vec3 pos = applyTransform(POSITION, transform);
+
+    DrawInfo drawInfo = drawInfoBuffer.data[drawIndex];
+
+    vec3 in_pos = vec3(positions.v[gl_VertexIndex * 3 + 0u], positions.v[gl_VertexIndex * 3 + 1u], positions.v[gl_VertexIndex * 3 + 2u]);
+    vec2 in_uv = vec2(texcoords.v[gl_VertexIndex * 2 + 0u], texcoords.v[gl_VertexIndex * 2 + 1u]);
+
+    vec3 pos = applyTransform(in_pos, drawInfo.transform);
     gl_Position = proj * vec4(pos , 1.0);
-    UV_OUT = UV;
+    UV_OUT = in_uv;
 }

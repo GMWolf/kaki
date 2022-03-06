@@ -11,9 +11,7 @@ struct Transform {
 
 layout(push_constant) uniform constants {
     mat4 proj;
-    vec3 viewPos; float pad0;
-    Transform transform;
-    vec3 light; float pad1;
+    uint drawId;
 };
 
 layout(set = 0, binding = 0) uniform sampler2D albedoTexture;
@@ -41,7 +39,7 @@ void main() {
 
     uint triId = gl_PrimitiveID;
 
-    vec3 c = hsv2rgb(vec3(random(vec2(triId, 1.0)), 0.5 + 0.5 * random(vec2(triId, 1.0)), 1.0));
+    vec3 c = hsv2rgb(vec3(random(vec2(triId, 1.0)), 0.5 + 0.5 * random(vec2(drawId, 1.0)), 1.0));
 
     outColor = vec4(c, 1);
 }

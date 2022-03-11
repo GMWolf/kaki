@@ -81,11 +81,8 @@ namespace kaki {
 
                 for(auto i : it) {
                     kaki::internal::MeshInstance& mesh = meshInstances[i];
-                    auto albedoImage = flecs::entity(world, filters[i].albedo).get<kaki::Image>();
-                    auto normalImage = flecs::entity(world, filters[i].normal).get<kaki::Image>();
-                    auto metallicRoughnessImage = flecs::entity(world, filters[i].metallicRoughness).get<kaki::Image>();
-                    auto aoImage = flecs::entity(world, filters[i].ao).get<kaki::Image>();
-                    auto emissiveImage = flecs::entity(world, filters[i].emissive).get<kaki::Image>();
+                    auto material = flecs::entity(world, filters[i].material).get<kaki::Material>();
+                    auto albedoImage = flecs::entity(world, material->albedo).get<kaki::Image>();
                     auto& transform = transforms[i];
 
                     if (!descSetLayouts.empty()) {
@@ -102,10 +99,6 @@ namespace kaki {
 
                         ShaderInput inputs[]{
                                 {"albedoTexture", albedoImage->view, vk.sampler},
-                                {"normalTexture", normalImage ? normalImage->view : VK_NULL_HANDLE, vk.sampler},
-                                {"metallicRoughnessTexture", metallicRoughnessImage ? metallicRoughnessImage->view : VK_NULL_HANDLE, vk.sampler},
-                                {"aoTexture", aoImage ? aoImage->view : VK_NULL_HANDLE, vk.sampler},
-                                {"emissiveTexture", emissiveImage? emissiveImage->view : VK_NULL_HANDLE, vk.sampler},
                                 {"positions", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.positionBuffer},
                                 {"normals", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.normalBuffer},
                                 {"tangents", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.tangentBuffer},
@@ -137,7 +130,7 @@ namespace kaki {
                             .transform = transform,
                             .indexOffset = mesh.indexOffset,
                             .vertexOffset = mesh.vertexOffset,
-                            .material = 0,
+                            .material = filters[i].material,
                     };
 
                     vkCmdPushConstants(cmd, pipeline->pipelineLayout,
@@ -159,84 +152,78 @@ namespace kaki {
         auto& vk = *world.get_mut<VkGlobals>();
         auto& geometry = vk.geometry;
 
-        MeshFilter* filter = nullptr;
-        world.each([&](MeshFilter& f) {
-            if (filter == nullptr) {
-                filter = &f;
+        world.each([&](flecs::entity materialEntity, Material& material) {
+            auto albedoImage = flecs::entity(world, material.albedo).get<kaki::Image>();
+            auto normalImage = flecs::entity(world, material.normal).get<kaki::Image>();
+            auto metallicRoughnessImage = flecs::entity(world, material.metallicRoughness).get<kaki::Image>();
+            auto aoImage = flecs::entity(world, material.ao).get<kaki::Image>();
+            auto emissiveImage = flecs::entity(world, material.emissive).get<kaki::Image>();
+
+            ShaderInput inputs[]{
+                    {"albedoTexture", albedoImage->view, vk.sampler},
+                    {"normalTexture", normalImage ? normalImage->view : VK_NULL_HANDLE, vk.sampler},
+                    {"metallicRoughnessTexture", metallicRoughnessImage ? metallicRoughnessImage->view : VK_NULL_HANDLE, vk.sampler},
+                    {"aoTexture", aoImage ? aoImage->view : VK_NULL_HANDLE, vk.sampler},
+                    {"emissiveTexture", emissiveImage? emissiveImage->view : VK_NULL_HANDLE, vk.sampler},
+                    {"positions", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.positionBuffer},
+                    {"normals", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.normalBuffer},
+                    {"tangents", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.tangentBuffer},
+                    {"texcoords", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.texcoordBuffer},
+                    {"drawInfoBuffer", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.drawInfoBuffer[vk.currentFrame]},
+                    {"visbuffer", images[0], vk.uintSampler},
+                    {"indices", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.indexBuffer},
+            };
+
+            auto pipeline = world.lookup("testpackage::shade").get<kaki::Pipeline>();
+
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
+
+            std::vector<VkDescriptorSetLayout> descSetLayouts;
+            for(auto& descSet : pipeline->descriptorSets) {
+                descSetLayouts.push_back(descSet.layout);
             }
+            std::vector<VkDescriptorSet> descriptorSets(descSetLayouts.size());
+            VkDescriptorSetAllocateInfo descAlloc{
+                    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                    .pNext = nullptr,
+                    .descriptorPool = vk.descriptorPools[vk.currentFrame],
+                    .descriptorSetCount = static_cast<uint32_t>(descSetLayouts.size()),
+                    .pSetLayouts = descSetLayouts.data(),
+            };
+            vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
+
+            updateDescSets(vk, descriptorSets, *pipeline, inputs);
+            for(uint32_t d = 0; d < pipeline->descriptorSets.size(); d++) {
+                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                        pipeline->pipelineLayout,
+                                        pipeline->descriptorSets[d].index, 1, &descriptorSets[d], 0, nullptr);
+            }
+
+            struct Pc {
+                glm::mat4 proj{};
+                glm::vec3 viewPos; uint drawId;
+                glm::vec3 light; float pad1;
+                glm::vec2 winSize;
+                uint32_t material;
+            } pc;
+
+            world.each([&](const kaki::Camera& camera, const kaki::Transform& cameraTransform) {
+                float aspect = (float) vk.swapchain.extent.width / (float) vk.swapchain.extent.height;
+                 glm::mat4 proj = perspective(camera.fov, aspect, 0.01f, 100.0f);
+                glm::mat4 view = cameraTransform.inverse().matrix();
+                pc.proj = proj * view;
+                pc.viewPos = cameraTransform.position;
+            });
+
+            pc.winSize = {vk.swapchain.extent.width, vk.swapchain.extent.height};
+            pc.light = -glm::normalize(glm::vec3(0, -1, 0.5));
+            pc.material = materialEntity.id();
+
+            vkCmdPushConstants(cmd, pipeline->pipelineLayout,
+                               VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+                               sizeof(Pc), &pc);
+            vkCmdDrawIndexed(cmd, 3, 1, 0, 0, 0);
         });
-
-        auto albedoImage = flecs::entity(world, filter->albedo).get<kaki::Image>();
-        auto normalImage = flecs::entity(world, filter->normal).get<kaki::Image>();
-        auto metallicRoughnessImage = flecs::entity(world, filter->metallicRoughness).get<kaki::Image>();
-        auto aoImage = flecs::entity(world, filter->ao).get<kaki::Image>();
-        auto emissiveImage = flecs::entity(world, filter->emissive).get<kaki::Image>();
-
-        ShaderInput inputs[]{
-                {"albedoTexture", albedoImage->view, vk.sampler},
-                {"normalTexture", normalImage ? normalImage->view : VK_NULL_HANDLE, vk.sampler},
-                {"metallicRoughnessTexture", metallicRoughnessImage ? metallicRoughnessImage->view : VK_NULL_HANDLE, vk.sampler},
-                {"aoTexture", aoImage ? aoImage->view : VK_NULL_HANDLE, vk.sampler},
-                {"emissiveTexture", emissiveImage? emissiveImage->view : VK_NULL_HANDLE, vk.sampler},
-                {"positions", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.positionBuffer},
-                {"normals", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.normalBuffer},
-                {"tangents", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.tangentBuffer},
-                {"texcoords", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.texcoordBuffer},
-                {"drawInfoBuffer", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.drawInfoBuffer[vk.currentFrame]},
-                {"visbuffer", images[0], vk.uintSampler},
-                {"indices", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.indexBuffer},
-        };
-
-        auto pipeline = world.lookup("testpackage::shade").get<kaki::Pipeline>();
-
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
-
-        std::vector<VkDescriptorSetLayout> descSetLayouts;
-        for(auto& descSet : pipeline->descriptorSets) {
-            descSetLayouts.push_back(descSet.layout);
-        }
-        std::vector<VkDescriptorSet> descriptorSets(descSetLayouts.size());
-        VkDescriptorSetAllocateInfo descAlloc{
-                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                .pNext = nullptr,
-                .descriptorPool = vk.descriptorPools[vk.currentFrame],
-                .descriptorSetCount = static_cast<uint32_t>(descSetLayouts.size()),
-                .pSetLayouts = descSetLayouts.data(),
-        };
-        vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
-
-        updateDescSets(vk, descriptorSets, *pipeline, inputs);
-        for(uint32_t d = 0; d < pipeline->descriptorSets.size(); d++) {
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    pipeline->pipelineLayout,
-                                    pipeline->descriptorSets[d].index, 1, &descriptorSets[d], 0, nullptr);
-        }
-
-        struct Pc {
-            glm::mat4 proj{};
-            glm::vec3 viewPos; uint drawId;
-            glm::vec3 light; float pad1;
-            glm::vec2 winSize;
-        } pc;
-
-        world.each([&](const kaki::Camera& camera, const kaki::Transform& cameraTransform) {
-            float aspect = (float) vk.swapchain.extent.width / (float) vk.swapchain.extent.height;
-            glm::mat4 proj = perspective(camera.fov, aspect, 0.01f, 100.0f);
-            glm::mat4 view = cameraTransform.inverse().matrix();
-            pc.proj = proj * view;
-            pc.viewPos = cameraTransform.position;
-        });
-
-        pc.winSize = {vk.swapchain.extent.width, vk.swapchain.extent.height};
-        //pc.proj ;
-        pc.light = -glm::normalize(glm::vec3(0, -1, 0.5));
-
-        vkCmdPushConstants(cmd, pipeline->pipelineLayout,
-                           VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-                           sizeof(Pc), &pc);
-
-        vkCmdDrawIndexed(cmd, 3, 1, 0, 0, 0);
-
     }
 
     inline RenderGraph graphScript(VkGlobals& vk) {

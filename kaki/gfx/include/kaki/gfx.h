@@ -17,7 +17,10 @@ namespace kaki {
     struct MeshFilter {
         flecs::entity_t mesh;
         uint32_t primitiveIndex;
+        flecs::entity_t material;
+    };
 
+    struct Material {
         flecs::entity_t albedo;
         flecs::entity_t normal;
         flecs::entity_t metallicRoughness;

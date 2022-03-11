@@ -72,6 +72,7 @@ layout(push_constant) uniform constants {
     vec3 viewPos; uint drawId;
     vec3 light; float pad1;
     vec2 winSize;
+    uint material;
 };
 
 
@@ -203,6 +204,10 @@ void main() {
     uvec2 id = texelFetch(visbuffer, ivec2(gl_FragCoord.xy), 0 ).rg;
 
     DrawInfo draw = drawInfoBuffer.data[id.x];
+
+    if (draw.material != material) {
+        discard;
+    }
 
     uvec3 tri;
     tri.x = indices.v[draw.indexOffset + id.y * 3 + 0] + draw.vertexOffset;

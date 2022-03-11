@@ -18,7 +18,11 @@ namespace kaki {
         if (selected.entity.is_alive()) {
             ImGui::Begin("Inspector");
 
-            ImGui::Text("Name: %s", selected.entity.name().c_str());
+            const char* name = selected.entity.name().c_str();
+            if (strlen(name) == 0) {
+                name = "<unnamed>";
+            }
+            ImGui::Text("Name: %s", name);
 
             for (auto t: selected.entity.type().vector()) {
                 auto te = selected.entity.world().entity(t);
@@ -40,10 +44,12 @@ namespace kaki {
 
         bool hasChildren = entity.world().filter_builder().term(flecs::ChildOf, entity).build().iter().is_true();
 
-        bool opened = ImGui::TreeNodeEx(entity.name().c_str(),
+        const char* fmt = entity.name().size() > 0 ? entity.name().c_str() : "%lu";
+
+        bool opened = ImGui::TreeNodeEx(entity.name().c_str() ,
                                           ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick |
                                           (isSelected ? ImGuiTreeNodeFlags_Selected : 0) |
-                                                  (hasChildren ? 0 : ImGuiTreeNodeFlags_Leaf));
+                                                  (hasChildren ? 0 : ImGuiTreeNodeFlags_Leaf), fmt, entity.id());
         if (ImGui::IsItemClicked()) {
             entity.world().set(GuiSelectedEntity{entity});
         }

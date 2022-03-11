@@ -431,6 +431,7 @@ kaki::gfx::gfx(flecs::world &world) {
     world.component<kaki::Gltf>();
     world.component<kaki::ShaderModule>();
     world.component<kaki::MeshFilter>();
+    world.component<kaki::Material>();
 
     world.component<kaki::Camera>()
             .member<float>("yfov");
@@ -496,16 +497,34 @@ kaki::gfx::gfx(flecs::world &world) {
                 cereal::BinaryInputArchive archive(bufStream);
 
                 uint32_t primitiveIndex;
-                uint64_t meshRef, albedoRef, normalRef, mrRef, aoRef, emissiveRef;
-                archive(meshRef, primitiveIndex, albedoRef, normalRef, mrRef, aoRef, emissiveRef);
+                uint64_t meshRef, materialRef;
+                archive(meshRef, primitiveIndex, materialRef);
 
                 filters[i].mesh = data->entityRefs[meshRef];
                 filters[i].primitiveIndex = primitiveIndex;
-                filters[i].albedo = data->entityRefs[albedoRef];
-                filters[i].normal = data->entityRefs[normalRef];
-                filters[i].metallicRoughness = data->entityRefs[mrRef];
-                filters[i].ao = data->entityRefs[aoRef];
-                filters[i].emissive = data->entityRefs[emissiveRef];
+                filters[i].material = data->entityRefs[materialRef];
+            }
+
+        }
+    });
+
+    world.entity("MeshFilterLoader").set<ComponentAssetHandler, Material>({
+        .load = [](flecs::iter iter, AssetData* data, void* pmaterials) {
+            auto materials = static_cast<Material*>(pmaterials);
+
+            for(auto i : iter) {
+                membuf buf(data[i].data);
+                std::istream bufStream(&buf);
+                cereal::BinaryInputArchive archive(bufStream);
+
+                uint64_t albedoRef, normalRef, mrRef, aoRef, emissiveRef;
+                archive(albedoRef, normalRef, mrRef, aoRef, emissiveRef);
+
+                materials[i].albedo = data->entityRefs[albedoRef];
+                materials[i].normal = data->entityRefs[normalRef];
+                materials[i].metallicRoughness = data->entityRefs[mrRef];
+                materials[i].ao = data->entityRefs[aoRef];
+                materials[i].emissive = data->entityRefs[emissiveRef];
             }
 
         }
@@ -529,11 +548,7 @@ kaki::gfx::gfx(flecs::world &world) {
     world.component<MeshFilter>()
             .member("mesh", ecs_id(ecs_entity_t))
             .member<uint32_t>("index")
-            .member("albedo", ecs_id(ecs_entity_t))
-            .member("normal", ecs_id(ecs_entity_t))
-            .member("metallicRoughness", ecs_id(ecs_entity_t))
-            .member("ao", ecs_id(ecs_entity_t))
-            .member("emissive", ecs_id(ecs_entity_t));
+            .member("material", ecs_id(ecs_entity_t));
 
     createGlobals(world);
 

@@ -239,6 +239,52 @@ void writeImages(kaki::Package& package, std::span<cgltf_image> images, const ch
     }
 }
 
+void writeMaterials(kaki::Package& package, std::span<cgltf_material> materials, uint64_t firstImage, cgltf_data* cgltfData, std::ostream& outData)
+{
+    cereal::BinaryOutputArchive dataArchive(outData);
+
+    if (!materials.empty()) {
+
+        auto first = package.entities.size();
+        auto dataStart = outData.tellp();
+
+        auto& table = package.tables.emplace_back(kaki::Package::Table{
+            .entityFirst = first,
+            .entityCount = materials.size(),
+            .referenceOffset = 0u,
+            .components = {
+                    kaki::Package::Component{.type = {kaki::Package::TypeId::ChildOf, 0u}},
+                    kaki::Package::Component{.type = {"kaki::gfx::Material", {}}}
+            }
+        });
+
+        for(auto& material : materials) {
+            package.entities.push_back({material.name ? material.name : ""});
+
+            auto& data = table.components[1].data.emplace_back();
+            data.offset = static_cast<uint64_t>(outData.tellp());
+
+            auto albedoImage = material.pbr_metallic_roughness.base_color_texture.texture->image;
+            auto normalImage = material.normal_texture.texture ? material.normal_texture.texture->image : nullptr;
+            auto mrImage = material.pbr_metallic_roughness.metallic_roughness_texture.texture ? material.pbr_metallic_roughness.metallic_roughness_texture.texture->image : nullptr;
+            auto aoImage = material.occlusion_texture.texture ? material.occlusion_texture.texture->image : nullptr;
+            auto emissiveImage = material.emissive_texture.texture ? material.emissive_texture.texture->image : nullptr;
+
+            uint64_t albedoEntity = firstImage + std::distance(cgltfData->images, albedoImage);
+            uint64_t normalEntity = normalImage ? firstImage + std::distance(cgltfData->images, normalImage) : 0;
+            uint64_t mrEntity = mrImage ? firstImage + std::distance(cgltfData->images, mrImage) : 0;
+            uint64_t aoEntity = aoImage ? firstImage + std::distance(cgltfData->images, aoImage) : 0;
+            uint64_t emissiveEntity = emissiveImage ? firstImage + std::distance(cgltfData->images, emissiveImage) : 0;
+
+            dataArchive(albedoEntity, normalEntity, mrEntity, aoEntity, emissiveEntity);
+
+            data.size = static_cast<uint64_t>(outData.tellp()) - data.offset;
+        }
+
+    }
+}
+
+
 kaki::Package::Data writeTransform(const cgltf_node* node, std::ostream& outData) {
 
     cereal::BinaryOutputArchive dataArchive(outData);
@@ -253,26 +299,8 @@ kaki::Package::Data writeTransform(const cgltf_node* node, std::ostream& outData
     return data;
 }
 
-kaki::Package::Data writeTransform(std::ostream& outData) {
 
-    cereal::BinaryOutputArchive dataArchive(outData);
-
-    kaki::Package::Data data{};
-    data.offset = outData.tellp();
-
-    float zero = 0;
-    float one = 1;
-
-    dataArchive(zero, zero, zero);
-    dataArchive(one);
-    dataArchive(zero, zero, zero, one);
-    data.size = (uint64_t)outData.tellp() - data.offset;
-
-    return data;
-}
-
-
-kaki::Package::Data writeMeshFilter(cgltf_mesh* mesh, cgltf_primitive& primitive, uint64_t firstMesh, uint64_t firstImage, cgltf_data* cgltfData, std::ostream& outData)
+kaki::Package::Data writeMeshFilter(cgltf_mesh* mesh, cgltf_primitive& primitive, uint64_t firstMesh, uint64_t firstMaterial, cgltf_data* cgltfData, std::ostream& outData)
 {
     cereal::BinaryOutputArchive dataArchive(outData);
     kaki::Package::Data md{};
@@ -286,20 +314,16 @@ kaki::Package::Data writeMeshFilter(cgltf_mesh* mesh, cgltf_primitive& primitive
     auto emissiveImage = primitive.material->emissive_texture.texture ? primitive.material->emissive_texture.texture->image : nullptr;
 
     uint32_t primitiveIndex = std::distance(mesh->primitives, &primitive);
-    uint64_t albedoEntity = firstImage + std::distance(cgltfData->images, albedoImage);
-    uint64_t normalEntity = normalImage ? firstImage + std::distance(cgltfData->images, normalImage) : 0;
-    uint64_t mrEntity = mrImage ? firstImage + std::distance(cgltfData->images, mrImage) : 0;
-    uint64_t aoEntity = aoImage ? firstImage + std::distance(cgltfData->images, aoImage) : 0;
-    uint64_t emissiveEntity = emissiveImage ? firstImage + std::distance(cgltfData->images, emissiveImage) : 0;
+    uint64_t materialEntity = firstMaterial + std::distance(cgltfData->materials, primitive.material);
 
-    dataArchive(meshEntity, primitiveIndex, albedoEntity, normalEntity, mrEntity, aoEntity, emissiveEntity);
+    dataArchive(meshEntity, primitiveIndex, materialEntity);
     md.size = (uint64_t)outData.tellp() - md.offset;
 
     return md;
 }
 
 template<std::ranges::range Range>
-void writeSinglePrimitiveMeshNodes(kaki::Package& package, uint64_t parentEntity, uint64_t firstMesh, uint64_t firstImage, cgltf_data* cgltfData, Range&& nodes, std::ostream& outData) {
+void writeSinglePrimitiveMeshNodes(kaki::Package& package, uint64_t parentEntity, uint64_t firstMesh, uint64_t firstMaterial, cgltf_data* cgltfData, Range&& nodes, std::ostream& outData) {
     auto nodeCount = std::ranges::distance(nodes);
 
     if (nodeCount == 0) {
@@ -327,13 +351,13 @@ void writeSinglePrimitiveMeshNodes(kaki::Package& package, uint64_t parentEntity
         package.entities.push_back({node->name});
 
         transformData.emplace_back(writeTransform(node, outData));
-        meshData.emplace_back(writeMeshFilter(node->mesh, node->mesh->primitives[0], firstMesh, firstImage, cgltfData, outData));
+        meshData.emplace_back(writeMeshFilter(node->mesh, node->mesh->primitives[0], firstMesh, firstMaterial, cgltfData, outData));
     }
 
     package.tables.emplace_back(std::move(table));
 }
 
-void writeMultiPrimitiveMeshNodesPrimitives(kaki::Package& package, uint64_t parentEntity, uint64_t firstMesh, uint64_t firstImage, cgltf_data* cgltfData, cgltf_mesh* mesh, std::ostream& outData) {
+void writeMultiPrimitiveMeshNodesPrimitives(kaki::Package& package, uint64_t parentEntity, uint64_t firstMesh, uint64_t firstMaterial, cgltf_data* cgltfData, cgltf_mesh* mesh, std::ostream& outData) {
 
     cereal::BinaryOutputArchive dataArchive(outData);
     kaki::Package::Table table {
@@ -352,14 +376,14 @@ void writeMultiPrimitiveMeshNodesPrimitives(kaki::Package& package, uint64_t par
     for(cgltf_primitive& primitive : std::span(mesh->primitives, mesh->primitives_count)) {
         package.entities.push_back({""});
 
-        meshData.emplace_back(writeMeshFilter(mesh, primitive, firstMesh, firstImage, cgltfData, outData));
+        meshData.emplace_back(writeMeshFilter(mesh, primitive, firstMesh, firstMaterial, cgltfData, outData));
     }
 
     package.tables.emplace_back(std::move(table));
 }
 
 template<std::ranges::range Range>
-void writeMultiPrimitiveMeshNodes(kaki::Package& package, uint64_t parentEntity, uint64_t firstMesh, uint64_t firstImage, cgltf_data* cgltfData, Range&& nodes, std::ostream& outData) {
+void writeMultiPrimitiveMeshNodes(kaki::Package& package, uint64_t parentEntity, uint64_t firstMesh, uint64_t firstMaterial, cgltf_data* cgltfData, Range&& nodes, std::ostream& outData) {
     auto nodeCount = std::ranges::distance(nodes);
     if (nodeCount == 0) {
         return;
@@ -392,7 +416,7 @@ void writeMultiPrimitiveMeshNodes(kaki::Package& package, uint64_t parentEntity,
     package.tables.emplace_back(std::move(table));
 
     for(cgltf_node* node : nodes) {
-        writeMultiPrimitiveMeshNodesPrimitives(package, it, firstMesh, firstImage, cgltfData, node->mesh, outData);
+        writeMultiPrimitiveMeshNodesPrimitives(package, it, firstMesh, firstMaterial, cgltfData, node->mesh, outData);
         it ++;
     }
 
@@ -400,7 +424,7 @@ void writeMultiPrimitiveMeshNodes(kaki::Package& package, uint64_t parentEntity,
 
 
 template<std::ranges::range Range>
-void writeMeshNodes(kaki::Package& package, uint64_t parentEntity, uint64_t firstMesh, uint64_t firstImage, cgltf_data* cgltfData, Range&& nodes, std::ostream& outData) {
+void writeMeshNodes(kaki::Package& package, uint64_t parentEntity, uint64_t firstMesh, uint64_t firstMaterial, cgltf_data* cgltfData, Range&& nodes, std::ostream& outData) {
 
     auto nodeCount = std::ranges::distance(nodes);
 
@@ -408,8 +432,8 @@ void writeMeshNodes(kaki::Package& package, uint64_t parentEntity, uint64_t firs
         return;
     }
 
-    writeSinglePrimitiveMeshNodes(package, parentEntity, firstMesh, firstImage, cgltfData, nodes | std::views::filter([](cgltf_node* node){return node->mesh->primitives_count == 1;}), outData);
-    writeMultiPrimitiveMeshNodes(package, parentEntity, firstMesh, firstImage, cgltfData, nodes | std::views::filter([](cgltf_node* node){return node->mesh->primitives_count > 1;}), outData);
+    writeSinglePrimitiveMeshNodes(package, parentEntity, firstMesh, firstMaterial, cgltfData, nodes | std::views::filter([](cgltf_node* node){return node->mesh->primitives_count == 1;}), outData);
+    writeMultiPrimitiveMeshNodes(package, parentEntity, firstMesh, firstMaterial, cgltfData, nodes | std::views::filter([](cgltf_node* node){return node->mesh->primitives_count > 1;}), outData);
 }
 
 template<std::ranges::range Range>
@@ -462,15 +486,15 @@ static bool hasCamera(cgltf_node* node) {
     return node->camera;
 }
 
-void writeNodes(kaki::Package& package, uint64_t parent, uint64_t firstMesh, uint64_t firstImage, cgltf_data* cgltfData, std::span<cgltf_node*> nodes, std::ostream& outData) {
+void writeNodes(kaki::Package& package, uint64_t parent, uint64_t firstMesh, uint64_t firstMaterial, cgltf_data* cgltfData, std::span<cgltf_node*> nodes, std::ostream& outData) {
 
-    writeMeshNodes(package, parent, firstMesh, firstImage, cgltfData, nodes | std::views::filter(hasMesh), outData);
+    writeMeshNodes(package, parent, firstMesh, firstMaterial, cgltfData, nodes | std::views::filter(hasMesh), outData);
     writeCameraNodes(package, parent, nodes | std::views::filter(hasCamera), outData);
 
 }
 
 
-void writeScene(kaki::Package& package, uint64_t firstMesh, uint64_t firstImage, cgltf_data* data, cgltf_scene* scene, std::ostream& outData) {
+void writeScene(kaki::Package& package, uint64_t firstMesh, uint64_t firstMaterial, cgltf_data* data, cgltf_scene* scene, std::ostream& outData) {
 
     kaki::Package::Table table {
             .entityFirst = package.entities.size(),
@@ -488,7 +512,7 @@ void writeScene(kaki::Package& package, uint64_t firstMesh, uint64_t firstImage,
 
     package.tables.push_back(std::move(table));
 
-    writeNodes(package, id, firstMesh, firstImage, data, std::span(scene->nodes, scene->nodes_count), outData);
+    writeNodes(package, id, firstMesh, firstMaterial, data, std::span(scene->nodes, scene->nodes_count), outData);
 }
 
 int main(int argc, char* argv[]) {
@@ -553,7 +577,9 @@ int main(int argc, char* argv[]) {
     writeMeshes(package, meshes, outData);
     auto imageRefStart = package.entities.size();
     writeImages(package, std::span(data->images, data->images_count), inputPath.c_str(), outData);
-    writeScene(package, meshRefStart, imageRefStart, data, data->scene, outData);
+    auto materialRefStart = package.entities.size();
+    writeMaterials(package, std::span(data->materials, data->materials_count), imageRefStart, data, outData);
+    writeScene(package, meshRefStart, materialRefStart, data, data->scene, outData);
 
     std::ofstream os(outputPath);
     cereal::JSONOutputArchive archive( os );

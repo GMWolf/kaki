@@ -19,8 +19,8 @@ int main() {
     world.import<kaki::windowing>();
 
     auto window = world.entity("window").set<kaki::Window>(kaki::Window{
-        .width = 1280,
-        .height = 720,
+        .width = 1920,
+        .height = 1080,
         .title = "Test kaki app",
     }).set<kaki::Input>({});
 

@@ -10,6 +10,7 @@
 #include <ranges>
 #include <vk_cereal.h>
 #include <cereal/types/optional.hpp>
+#include <algorithm>
 
 static VkPipelineLayout createPipelineLayout(VkDevice device, std::span<const kaki::ShaderModule*> modules)
 {
@@ -215,4 +216,13 @@ kaki::Pipeline kaki::createPipeline(const kaki::VkGlobals& vk, flecs::entity sco
     vkDestroyRenderPass(vk.device, renderpass, nullptr);
 
     return pipeline;
+}
+
+const kaki::DescriptorSet* kaki::Pipeline::getDescSet(uint32_t setIndex) const {
+    for(const auto& set : descriptorSets) {
+        if (set.index == setIndex) {
+            return &set;
+        }
+    }
+    return nullptr;
 }

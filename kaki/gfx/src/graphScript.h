@@ -11,6 +11,7 @@
 #include <kaki/transform.h>
 #include "gltf.h"
 #include "descriptors.h"
+#include "material.h"
 
 namespace kaki {
 
@@ -152,52 +153,57 @@ namespace kaki {
         auto& vk = *world.get_mut<VkGlobals>();
         auto& geometry = vk.geometry;
 
-        world.each([&](flecs::entity materialEntity, Material& material) {
-            auto albedoImage = flecs::entity(world, material.albedo).get<kaki::Image>();
-            auto normalImage = flecs::entity(world, material.normal).get<kaki::Image>();
-            auto metallicRoughnessImage = flecs::entity(world, material.metallicRoughness).get<kaki::Image>();
-            auto aoImage = flecs::entity(world, material.ao).get<kaki::Image>();
-            auto emissiveImage = flecs::entity(world, material.emissive).get<kaki::Image>();
+        auto pipeline = world.lookup("testpackage::shade").get<kaki::Pipeline>();
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
 
-            ShaderInput inputs[]{
-                    {"albedoTexture", albedoImage->view, vk.sampler},
-                    {"normalTexture", normalImage ? normalImage->view : VK_NULL_HANDLE, vk.sampler},
-                    {"metallicRoughnessTexture", metallicRoughnessImage ? metallicRoughnessImage->view : VK_NULL_HANDLE, vk.sampler},
-                    {"aoTexture", aoImage ? aoImage->view : VK_NULL_HANDLE, vk.sampler},
-                    {"emissiveTexture", emissiveImage? emissiveImage->view : VK_NULL_HANDLE, vk.sampler},
+        // Set global and geometry inputs
+        {
+            ShaderInput geometryInputs[]{
                     {"positions", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.positionBuffer},
-                    {"normals", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.normalBuffer},
-                    {"tangents", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.tangentBuffer},
+                    {"normals",   VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.normalBuffer},
+                    {"tangents",  VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.tangentBuffer},
                     {"texcoords", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.texcoordBuffer},
-                    {"drawInfoBuffer", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.drawInfoBuffer[vk.currentFrame]},
-                    {"visbuffer", images[0], vk.uintSampler},
                     {"indices", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.indexBuffer},
             };
 
-            auto pipeline = world.lookup("testpackage::shade").get<kaki::Pipeline>();
+            ShaderInput globalInputs[]{
+                    {"drawInfoBuffer", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.drawInfoBuffer[vk.currentFrame]},
+                    {"visbuffer", images[0], vk.uintSampler},
+                    {"indices",        VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.indexBuffer},
+            };
 
-            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
+            const DescriptorSet* geomSet = pipeline->getDescSet(0);
+            const DescriptorSet* passSet = pipeline->getDescSet(1);
 
-            std::vector<VkDescriptorSetLayout> descSetLayouts;
-            for(auto& descSet : pipeline->descriptorSets) {
-                descSetLayouts.push_back(descSet.layout);
-            }
-            std::vector<VkDescriptorSet> descriptorSets(descSetLayouts.size());
-            VkDescriptorSetAllocateInfo descAlloc{
+            VkDescriptorSetLayout layouts[] = {
+                    geomSet->layout,
+                    passSet->layout,
+            };
+
+            VkDescriptorSet descriptorSets[2]{};
+            VkDescriptorSetAllocateInfo descAlloc {
                     .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
                     .pNext = nullptr,
                     .descriptorPool = vk.descriptorPools[vk.currentFrame],
-                    .descriptorSetCount = static_cast<uint32_t>(descSetLayouts.size()),
-                    .pSetLayouts = descSetLayouts.data(),
+                    .descriptorSetCount = 2,
+                    .pSetLayouts = layouts,
             };
-            vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
+            vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets);
 
-            updateDescSets(vk, descriptorSets, *pipeline, inputs);
-            for(uint32_t d = 0; d < pipeline->descriptorSets.size(); d++) {
-                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                        pipeline->pipelineLayout,
-                                        pipeline->descriptorSets[d].index, 1, &descriptorSets[d], 0, nullptr);
-            }
+            DescSetWriteCtx writeCtx;
+            addDescSetWrites(writeCtx, descriptorSets[0], *geomSet, geometryInputs);
+            addDescSetWrites(writeCtx, descriptorSets[1], *passSet, globalInputs);
+
+            updateDescSets(vk, writeCtx);
+
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipelineLayout,
+                                    0, 2, descriptorSets, 0, nullptr);
+        }
+
+        world.each([&](flecs::entity materialEntity, Material& material) {
+
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipelineLayout,
+                                    2, 1, &material.descriptorSet, 0, nullptr);
 
             struct Pc {
                 glm::mat4 proj{};

@@ -20,14 +20,6 @@ namespace kaki {
         flecs::entity_t material;
     };
 
-    struct Material {
-        flecs::entity_t albedo;
-        flecs::entity_t normal;
-        flecs::entity_t metallicRoughness;
-        flecs::entity_t ao;
-        flecs::entity_t emissive;
-    };
-
     namespace internal {
         struct MeshInstance {
             uint32_t indexOffset;

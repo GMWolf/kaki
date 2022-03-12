@@ -28,6 +28,7 @@
 #include "entity_tree.h"
 #include "graphScript.h"
 #include "renderpass.h"
+#include "material.h"
 
 static bool createSwapChain(kaki::VkGlobals& vk) {
     vkb::SwapchainBuilder swapchainBuilder { vk.device };
@@ -183,6 +184,24 @@ static bool createGlobals(flecs::world& world) {
         for(auto & descriptorPool : vk.descriptorPools) {
             vkCreateDescriptorPool(vk.device, &descPoolInfo, nullptr, &descriptorPool);
         }
+    }
+
+    {
+        VkDescriptorPoolSize descriptorPoolSize[]{
+                VkDescriptorPoolSize{
+                        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                        .descriptorCount = 1024,
+                },
+        };
+
+        VkDescriptorPoolCreateInfo descPoolInfo{
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+                .maxSets = 1024,
+                .poolSizeCount = std::span(descriptorPoolSize).size(),
+                .pPoolSizes = descriptorPoolSize,
+        };
+
+        vkCreateDescriptorPool(vk.device, &descPoolInfo, nullptr, &vk.staticDescPool);
     }
 
     {
@@ -413,8 +432,8 @@ static void UpdateMeshInstance(flecs::iter iter, kaki::MeshFilter* meshFilters) 
         auto gltf = gltfEntity.get<kaki::Gltf>();
 
         iter.entity(i).set(kaki::internal::MeshInstance {
-            .indexOffset = mesh->primitives[meshFilters[i].primitiveIndex].indexOffset + gltf->meshAlloc.indexOffset,
-            .vertexOffset = mesh->primitives[meshFilters[i].primitiveIndex].vertexOffset + gltf->meshAlloc.vertexOffset,
+            .indexOffset = static_cast<uint32_t>(mesh->primitives[meshFilters[i].primitiveIndex].indexOffset + gltf->meshAlloc.indexOffset),
+            .vertexOffset = static_cast<uint32_t>(mesh->primitives[meshFilters[i].primitiveIndex].vertexOffset + gltf->meshAlloc.vertexOffset),
             .indexCount = mesh->primitives[meshFilters[i].primitiveIndex].indexCount,
         } );
     }
@@ -468,11 +487,11 @@ kaki::gfx::gfx(flecs::world &world) {
         }
     }).add<DependsOn>(gltfLoader);
 
-    world.entity("ImageLoader").set<ComponentAssetHandler, Image>({
+    auto imageLoader = world.entity("ImageLoader").set<ComponentAssetHandler, Image>({
         .load = loadImages,
     });
 
-    world.entity("PipelineLoader").set<ComponentAssetHandler, Pipeline>({
+    auto pipelineLoader = world.entity("PipelineLoader").set<ComponentAssetHandler, Pipeline>({
         .load = [](flecs::iter iter, AssetData* data, void* ppipelines) {
 
             const VkGlobals& vk = *iter.world().get<VkGlobals>();
@@ -508,27 +527,9 @@ kaki::gfx::gfx(flecs::world &world) {
         }
     });
 
-    world.entity("MeshFilterLoader").set<ComponentAssetHandler, Material>({
-        .load = [](flecs::iter iter, AssetData* data, void* pmaterials) {
-            auto materials = static_cast<Material*>(pmaterials);
-
-            for(auto i : iter) {
-                membuf buf(data[i].data);
-                std::istream bufStream(&buf);
-                cereal::BinaryInputArchive archive(bufStream);
-
-                uint64_t albedoRef, normalRef, mrRef, aoRef, emissiveRef;
-                archive(albedoRef, normalRef, mrRef, aoRef, emissiveRef);
-
-                materials[i].albedo = data->entityRefs[albedoRef];
-                materials[i].normal = data->entityRefs[normalRef];
-                materials[i].metallicRoughness = data->entityRefs[mrRef];
-                materials[i].ao = data->entityRefs[aoRef];
-                materials[i].emissive = data->entityRefs[emissiveRef];
-            }
-
-        }
-    });
+    world.entity("MaterialLoader").set<ComponentAssetHandler, Material>({
+        .load = kaki::loadMaterials,
+    }).add<DependsOn>(imageLoader).add<DependsOn>(pipelineLoader);
 
     world.entity("CameraLoader").set<ComponentAssetHandler, Camera>({
         .load = [](flecs::iter iter, AssetData* data, void* pfilters) {

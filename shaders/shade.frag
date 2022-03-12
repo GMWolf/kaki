@@ -2,25 +2,25 @@
 
 layout(location = 0) in vec2 screenPos;
 
-layout(set = 1, binding = 0) uniform sampler2D albedoTexture;
-layout(set = 1, binding = 1) uniform sampler2D normalTexture;
-layout(set = 1, binding = 2) uniform sampler2D metallicRoughnessTexture;
-layout(set = 1, binding = 3) uniform sampler2D aoTexture;
-layout(set = 1, binding = 4) uniform sampler2D emissiveTexture;
+layout(set = 2, binding = 0) uniform sampler2D albedoTexture;
+layout(set = 2, binding = 1) uniform sampler2D normalTexture;
+layout(set = 2, binding = 2) uniform sampler2D metallicRoughnessTexture;
+layout(set = 2, binding = 3) uniform sampler2D aoTexture;
+layout(set = 2, binding = 4) uniform sampler2D emissiveTexture;
 
-layout(set = 1, binding = 5, std430) buffer PositionBlock {
+layout(set = 0, binding = 0, std430) buffer PositionBlock {
     float v[];
 } positions;
-layout(set = 1, binding = 6, std430) buffer NormalBlock {
+layout(set = 0, binding = 1, std430) buffer NormalBlock {
     float v[];
 } normals;
-layout(set = 1, binding = 7, std430) buffer TangentBlock {
+layout(set = 0, binding = 2, std430) buffer TangentBlock {
     float v[];
 } tangents;
-layout(set = 1, binding = 8, std430) buffer TexcoordBlock {
+layout(set = 0, binding = 3, std430) buffer TexcoordBlock {
     float v[];
 } texcoords;
-layout(set = 1, binding = 9, std430) buffer IndexBlock {
+layout(set = 0, binding = 4, std430) buffer IndexBlock {
     uint v[];
 } indices;
 
@@ -62,8 +62,8 @@ vec3 applyTransform(vec3 pos, Transform transform) {
     return (rotate(pos, transform.orientation) * transform.scale) + transform.position;
 }
 
-layout(set = 0, binding = 0) uniform usampler2D visbuffer;
-layout(set = 0, binding = 1, std430) buffer DrawInfoBlock {
+layout(set = 1, binding = 0) uniform usampler2D visbuffer;
+layout(set = 1, binding = 1, std430) buffer DrawInfoBlock {
     DrawInfo data[];
 } drawInfoBuffer;
 

@@ -15,6 +15,9 @@ namespace kaki {
         VkPipelineLayout pipelineLayout {};
         VkPipeline pipeline {};
         std::vector<DescriptorSet> descriptorSets;
+
+        const DescriptorSet* getDescSet(uint32_t setIndex) const;
+
     };
 
     Pipeline createPipeline(const VkGlobals& vk, flecs::entity scope, std::span<uint8_t> pipelineData);

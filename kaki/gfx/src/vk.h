@@ -42,6 +42,8 @@ namespace kaki {
         VkCommandPool cmdPool {};
         VkCommandBuffer cmd[framesInFlight] {};
 
+        VkDescriptorPool staticDescPool;
+
         VkDescriptorPool descriptorPools[framesInFlight];
         VkDescriptorPool imguiDescPool;
         VkSampler sampler;

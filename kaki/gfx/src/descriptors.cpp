@@ -8,7 +8,7 @@
 
 namespace kaki {
 
-    static void fillDescSetWrites(kaki::VkGlobals &vk, VkDescriptorSet vkSet, kaki::DescriptorSet &descSetInfo,
+    static void fillDescSetWrites(VkDescriptorSet vkSet, const kaki::DescriptorSet &descSetInfo,
                                   std::span<ShaderInput> shaderInputs, std::span<VkWriteDescriptorSet> writes,
                                   std::span<VkDescriptorImageInfo> imageInfos,
                                   std::span<VkDescriptorBufferInfo> bufferInfos) {
@@ -45,10 +45,35 @@ namespace kaki {
                     .dstArrayElement = 0,
                     .descriptorCount = 1,
                     .descriptorType = descSetInfo.bindings[i].descriptorType,
-                    .pImageInfo = &imageInfos[i],
-                    .pBufferInfo = &bufferInfos[i],
             };
         }
+    }
+
+    void addDescSetWrites(DescSetWriteCtx& ctx, VkDescriptorSet vkSet, const kaki::DescriptorSet &descSetInfo, std::span<ShaderInput> shaderInputs) {
+
+        const size_t writeCount = descSetInfo.bindings.size();
+
+        ctx.descSetWrites.resize(ctx.descSetWrites.size() + writeCount);
+        ctx.imageInfos.resize(ctx.imageInfos.size() + writeCount);
+        ctx.bufferInfos.resize(ctx.bufferInfos.size() + writeCount);
+
+        fillDescSetWrites(vkSet, descSetInfo, shaderInputs,
+                          std::span(ctx.descSetWrites).last(writeCount),
+                          std::span(ctx.imageInfos).last(writeCount),
+                          std::span(ctx.bufferInfos).last(writeCount));
+
+    }
+
+    static void WriteResInfoPtrs(DescSetWriteCtx& ctx) {
+        for(int i = 0; i < ctx.descSetWrites.size(); i++) {
+            ctx.descSetWrites[i].pImageInfo = &ctx.imageInfos[i];
+            ctx.descSetWrites[i].pBufferInfo = &ctx.bufferInfos[i];
+        }
+    }
+
+    void updateDescSets(VkGlobals &vk, DescSetWriteCtx &ctx) {
+        WriteResInfoPtrs( ctx);
+        vkUpdateDescriptorSets(vk.device, ctx.descSetWrites.size(), ctx.descSetWrites.data(), 0, nullptr);
     }
 
     void updateDescSets(VkGlobals &vk, std::span<VkDescriptorSet> descSets, const Pipeline &pipeline,
@@ -57,29 +82,24 @@ namespace kaki {
         size_t writeCount = std::accumulate(pipeline.descriptorSets.begin(), pipeline.descriptorSets.end(), 0,
                                             [](size_t a, const DescriptorSet &set) {
                                                 return a + set.bindings.size();
-                                            });;
+                                            });
 
-        std::vector<VkWriteDescriptorSet> descSetWrites(writeCount);
-        std::vector<VkDescriptorImageInfo> imageInfos(writeCount);
-        std::vector<VkDescriptorBufferInfo> bufferInfos(writeCount);
-
-        std::span<VkWriteDescriptorSet> descSetWriteRange = descSetWrites;
-        std::span<VkDescriptorImageInfo> imageInfoRange = imageInfos;
-        std::span<VkDescriptorBufferInfo> bufferInfoRange = bufferInfos;
+        DescSetWriteCtx ctx;
+        ctx.reserve(writeCount);
 
         for (int i = 0; i < pipeline.descriptorSets.size(); i++) {
             auto vkSet = descSets[i];
             auto set = pipeline.descriptorSets[i];
 
-            fillDescSetWrites(vk, vkSet, set, shaderInputs, descSetWriteRange, imageInfoRange, bufferInfoRange);
-            descSetWriteRange = descSetWriteRange.subspan(set.bindings.size(),
-                                                          descSetWriteRange.size() - set.bindings.size());
-            imageInfoRange = imageInfoRange.subspan(set.bindings.size(), imageInfoRange.size() - set.bindings.size());
-            bufferInfoRange = bufferInfoRange.subspan(set.bindings.size(),
-                                                      bufferInfoRange.size() - set.bindings.size());
+            addDescSetWrites(ctx, vkSet, set, shaderInputs);
         }
 
-        vkUpdateDescriptorSets(vk.device, writeCount, descSetWrites.data(), 0, nullptr);
+        updateDescSets( vk, ctx );
     }
 
+    void DescSetWriteCtx::reserve(size_t count) {
+        bufferInfos.reserve(count);
+        imageInfos.reserve(count);
+        descSetWrites.reserve(count);
+    }
 }

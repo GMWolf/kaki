@@ -191,10 +191,10 @@ namespace kaki {
             vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets);
 
             DescSetWriteCtx writeCtx;
-            addDescSetWrites(writeCtx, descriptorSets[0], *geomSet, geometryInputs);
-            addDescSetWrites(writeCtx, descriptorSets[1], *passSet, globalInputs);
+            writeCtx.add(descriptorSets[0], *geomSet, geometryInputs);
+            writeCtx.add(descriptorSets[1], *passSet, globalInputs);
 
-            updateDescSets(vk, writeCtx);
+            writeCtx.submit(vk);
 
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipelineLayout,
                                     0, 2, descriptorSets, 0, nullptr);

@@ -6,6 +6,7 @@
 #include "vk.h"
 #include "pipeline.h"
 #include <variant>
+#include <initializer_list>
 namespace kaki {
     struct ShaderInput {
         struct Image {
@@ -23,11 +24,10 @@ namespace kaki {
         std::vector<VkDescriptorBufferInfo> bufferInfos;
 
         void reserve(size_t count);
+
+        void add(VkDescriptorSet vkSet, const kaki::DescriptorSet &info, std::span<const ShaderInput> shaderInputs);
+        void add(VkDescriptorSet vkSet, const kaki::DescriptorSet &info, std::initializer_list<ShaderInput> shaderInputs);
+        void submit(VkGlobals& vk);
     };
-
-    void addDescSetWrites(DescSetWriteCtx& ctx, VkDescriptorSet vkSet, const kaki::DescriptorSet &descSetInfo, std::span<ShaderInput> shaderInputs);
-
     void updateDescSets( kaki::VkGlobals& vk, std::span<VkDescriptorSet> descSets, const kaki::Pipeline& pipeline, std::span<ShaderInput> shaderInputs);
-
-    void updateDescSets( kaki::VkGlobals& vk, DescSetWriteCtx& ctx);
 }

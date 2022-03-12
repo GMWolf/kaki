@@ -9,13 +9,13 @@
 namespace kaki {
 
     static void fillDescSetWrites(VkDescriptorSet vkSet, const kaki::DescriptorSet &descSetInfo,
-                                  std::span<ShaderInput> shaderInputs, std::span<VkWriteDescriptorSet> writes,
+                                  std::span<const ShaderInput> shaderInputs, std::span<VkWriteDescriptorSet> writes,
                                   std::span<VkDescriptorImageInfo> imageInfos,
                                   std::span<VkDescriptorBufferInfo> bufferInfos) {
 
         for (int i = 0; i < descSetInfo.bindings.size(); i++) {
             const auto &name = descSetInfo.bindingNames[i];
-            auto input = std::ranges::find_if(shaderInputs, [name](ShaderInput &input) { return input.name == name; });
+            const auto input = std::ranges::find_if(shaderInputs, [name](const ShaderInput &input) { return input.name == name; });
             assert(input != shaderInputs.end());
 
             switch (descSetInfo.bindings[i].descriptorType) {
@@ -49,7 +49,7 @@ namespace kaki {
         }
     }
 
-    void addDescSetWrites(DescSetWriteCtx& ctx, VkDescriptorSet vkSet, const kaki::DescriptorSet &descSetInfo, std::span<ShaderInput> shaderInputs) {
+    void addDescSetWrites(DescSetWriteCtx& ctx, VkDescriptorSet vkSet, const kaki::DescriptorSet &descSetInfo, std::span<const ShaderInput> shaderInputs) {
 
         const size_t writeCount = descSetInfo.bindings.size();
 
@@ -102,4 +102,18 @@ namespace kaki {
         imageInfos.reserve(count);
         descSetWrites.reserve(count);
     }
+
+    void DescSetWriteCtx::add(VkDescriptorSet vkSet, const DescriptorSet &info, std::span<const ShaderInput> shaderInputs) {
+        addDescSetWrites(*this, vkSet, info, shaderInputs);
+    }
+
+    void DescSetWriteCtx::submit(VkGlobals &vk) {
+        updateDescSets(vk, *this);
+    }
+
+    void DescSetWriteCtx::add(VkDescriptorSet vkSet, const DescriptorSet &info,
+                              std::initializer_list<ShaderInput> shaderInputs) {
+        addDescSetWrites(*this, vkSet, info, std::span(shaderInputs.begin(), shaderInputs.end()));
+    }
+
 }

@@ -65,19 +65,16 @@ namespace kaki {
             auto aoImage = flecs::entity(world, materials[i].ao).get<kaki::Image>();
             auto emissiveImage = flecs::entity(world, materials[i].emissive).get<kaki::Image>();
 
-            ShaderInput inputs[] {
+            descCtx.add(descSets[i], *descSet, {
                     {"albedoTexture", ShaderInput::Image{albedoImage->view, vk.sampler}},
                     {"normalTexture", ShaderInput::Image{normalImage ? normalImage->view : VK_NULL_HANDLE, vk.sampler}},
                     {"metallicRoughnessTexture", ShaderInput::Image{metallicRoughnessImage ? metallicRoughnessImage->view : VK_NULL_HANDLE, vk.sampler}},
                     {"aoTexture", ShaderInput::Image{aoImage ? aoImage->view : VK_NULL_HANDLE, vk.sampler}},
                     {"emissiveTexture", ShaderInput::Image{emissiveImage? emissiveImage->view : VK_NULL_HANDLE, vk.sampler}},
-            };
-
-            addDescSetWrites(descCtx, descSets[i], *descSet, inputs);
+            });
         }
 
-        updateDescSets(vk, descCtx);
-
+        descCtx.submit(vk);
     }
 
 }

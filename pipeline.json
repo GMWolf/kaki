@@ -17,5 +17,7 @@
     "format": "D32_SFLOAT"
   },
   "cullMode" : "BACK",
-  "depthCompare" : "GREATER_OR_EQUAL"
+  "depthTest": true,
+  "depthCompare" : "GREATER_OR_EQUAL",
+  "depthWrite": true
 }

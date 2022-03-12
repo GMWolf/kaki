@@ -60,9 +60,11 @@ kaki::Pipeline kaki::createPipeline(const kaki::VkGlobals& vk, flecs::entity sco
     std::optional<VkFormat> depthFormat;
     VkCullModeFlags cullMode;
     VkCompareOp depthCompareOp;
+    bool depthTestEnable;
+    bool depthWriteEnable;
     archive(vertexName, fragmentName);
     archive(colorBlendAttachments);
-    archive(colorFormats, depthFormat, cullMode, depthCompareOp);
+    archive(colorFormats, depthFormat, cullMode, depthTestEnable, depthCompareOp, depthWriteEnable);
 
     for(auto& format : colorFormats) {
         if (format == VK_FORMAT_UNDEFINED) {
@@ -171,8 +173,8 @@ kaki::Pipeline kaki::createPipeline(const kaki::VkGlobals& vk, flecs::entity sco
 
     VkPipelineDepthStencilStateCreateInfo depthStencil {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-            .depthTestEnable = VK_TRUE,
-            .depthWriteEnable = VK_TRUE,
+            .depthTestEnable = depthTestEnable,
+            .depthWriteEnable = depthWriteEnable,
             .depthCompareOp = depthCompareOp,
             .depthBoundsTestEnable = VK_FALSE,
             .stencilTestEnable = VK_FALSE,

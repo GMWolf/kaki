@@ -1,0 +1,12 @@
+{
+  "vertex": "materialPass_vert",
+  "fragment": "materialPass_frag",
+  "attachments" : [],
+  "depthAttachment" : {
+    "format": "D16_UNORM"
+  },
+  "cullMode" : "NONE",
+  "depthTest" : true,
+  "depthCompare" : "ALWAYS",
+  "depthWrite" : true
+}

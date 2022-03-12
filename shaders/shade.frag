@@ -205,10 +205,6 @@ void main() {
 
     DrawInfo draw = drawInfoBuffer.data[id.x];
 
-    if (draw.material != material) {
-        discard;
-    }
-
     uvec3 tri;
     tri.x = indices.v[draw.indexOffset + id.y * 3 + 0] + draw.vertexOffset;
     tri.y = indices.v[draw.indexOffset + id.y * 3 + 1] + draw.vertexOffset;

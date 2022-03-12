@@ -65,8 +65,10 @@ int main(int argc, char* argv[]) {
         vk_parse("VkCullModeFlags", doc["cullMode"].GetString(), &cullMode);
         VkCompareOp depthCompareOp;
         vk_parse("VkCompareOp", doc["depthCompare"].GetString(), &depthCompareOp);
+        bool depthTestEnable = doc["depthTest"].GetBool();
+        bool depthWriteEnable = doc["depthWrite"].GetBool();
 
-        dataArchive(vertex, fragment, colorBlendAttachments, colorFormats, depthFormat, cullMode, depthCompareOp);
+        dataArchive(vertex, fragment, colorBlendAttachments, colorFormats, depthFormat, cullMode, depthTestEnable, depthCompareOp, depthWriteEnable);
     }
 
     kaki::Package package {

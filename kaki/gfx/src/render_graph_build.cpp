@@ -200,6 +200,8 @@ namespace kaki {
                     .samples = VK_SAMPLE_COUNT_1_BIT,
                     .loadOp = getLoadOp(initialLayout, attachmentInfo.clear.has_value()),
                     .storeOp = nextLayout == VK_IMAGE_LAYOUT_UNDEFINED ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE,
+                    .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
                     .initialLayout = initialLayout,
                     .finalLayout = finalLayout,
                 };
@@ -227,6 +229,8 @@ namespace kaki {
                         .samples = VK_SAMPLE_COUNT_1_BIT,
                         .loadOp = getLoadOp(initialLayout, attachmentInfo.clear.has_value()),
                         .storeOp = nextLayout == VK_IMAGE_LAYOUT_UNDEFINED ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE,
+                        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
                         .initialLayout = initialLayout,
                         .finalLayout = finalLayout,
                 };

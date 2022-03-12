@@ -13,6 +13,11 @@
       "alpha_blend_op": "add"
     }
   ],
+  "depthAttachment" : {
+    "format": "D16_UNORM"
+  },
   "cullMode" : "NONE",
-  "depthCompare" : "GREATER_OR_EQUAL"
+  "depthTest" : true,
+  "depthCompare" : "EQUAL",
+  "depthWrite" : false
 }

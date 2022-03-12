@@ -220,10 +220,47 @@ namespace kaki {
             pc.material = materialEntity.id();
 
             vkCmdPushConstants(cmd, pipeline->pipelineLayout,
-                               VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+                               VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
                                sizeof(Pc), &pc);
             vkCmdDrawIndexed(cmd, 3, 1, 0, 0, 0);
         });
+    }
+
+
+    inline static void materialPass(flecs::world& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
+        auto& vk = *world.get_mut<VkGlobals>();
+
+        auto pipeline = world.lookup("testpackage::materialPass").get<kaki::Pipeline>();
+
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
+
+        ShaderInput inputs[] {
+                {"drawInfoBuffer", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.drawInfoBuffer[vk.currentFrame]},
+                {"visbuffer", images[0], vk.uintSampler},
+        };
+
+        std::vector<VkDescriptorSetLayout> descSetLayouts;
+        for(auto& descSet : pipeline->descriptorSets) {
+            descSetLayouts.push_back(descSet.layout);
+        }
+        std::vector<VkDescriptorSet> descriptorSets(descSetLayouts.size());
+        VkDescriptorSetAllocateInfo descAlloc{
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                .pNext = nullptr,
+                .descriptorPool = vk.descriptorPools[vk.currentFrame],
+                .descriptorSetCount = static_cast<uint32_t>(descSetLayouts.size()),
+                .pSetLayouts = descSetLayouts.data(),
+        };
+        vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
+
+        updateDescSets(vk, descriptorSets, *pipeline, inputs);
+        for(uint32_t d = 0; d < pipeline->descriptorSets.size(); d++) {
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    pipeline->pipelineLayout,
+                                    pipeline->descriptorSets[d].index, 1, &descriptorSets[d], 0, nullptr);
+        }
+
+        vkCmdDrawIndexed(cmd, 3, 1, 0, 0, 0);
     }
 
     inline RenderGraph graphScript(VkGlobals& vk) {
@@ -244,9 +281,20 @@ namespace kaki {
         .color(visbuffer)
         .depthClear(depthImage, {0.0f, 0});
 
+        auto materialBuffer = graph.image({
+            .size = vk.swapchain.extent,
+            .format = VK_FORMAT_D16_UNORM,
+        });
+
+        // Material depth buffer pass
+        graph.pass(materialPass)
+        .depth(materialBuffer)
+        .imageRead(visbuffer);
+
         // Shade
         graph.pass(shade)
         .colorClear(DISPLAY_IMAGE_INDEX, VkClearColorValue{.uint32 = {0, 0, 0, 0}})
+        .depth(materialBuffer)
         .imageRead(visbuffer);
 
         //Draw Imgui

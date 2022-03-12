@@ -21,14 +21,14 @@ namespace kaki {
             switch (descSetInfo.bindings[i].descriptorType) {
                 case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
                     imageInfos[i] = {
-                            .sampler = input->sampler,
-                            .imageView = input->imageView,
+                            .sampler = std::get<ShaderInput::Image>(input->view).sampler,
+                            .imageView = std::get<ShaderInput::Image>(input->view).view,
                             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                     };
                     break;
                 case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
                     bufferInfos[i] = VkDescriptorBufferInfo{
-                            .buffer = input->buffer,
+                            .buffer = std::get<VkBuffer>(input->view),
                             .offset = 0,
                             .range = VK_WHOLE_SIZE,
                     };

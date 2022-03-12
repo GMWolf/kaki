@@ -99,12 +99,12 @@ namespace kaki {
                         vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
 
                         ShaderInput inputs[]{
-                                {"albedoTexture", albedoImage->view, vk.sampler},
-                                {"positions", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.positionBuffer},
-                                {"normals", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.normalBuffer},
-                                {"tangents", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.tangentBuffer},
-                                {"texcoords", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.texcoordBuffer},
-                                {"drawInfoBuffer", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.drawInfoBuffer[vk.currentFrame]},
+                                {"albedoTexture", ShaderInput::Image{albedoImage->view, vk.sampler}},
+                                {"positions", vk.geometry.positionBuffer},
+                                {"normals", vk.geometry.normalBuffer},
+                                {"tangents", vk.geometry.tangentBuffer},
+                                {"texcoords", vk.geometry.texcoordBuffer},
+                                {"drawInfoBuffer", vk.drawInfoBuffer[vk.currentFrame]},
                         };
 
                         updateDescSets(vk, descriptorSets, *pipeline, inputs);
@@ -159,17 +159,17 @@ namespace kaki {
         // Set global and geometry inputs
         {
             ShaderInput geometryInputs[]{
-                    {"positions", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.positionBuffer},
-                    {"normals",   VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.normalBuffer},
-                    {"tangents",  VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.tangentBuffer},
-                    {"texcoords", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.texcoordBuffer},
-                    {"indices", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.indexBuffer},
+                    {"positions", vk.geometry.positionBuffer},
+                    {"normals", vk.geometry.normalBuffer},
+                    {"tangents", vk.geometry.tangentBuffer},
+                    {"texcoords", vk.geometry.texcoordBuffer},
+                    {"indices", vk.geometry.indexBuffer},
             };
 
             ShaderInput globalInputs[]{
-                    {"drawInfoBuffer", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.drawInfoBuffer[vk.currentFrame]},
-                    {"visbuffer", images[0], vk.uintSampler},
-                    {"indices",        VK_NULL_HANDLE, VK_NULL_HANDLE, vk.geometry.indexBuffer},
+                    {"drawInfoBuffer", vk.drawInfoBuffer[vk.currentFrame]},
+                    {"visbuffer", ShaderInput::Image{images[0], vk.uintSampler}},
+                    {"indices", vk.geometry.indexBuffer},
             };
 
             const DescriptorSet* geomSet = pipeline->getDescSet(0);
@@ -241,8 +241,8 @@ namespace kaki {
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
 
         ShaderInput inputs[] {
-                {"drawInfoBuffer", VK_NULL_HANDLE, VK_NULL_HANDLE, vk.drawInfoBuffer[vk.currentFrame]},
-                {"visbuffer", images[0], vk.uintSampler},
+                {"drawInfoBuffer", vk.drawInfoBuffer[vk.currentFrame]},
+                {"visbuffer", ShaderInput::Image{images[0], vk.uintSampler}},
         };
 
         std::vector<VkDescriptorSetLayout> descSetLayouts;

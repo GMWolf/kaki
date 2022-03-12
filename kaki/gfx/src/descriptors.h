@@ -5,13 +5,16 @@
 #pragma once
 #include "vk.h"
 #include "pipeline.h"
-
+#include <variant>
 namespace kaki {
     struct ShaderInput {
+        struct Image {
+            VkImageView view;
+            VkSampler sampler;
+        };
+
         const char* name;
-        VkImageView imageView;
-        VkSampler sampler;
-        VkBuffer buffer;
+        std::variant<Image, VkBuffer> view;
     };
 
     struct DescSetWriteCtx {

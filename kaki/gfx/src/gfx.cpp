@@ -10,7 +10,6 @@
 #include "window.h"
 #include <cstdio>
 #include "pipeline.h"
-#include "shader.h"
 #include <kaki/asset.h>
 #include "image.h"
 #include <glm/glm.hpp>
@@ -439,7 +438,9 @@ static void UpdateMeshInstance(flecs::iter iter, kaki::MeshFilter* meshFilters) 
     }
 }
 
-
+namespace kaki {
+    Pipeline createPipeline(const VkGlobals &vk, flecs::entity scope, std::span<uint8_t> pipelineData);
+}
 kaki::gfx::gfx(flecs::world &world) {
     auto This = world.module<gfx>();
     flecs::doc::set_brief(This, "Rendering module for kaki");
@@ -448,7 +449,6 @@ kaki::gfx::gfx(flecs::world &world) {
     world.component<kaki::Image>();
     world.component<kaki::Pipeline>();
     world.component<kaki::Gltf>();
-    world.component<kaki::ShaderModule>();
     world.component<kaki::MeshFilter>();
     world.component<kaki::Material>();
 
@@ -459,20 +459,6 @@ kaki::gfx::gfx(flecs::world &world) {
 
     auto gltfLoader = world.entity("GltfLoader").set<ComponentAssetHandler, Gltf>({
         .load = loadGltfs,
-    });
-
-    auto shaderModuleLoader = world.entity("ShaderLoader").set<ComponentAssetHandler, ShaderModule>({
-        .load = [](flecs::iter iter, AssetData* data, void* pmodule){
-            auto* modules = static_cast<ShaderModule*>(pmodule);
-            auto device = iter.world().get<VkGlobals>()->device.device;
-
-            for(auto i : iter) {
-                membuf buf(data[i].data);
-                std::istream bufStream(&buf);
-                cereal::BinaryInputArchive archive(bufStream);
-                modules[i] = loadShaderModule(device, archive);
-            }
-        }
     });
 
     world.entity("MeshLoader").set<ComponentAssetHandler, Mesh>({
@@ -504,7 +490,7 @@ kaki::gfx::gfx(flecs::world &world) {
             }
 
         }
-    }).add<DependsOn>(shaderModuleLoader);
+    });
 
     world.entity("MeshFilterLoader").set<ComponentAssetHandler, MeshFilter>({
         .load = [](flecs::iter iter, AssetData* data, void* pfilters) {

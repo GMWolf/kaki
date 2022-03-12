@@ -12,6 +12,8 @@
 #define VK_VALUE_SERIALIZATION_CONFIG_MAIN
 #include <vk_value_serialization.hpp>
 #include <kaki/vk_cereal.h>
+#include <kaki/pipeline.h>
+#include "shader.h"
 
 namespace fs = std::filesystem;
 
@@ -30,12 +32,11 @@ int main(int argc, char* argv[]) {
                     std::istreambuf_iterator<char>());
     doc.ParseInsitu(str.data());
 
-
     std::ofstream outputData(outputDataFile, std::ios::binary);
     {
         cereal::BinaryOutputArchive dataArchive(outputData);
-        std::string vertex = doc["vertex"].GetString();
-        std::string fragment = doc["fragment"].GetString();
+        std::string vertexSrcPath = doc["vertex"].GetString();
+        std::string fragmentSrcPath = doc["fragment"].GetString();
 
         std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments;
         std::vector<VkFormat> colorFormats;
@@ -68,7 +69,32 @@ int main(int argc, char* argv[]) {
         bool depthTestEnable = doc["depthTest"].GetBool();
         bool depthWriteEnable = doc["depthWrite"].GetBool();
 
-        dataArchive(vertex, fragment, colorBlendAttachments, colorFormats, depthFormat, cullMode, depthTestEnable, depthCompareOp, depthWriteEnable);
+
+        auto vertexModule = compileModule((inputPath.parent_path() / vertexSrcPath).c_str(), shaderc_vertex_shader, {});
+        if (!vertexModule) {
+            fprintf(stderr, "Failed compiling %s\n", vertexSrcPath.c_str());
+            return -1;
+        }
+
+        auto fragmentModule = compileModule((inputPath.parent_path() / fragmentSrcPath).c_str(), shaderc_fragment_shader, {});
+        if (!fragmentModule) {
+            fprintf(stderr, "Failed compiling %s\n", fragmentSrcPath.c_str());
+            return -1;
+        }
+
+        std::vector<VkPushConstantRange> pushConstants;
+        pushConstants.insert(pushConstants.end(), vertexModule->pushConstantRanges.begin(), vertexModule->pushConstantRanges.end());
+        pushConstants.insert(pushConstants.end(), fragmentModule->pushConstantRanges.begin(), fragmentModule->pushConstantRanges.end());
+
+        std::vector<kaki::DescriptorSet> descSets;
+        descSets.insert(descSets.end(), vertexModule->descSets.begin(), vertexModule->descSets.end());
+        descSets.insert(descSets.end(), fragmentModule->descSets.begin(), fragmentModule->descSets.end());
+
+        dataArchive(colorBlendAttachments, colorFormats, depthFormat, cullMode, depthTestEnable, depthCompareOp, depthWriteEnable);
+        dataArchive(pushConstants, descSets);
+        dataArchive(vertexModule->code);
+        dataArchive(fragmentModule->code);
+
     }
 
     kaki::Package package {

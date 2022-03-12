@@ -88,16 +88,18 @@ add_executable(test main.cpp)
 target_link_libraries(test PRIVATE kaki-gfx)
 target_link_libraries(test PRIVATE flecs_static)
 
-compile_shader(test-shader SOURCES shader.vert shader.frag shaders/visibility.vert shaders/visibility.frag shaders/shade.vert shaders/shade.frag shaders/materialPass.vert shaders/materialPass.frag)
 compile_gltf(test-gltf SOURCES SciFiHelmet/SciFiHelmet.gltf)
 compile_gltf(test-sponza SOURCES sponza/Sponza.gltf)
 compile_gltf(test-dh SOURCES DamagedHelmet/DamagedHelmet.gltf)
-compile_pipeline(apipeline pipeline.json)
 compile_pipeline(vispipeline shaders/visibility.json)
 compile_pipeline(shadepipeline shaders/shade.json)
 compile_pipeline(materialpipeline shaders/materialPass.json)
-make_package(testpackage SOURCES shader.vert.shd shader.frag.shd apipeline.json SciFiHelmet/SciFiHelmet.gltf.json sponza/Sponza.gltf.json DamagedHelmet/DamagedHelmet.gltf.json
-        shaders/visibility.vert.shd shaders/visibility.frag.shd vispipeline.json shadepipeline.json shaders/shade.vert.shd shaders/shade.frag.shd
-        shaders/materialPass.vert.shd shaders/materialPass.frag.shd materialpipeline.json
+make_package(testpackage SOURCES
+        SciFiHelmet/SciFiHelmet.gltf.json
+        sponza/Sponza.gltf.json
+        DamagedHelmet/DamagedHelmet.gltf.json
+        vispipeline.json
+        shadepipeline.json
+        materialpipeline.json
         )
 add_dependencies(test testpackage)

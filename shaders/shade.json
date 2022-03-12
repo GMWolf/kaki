@@ -1,6 +1,6 @@
 {
-  "vertex": "shade_vert",
-  "fragment": "shade_frag",
+  "vertex": "shade.vert",
+  "fragment": "shade.frag",
   "attachments" : [
     {
       "format": "display",

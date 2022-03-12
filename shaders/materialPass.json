@@ -1,6 +1,6 @@
 {
-  "vertex": "materialPass_vert",
-  "fragment": "materialPass_frag",
+  "vertex": "materialPass.vert",
+  "fragment": "materialPass.frag",
   "attachments" : [],
   "depthAttachment" : {
     "format": "D16_UNORM"

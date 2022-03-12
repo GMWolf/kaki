@@ -1,6 +1,6 @@
 {
-  "vertex": "visibility_vert",
-  "fragment": "visibility_frag",
+  "vertex": "visibility.vert",
+  "fragment": "visibility.frag",
   "attachments" : [
     {
       "format": "R32G32_UINT",

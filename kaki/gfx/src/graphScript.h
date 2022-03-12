@@ -145,7 +145,7 @@ namespace kaki {
                             .transform = transform,
                             .indexOffset = mesh.indexOffset,
                             .vertexOffset = mesh.vertexOffset,
-                            .material = filters[i].material,
+                            .material = static_cast<uint32_t>(filters[i].material),
                     };
 
                     vkCmdPushConstants(cmd, pipeline->pipelineLayout,

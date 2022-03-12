@@ -1,5 +1,13 @@
-add_executable(pipeline_compiler pipeline_compiler.cpp)
-target_link_libraries(pipeline_compiler PRIVATE kaki-asset-interface cereal kaki-common rapidjson vk_mini_libs kaki-gfx-interface)
+add_executable(pipeline_compiler pipeline_compiler.cpp shader.h)
+target_link_libraries(pipeline_compiler PRIVATE
+        kaki-asset-interface
+        cereal
+        kaki-common
+        rapidjson
+        vk_mini_libs
+        kaki-gfx-interface
+        shaderc
+        spirv-reflect)
 
 function(compile_pipeline targetName input)
 

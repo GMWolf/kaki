@@ -13,3 +13,13 @@ void serialize(Archive& archive, VkPipelineColorBlendAttachmentState& blend) {
     archive(blend.srcAlphaBlendFactor, blend.dstAlphaBlendFactor, blend.alphaBlendOp);
     archive(blend.colorWriteMask);
 }
+
+template<class Archive>
+void serialize(Archive& archive, VkPushConstantRange& pc) {
+    archive(pc.stageFlags, pc.offset, pc.size);
+}
+
+template<class Archive>
+void serialize(Archive& archive, VkDescriptorSetLayoutBinding& b) {
+    archive(b.binding, b.descriptorType, b.descriptorCount, b.stageFlags);
+}

@@ -2,10 +2,10 @@
 
 layout(location = 0) out vec2 UV_OUT;
 
-layout(set = 1, binding = 0, std430) buffer PositionBlock {
+layout(set = 0, binding = 0, std430) buffer PositionBlock {
     float v[];
 } positions;
-layout(set = 1, binding = 3, std430) buffer TexcoordBlock {
+layout(set = 0, binding = 3, std430) buffer TexcoordBlock {
     float v[];
 } texcoords;
 
@@ -24,7 +24,7 @@ struct DrawInfo {
     uint pad;
 };
 
-layout(set = 1, binding = 4, std430) buffer DrawInfoBlock {
+layout(set = 0, binding = 4, std430) buffer DrawInfoBlock {
     DrawInfo data[];
 } drawInfoBuffer;
 

@@ -52,18 +52,39 @@ namespace kaki {
         auto& geometry = vk.geometry;
         auto pipeline = world.lookup("testpackage::visibility").get<kaki::Pipeline>();
 
-        std::vector<VkDescriptorSetLayout> descSetLayouts;
-        for(auto& descSet : pipeline->descriptorSets) {
-            descSetLayouts.push_back(descSet.layout);
-        }
-
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
-
-
 
         VkDeviceSize offsets[4]{0, 0, 0, 0};
         vkCmdBindVertexBuffers(vk.cmd[vk.currentFrame], 0, 4, geometry.vertexBuffers, offsets);
         vkCmdBindIndexBuffer(vk.cmd[vk.currentFrame], geometry.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+
+        {
+            auto gDesc = pipeline->getDescSet(0);
+            assert(gDesc);
+
+            VkDescriptorSet set;
+            VkDescriptorSetAllocateInfo descAlloc {
+                    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                    .pNext = nullptr,
+                    .descriptorPool = vk.descriptorPools[vk.currentFrame],
+                    .descriptorSetCount = 1,
+                    .pSetLayouts = &gDesc->layout,
+            };
+            vkAllocateDescriptorSets(vk.device, &descAlloc, &set);
+
+            DescSetWriteCtx descCtx;
+            descCtx.add(set, *gDesc, {
+                    {"positions", vk.geometry.positionBuffer},
+                    {"normals", vk.geometry.normalBuffer},
+                    {"tangents", vk.geometry.tangentBuffer},
+                    {"texcoords", vk.geometry.texcoordBuffer},
+                    {"drawInfoBuffer", vk.drawInfoBuffer[vk.currentFrame]},
+            });
+            descCtx.submit(vk);
+
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipelineLayout, 0, 1, &set, 0, nullptr);
+        }
 
         world.each([&](const kaki::Camera& camera, const kaki::Transform& cameraTransform) {
 
@@ -86,36 +107,30 @@ namespace kaki {
                     auto albedoImage = flecs::entity(world, material->albedo).get<kaki::Image>();
                     auto& transform = transforms[i];
 
-                    if (!descSetLayouts.empty()) {
-                        VkDescriptorSetAllocateInfo descAlloc{
-                                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                                .pNext = nullptr,
-                                .descriptorPool = vk.descriptorPools[vk.currentFrame],
-                                .descriptorSetCount = static_cast<uint32_t>(descSetLayouts.size()),
-                                .pSetLayouts = descSetLayouts.data(),
-                        };
 
-                        std::vector<VkDescriptorSet> descriptorSets(descSetLayouts.size());
-                        vkAllocateDescriptorSets(vk.device, &descAlloc, descriptorSets.data());
+                    {
+                        auto dDesc = pipeline->getDescSet(1);
+                        if (dDesc) {
 
-                        ShaderInput inputs[]{
-                                {"albedoTexture", ShaderInput::Image{albedoImage->view, vk.sampler}},
-                                {"positions", vk.geometry.positionBuffer},
-                                {"normals", vk.geometry.normalBuffer},
-                                {"tangents", vk.geometry.tangentBuffer},
-                                {"texcoords", vk.geometry.texcoordBuffer},
-                                {"drawInfoBuffer", vk.drawInfoBuffer[vk.currentFrame]},
-                        };
+                            VkDescriptorSet set;
+                            VkDescriptorSetAllocateInfo descAlloc{
+                                    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                                    .pNext = nullptr,
+                                    .descriptorPool = vk.descriptorPools[vk.currentFrame],
+                                    .descriptorSetCount = 1,
+                                    .pSetLayouts = &dDesc->layout,
+                            };
 
-                        updateDescSets(vk, descriptorSets, *pipeline, inputs);
+                            vkAllocateDescriptorSets(vk.device, &descAlloc, &set);
 
-                        for(uint32_t d = 0; d < pipeline->descriptorSets.size(); d++) {
-                            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                                    pipeline->pipelineLayout,
-                                                    pipeline->descriptorSets[d].index, 1, &descriptorSets[d], 0, nullptr);
+                            DescSetWriteCtx descCtx;
+                            descCtx.add(set, *dDesc, {
+                                    {"albedoTexture", ShaderInput::Image{albedoImage->view, vk.sampler}},
+                            });
+                            descCtx.submit(vk);
+
+                            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipelineLayout, 1, 1, &set, 0, nullptr);
                         }
-
-
                     }
 
                     struct Pc {
@@ -125,7 +140,6 @@ namespace kaki {
 
                     pc.proj = viewProj;
                     pc.drawIndex = drawIndex;
-                    //pc.light = -glm::normalize(glm::vec3(0, -1, 0.5));
 
                     vk.drawInfos[vk.currentFrame][drawIndex] = {
                             .transform = transform,

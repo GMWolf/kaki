@@ -14,10 +14,7 @@ layout(push_constant) uniform constants {
     uint drawId;
 };
 
-layout(set = 0, binding = 0) uniform sampler2D albedoTexture;
-
-
-
+layout(set = 1, binding = 0) uniform sampler2D albedoTexture;
 
 layout(location = 0) out uvec2 outVis;
 void main() {
@@ -27,8 +24,6 @@ void main() {
     }
 
     uint triId = gl_PrimitiveID;
-
-    //outColor = vec4(c, 1);
 
     outVis.x = drawId;
     outVis.y = triId;

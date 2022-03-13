@@ -29,7 +29,7 @@ std::string readFile(const char* path) {
 }
 
 struct CompileDefinition {
-    std::string def;
+    std::string name;
     std::string value;
 };
 
@@ -44,16 +44,18 @@ std::optional<ShaderModule> compileModule(const char* sourcePath, shaderc_shader
     shaderc::CompileOptions options;
     options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
     options.SetTargetSpirv(shaderc_spirv_version_1_0);
-    fprintf(stderr, "HI! %s\n", sourcePath);
     auto source = readFile(sourcePath);
-    fprintf(stderr, "HI1!\n");
+
+    for(auto& def : defs) {
+        options.AddMacroDefinition(def.name, def.value);
+    }
     auto preprocessed = compiler.PreprocessGlsl(source, shaderKind, sourcePath, options);
-    fprintf(stderr, "HI2!\n");
+
     if (preprocessed.GetCompilationStatus() != shaderc_compilation_status_success) {
         fprintf(stderr, "%s", preprocessed.GetErrorMessage().c_str());
         return {};
     }
-    fprintf(stderr, "HI3!\n");
+
     auto compiled = compiler.CompileGlslToSpv({preprocessed.cbegin(), preprocessed.cend()},
                                               shaderKind, sourcePath, options);
 

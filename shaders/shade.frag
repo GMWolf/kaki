@@ -6,7 +6,10 @@ layout(set = 2, binding = 0) uniform sampler2D albedoTexture;
 layout(set = 2, binding = 1) uniform sampler2D normalTexture;
 layout(set = 2, binding = 2) uniform sampler2D metallicRoughnessTexture;
 layout(set = 2, binding = 3) uniform sampler2D aoTexture;
+
+#if OPT_EMISSIVE
 layout(set = 2, binding = 4) uniform sampler2D emissiveTexture;
+#endif
 
 layout(set = 0, binding = 0, std430) buffer PositionBlock {
     float v[];
@@ -269,6 +272,10 @@ void main() {
     l.radiance = 3 * vec3(2, 1.7, 1.5);
 
     vec3 c = pbrColor(m, l, v);
+
+    #if OPT_EMISSIVE
+    c += textureGrad(emmisivity, uv, duv_dx, duv_dy).rgb;
+    #endif
 
     // = tangent;
     outColor = vec4(c, 1.0);

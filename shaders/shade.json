@@ -19,5 +19,8 @@
   "cullMode" : "NONE",
   "depthTest" : true,
   "depthCompare" : "EQUAL",
-  "depthWrite" : false
+  "depthWrite" : false,
+  "options" : [
+    "OPT_EMISSIVE"
+  ]
 }

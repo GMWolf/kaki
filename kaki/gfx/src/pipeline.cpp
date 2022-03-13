@@ -125,7 +125,6 @@ namespace kaki {
                 }
         };
 
-
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{
                 .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         };

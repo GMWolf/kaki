@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
     std::ofstream ofs(output);
 
     ofs << "rule tex\n"
-           "  command = pvr-tex-tool -i $in -o $out -m -f $format -ics $ics\n";
+           "  command = pvr-tex-tool -i $in -o $out -m -f $format -ics $ics $extra\n";
 
     ofs << "\n";
 
@@ -97,9 +97,10 @@ int main(int argc, char* argv[]) {
             case Usage::metalRough:
                 ofs << "  format = BC5,UBN,lRGB\n";
                 ofs << "  ics = lRGB\n";
+                ofs << "  extra = -red " << image.uri <<",blue\n";
                 break;
             case Usage::ao:
-                ofs << "  format = BC5,UBN,lRGB\n";
+                ofs << "  format = BC4,UBN,lRGB\n";
                 ofs << "  ics = lRGB\n";
                 break;
         }

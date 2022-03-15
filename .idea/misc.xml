@@ -29,6 +29,7 @@
       <file path="$PROJECT_DIR$/external/rapidjson" />
       <file path="$PROJECT_DIR$/external/shaderc" />
       <file path="$PROJECT_DIR$/external/vk-bootstrap" />
+      <file path="$PROJECT_DIR$/external/vulkan-mini-libs-2" />
     </libraryRoots>
   </component>
 </project>

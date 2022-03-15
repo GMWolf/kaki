@@ -58,7 +58,6 @@ namespace kaki {
         vkCmdBindVertexBuffers(vk.cmd[vk.currentFrame], 0, 4, geometry.vertexBuffers, offsets);
         vkCmdBindIndexBuffer(vk.cmd[vk.currentFrame], geometry.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-
         {
             auto gDesc = pipeline->getDescSet(0);
             assert(gDesc);
@@ -184,7 +183,11 @@ namespace kaki {
                     {"drawInfoBuffer", vk.drawInfoBuffer[vk.currentFrame]},
                     {"visbuffer", ShaderInput::Image{images[0], vk.uintSampler}},
                     {"indices", vk.geometry.indexBuffer},
+                    {"irradianceMap", ShaderInput::Image{world.lookup("testpackage::sponzaDiffuseIrradiance").get<kaki::Image>()->view, vk.sampler}},
+                    {"specularMap", ShaderInput::Image{world.lookup("testpackage::sponzaSpecular").get<kaki::Image>()->view, vk.sampler}},
+                    {"brdf_lut", ShaderInput::Image{world.lookup("testpackage::brdf_lut").get<kaki::Image>()->view, vk.sampler}},
             };
+
 
             const DescriptorSet* geomSet = pipeline->getDescSet(0);
             const DescriptorSet* passSet = pipeline->getDescSet(1);

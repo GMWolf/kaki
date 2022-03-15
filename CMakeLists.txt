@@ -94,6 +94,9 @@ compile_gltf(test-dh SOURCES DamagedHelmet/DamagedHelmet.gltf)
 compile_pipeline(vispipeline shaders/visibility.json)
 compile_pipeline(shadepipeline shaders/shade.json)
 compile_pipeline(materialpipeline shaders/materialPass.json)
+add_image(sponzaDiffuseIrradiance sponza/SponzaDiffuseIrradiance.ktx2)
+add_image(sponzaSpecular sponza/sponzaSpecular.ktx2)
+add_image(brdf_lut brdf_lut.ktx2)
 make_package(testpackage SOURCES
         SciFiHelmet/SciFiHelmet.gltf.json
         sponza/Sponza.gltf.json
@@ -101,5 +104,8 @@ make_package(testpackage SOURCES
         vispipeline.json
         shadepipeline.json
         materialpipeline.json
+        sponzaDiffuseIrradiance.json
+        sponzaSpecular.json
+        brdf_lut.json
         )
 add_dependencies(test testpackage)

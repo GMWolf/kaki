@@ -29,7 +29,7 @@ add_library(kaki-gfx
         src/geometry_buffer.h
         src/geometry_buffer.cpp
         src/material.h
-        src/material.cpp)
+        src/material.cpp src/probe.h)
 
 target_link_libraries(kaki-gfx PUBLIC kaki-gfx-interface kaki-core kaki-asset)
 target_link_libraries(kaki-gfx PUBLIC flecs_static cereal glm)

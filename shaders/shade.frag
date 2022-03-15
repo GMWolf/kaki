@@ -6,10 +6,8 @@ layout(set = 2, binding = 0) uniform sampler2D albedoTexture;
 layout(set = 2, binding = 1) uniform sampler2D normalTexture;
 layout(set = 2, binding = 2) uniform sampler2D metallicRoughnessTexture;
 layout(set = 2, binding = 3) uniform sampler2D aoTexture;
-
-#if OPT_EMISSIVE
 layout(set = 2, binding = 4) uniform sampler2D emissiveTexture;
-#endif
+
 
 layout(set = 0, binding = 0, std430) buffer PositionBlock {
     float v[];
@@ -26,6 +24,10 @@ layout(set = 0, binding = 3, std430) buffer TexcoordBlock {
 layout(set = 0, binding = 4, std430) buffer IndexBlock {
     uint v[];
 } indices;
+layout(set = 1, binding = 5) uniform samplerCube irradianceMap;
+layout(set = 1, binding = 6) uniform samplerCube specularMap;
+layout(set = 1, binding = 7) uniform sampler2D brdf_lut;
+
 
 vec3 hsv2rgb(vec3 c)
 {
@@ -161,12 +163,18 @@ vec3 fresnel(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(1.0-cosTheta, 5.0);
 }
 
+vec3 fresnelRoughness(float cosTheta, vec3 F0, float roughness)
+{
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
 struct PBRFragment {
     vec3 albedo;
     float metalicity;
     float roughness;
     vec3 emmisivity;
     vec3 normal;
+    float ao;
 };
 
 struct LightFragment {
@@ -199,6 +207,37 @@ vec3 pbrColor(PBRFragment f, LightFragment l, vec3 viewDirection) {
     c += f.emmisivity;
 
     return c;
+}
+
+vec3 pbrIrradiance(PBRFragment f, vec3 viewDirection) {
+
+    vec3 F0 = vec3(0.04);
+    F0 = mix(F0, f.albedo, f.metalicity);
+
+    vec3 kS = fresnelRoughness(max(dot(f.normal, viewDirection), 0.0), F0, f.roughness);
+    vec3 kD = 1.0 - kS;
+    vec3 irradiance = texture(irradianceMap, f.normal).rgb;
+    vec3 diffuse = irradiance * f.albedo;
+    vec3 ambient = (kD * diffuse);// * f.ao;
+
+    return ambient;
+}
+
+vec3 pbrSpecular(PBRFragment f, vec3 viewDirection) {
+
+    vec3 R = reflect(-viewDirection, f.normal);
+
+    const float MAX_REFLECTION_LOD = 7.0;
+    vec3 prefilteredColor = textureLod(specularMap, R,  f.roughness * MAX_REFLECTION_LOD).rgb;
+
+    vec3 F0 = vec3(0.04);
+    F0 = mix(F0, f.albedo, f.metalicity);
+
+    vec3 F        = fresnelRoughness(max(dot(f.normal, viewDirection), 0.0), F0, f.roughness);
+    vec2 envBRDF  = texture(brdf_lut, vec2(max(dot(f.normal, viewDirection), 0.0), 1.0 - f.roughness)).rg;
+    vec3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
+
+    return specular; // * f.ao;
 }
 
 layout(location = 0) out vec4 outColor;
@@ -263,19 +302,31 @@ void main() {
     m.albedo = textureGrad(albedoTexture, uv, duv_dx, duv_dy).rgb;
     m.metalicity = textureGrad(metallicRoughnessTexture, uv, duv_dx, duv_dy).r;
     m.roughness = textureGrad(metallicRoughnessTexture, uv, duv_dx, duv_dy).g;
-    //m.emmisivity = textureGrad(emmisivity, uv, duv_dx, duv_dy).rgb;
+    m.emmisivity = textureGrad(emissiveTexture, uv, duv_dx, duv_dy).rgb;
     m.normal = mat3(normalize(tangent), normalize(bitangent), normalize(normal)) * t_normal;
+    m.ao = textureGrad(aoTexture, uv, duv_dx, duv_dy).x;
 
-    vec3 v = normalize(position - viewPos);
+    vec3 v = normalize(viewPos - position);
     LightFragment l;
     l.lightDirection = light;
-    l.radiance = 3 * vec3(2, 1.7, 1.5);
+    l.radiance = 4 * vec3(2, 1.7, 1.5);
 
     vec3 c = pbrColor(m, l, v);
 
-    #if OPT_EMISSIVE
-    c += textureGrad(emmisivity, uv, duv_dx, duv_dy).rgb;
-    #endif
+    c += pbrIrradiance(m, v);
+
+    c += pbrSpecular(m,v);
+
+    //c = texture(specularMap, m.normal).rgb;
+
+
+    //vec3 F        = fresnelRoughness(max(dot(m.normal, v), 0.0), F0, m.roughness);
+
+    //c = F;
+
+    c += m.emmisivity;
+
+    c *= 0.5;
 
     // = tangent;
     outColor = vec4(c, 1.0);

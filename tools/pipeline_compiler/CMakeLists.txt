@@ -15,6 +15,7 @@ function(compile_pipeline targetName input)
             OUTPUT ${targetName}.json ${targetName}.bin
             COMMAND pipeline_compiler ARGS ${CMAKE_CURRENT_LIST_DIR}/${input} ${targetName}.json
             DEPENDS "${input}" pipeline_compiler
+            DEPFILE ${targetName}.json.d
             USES_TERMINAL
     )
 

@@ -13,11 +13,15 @@
 #include <vk_value_serialization.hpp>
 #include <kaki/vk_cereal.h>
 #include <kaki/pipeline.h>
+#include <regex>
 #include "shader.h"
 
 namespace fs = std::filesystem;
 
 int main(int argc, char* argv[]) {
+
+
+    std::vector<std::string> deps;
 
     fs::path inputPath = argv[1];
 
@@ -37,6 +41,9 @@ int main(int argc, char* argv[]) {
         cereal::BinaryOutputArchive dataArchive(outputData);
         std::string vertexSrcPath = doc["vertex"].GetString();
         std::string fragmentSrcPath = doc["fragment"].GetString();
+
+        deps.push_back(inputPath.parent_path() / vertexSrcPath);
+        deps.push_back(inputPath.parent_path() / fragmentSrcPath);
 
         std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments;
         std::vector<VkFormat> colorFormats;
@@ -115,5 +122,18 @@ int main(int argc, char* argv[]) {
     std::ofstream outputStream(outputFile);
     cereal::JSONOutputArchive archive(outputStream);
     archive(package);
+
+
+    {
+        std::ofstream depsos(outputFile.string() + ".d");
+        std::regex whitespaceRegex("\\s");
+        depsos << outputFile.c_str() << " :";
+
+        for(auto& d : deps) {
+            auto escapedPath = std::regex_replace(d, whitespaceRegex, "\\$&");
+            depsos << " " << escapedPath;
+        }
+    }
+
     return 0;
 }

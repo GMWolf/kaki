@@ -96,15 +96,17 @@ namespace kaki {
 
             world.filter_builder<kaki::MeshFilter, kaki::internal::MeshInstance>()
                     .term<kaki::Transform>().set(flecs::Self | flecs::SuperSet, flecs::ChildOf)
+                    .instanced()
                     .build().iter([&](flecs::iter& it, kaki::MeshFilter* filters, kaki::internal::MeshInstance* meshInstances) {
 
                 auto transforms = it.term<kaki::Transform>(3);
 
                 for(auto i : it) {
+
                     kaki::internal::MeshInstance& mesh = meshInstances[i];
                     auto material = flecs::entity(world, filters[i].material).get<kaki::Material>();
                     auto albedoImage = flecs::entity(world, material->albedo).get<kaki::Image>();
-                    auto& transform = transforms[i];
+                    auto& transform = it.is_owned(3) ? transforms[i] : *transforms;
 
 
                     {

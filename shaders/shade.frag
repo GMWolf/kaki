@@ -216,7 +216,7 @@ vec3 pbrIrradiance(PBRFragment f, vec3 viewDirection) {
 
     vec3 kS = fresnelRoughness(max(dot(f.normal, viewDirection), 0.0), F0, f.roughness);
     vec3 kD = 1.0 - kS;
-    vec3 irradiance = texture(irradianceMap, f.normal).rgb;
+    vec3 irradiance = textureLod(irradianceMap, f.normal, 0).rgb;
     vec3 diffuse = irradiance * f.albedo;
     vec3 ambient = (kD * diffuse);// * f.ao;
 

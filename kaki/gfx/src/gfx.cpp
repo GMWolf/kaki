@@ -165,7 +165,7 @@ static bool createGlobals(flecs::world& world) {
         VkDescriptorPoolSize descriptorPoolSize[]{
                 VkDescriptorPoolSize{
                         .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                        .descriptorCount = 1024,
+                        .descriptorCount = 4096,
                 },
                 VkDescriptorPoolSize{
                         .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -175,7 +175,7 @@ static bool createGlobals(flecs::world& world) {
 
         VkDescriptorPoolCreateInfo descPoolInfo{
                 .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-                .maxSets = 1024,
+                .maxSets = 4096,
                 .poolSizeCount = std::span(descriptorPoolSize).size(),
                 .pPoolSizes = descriptorPoolSize,
         };
@@ -261,7 +261,7 @@ static bool createGlobals(flecs::world& world) {
 
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    //io.ConfigFlags |= ImGuiConfigFlags_;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
@@ -316,7 +316,7 @@ static bool createGlobals(flecs::world& world) {
     vk.script = kaki::graphScript;
     vk.graph = graphScript(vk);
 
-    kaki::allocGeometryBuffer(vk.allocator, vk.geometry, 3 * 1024 * 1024, 1024 * 1024);
+    kaki::allocGeometryBuffer(vk.allocator, vk.geometry, 9 * 1024 * 1024, 3 * 1024 * 1024);
 
     for(uint i = 0; i < vk.framesInFlight; i++)
     {
@@ -533,9 +533,9 @@ kaki::gfx::gfx(flecs::world &world) {
     });
 
     world.component<MeshFilter>()
-            .member("mesh", ecs_id(ecs_entity_t))
+            .member(ecs_id(ecs_entity_t), "mesh")
             .member<uint32_t>("index")
-            .member("material", ecs_id(ecs_entity_t));
+            .member(ecs_id(ecs_entity_t), "material");
 
     createGlobals(world);
 

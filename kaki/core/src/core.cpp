@@ -46,9 +46,9 @@ kaki::core::core(flecs::world &world) {
             .member<float>("scale");
 
     world.component<Transform>()
-            .member("position", vec3)
-            .member("scale", scale)
-            .member("orientation", quat);
+            .member(vec3, "position")
+            .member(scale, "scale")
+            .member(quat, "orientation");
 
     //world.component<Transform>()
     //        .add(flecs::With, world.pair<Transform, WorldSpace>());

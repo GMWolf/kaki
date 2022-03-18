@@ -29,12 +29,16 @@ int main() {
     auto package = kaki::loadPackage(world, "testpackage.json").add<Foo>();
     auto scene = world.entity("scene").is_a(package.lookup("SciFiHelmet::Scene")).add<Foo>();
     scene.lookup("Camera").add<Control>();
-    scene.lookup("SciFiHelmet").add<Rotate>();
+    auto sfh = scene.lookup("SciFiHelmet").add<Rotate>();
+    sfh.get_mut<kaki::Transform>()->position = {2, 1, 0};
+    sfh.get_mut<kaki::Transform>()->scale = 0.25;
 
     auto dhscene = world.entity("dhscene").is_a(package.lookup("DamagedHelmet::Scene")).add<Foo>();
     dhscene.lookup("damagedHelmet").add<Rotate>();
-
-    auto sponza = world.entity("sponza").is_a(package.lookup("Sponza::Sponza")).add<Foo>();
+    dhscene.lookup("damagedHelmet").get_mut<kaki::Transform>()->position = {-2, 1, 0};
+    dhscene.lookup("damagedHelmet").get_mut<kaki::Transform>()->scale = 0.25;
+    //auto sponza = world.entity("sponza").is_a(package.lookup("Sponza::Sponza")).add<Foo>();
+    auto temple = world.entity("temple").is_a(package.lookup("SunTemple::Scene")).add<Foo>();
 
     world.system<kaki::Transform>("Control system").term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
         auto* input = window.get<kaki::Input>();
@@ -53,6 +57,12 @@ int main() {
         }
         if (input->keyDown('S')) {
             d += s * glm::vec3(0, 0, -1);
+        }
+        if (input->keyDown('R')) {
+            d += s * glm::vec3(0, 1, 0);
+        }
+        if (input->keyDown('F')) {
+            d += s * glm::vec3(0, -1, 0);
         }
         if (input->keyDown('E')) {
             r += 1 * entity.delta_time();

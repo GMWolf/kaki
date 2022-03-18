@@ -140,10 +140,14 @@ void writeGltfEntity(kaki::Package& package, const std::string& name, Buffers& b
 
         archive(indexCount, vertexCount);
 
-        assert(buffers.position.size() == vertexCount);
-        assert(buffers.normal.size() == vertexCount);
-        assert(buffers.tangents.size() == vertexCount);
-        assert(buffers.texcoord.size() == vertexCount);
+        assert(buffers.position.size() >= vertexCount);
+        //buffers.position.resize(vertexCount);
+        assert(buffers.normal.size() >= vertexCount);
+        //buffers.normal.resize(vertexCount);
+        assert(buffers.tangents.size() >= vertexCount);
+        //buffers.tangents.resize(vertexCount);
+        assert(buffers.texcoord.size() >= vertexCount);
+        //buffers.texcoord.resize(vertexCount);
 
 
         saveBuffer(buffers.position, archive);
@@ -490,6 +494,16 @@ void writeNodes(kaki::Package& package, uint64_t parent, uint64_t firstMesh, uin
 
     writeMeshNodes(package, parent, firstMesh, firstMaterial, cgltfData, nodes | std::views::filter(hasMesh), outData);
     writeCameraNodes(package, parent, nodes | std::views::filter(hasCamera), outData);
+
+
+    for(auto node : nodes) {
+        if (node->children_count) {
+
+
+
+
+        }
+    }
 
 }
 

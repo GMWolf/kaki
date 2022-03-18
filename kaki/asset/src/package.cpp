@@ -142,9 +142,16 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
         entities.insert(entities.end(), entitiesTmp, entitiesTmp + entityCount);
     }
 
+
     entityNames.resize(package.entities.size());
     for(size_t i = 0; i < package.entities.size(); i++) {
-        entityNames[i].value = ecs_os_strdup( package.entities[i].name.c_str());
+        if (package.entities[i].name.length() > 0) {
+            entityNames[i].value = ecs_os_strdup(package.entities[i].name.c_str());
+        } else {
+            char name[64];
+            sprintf(name, "<%zu>", i);
+            entityNames[i].value = ecs_os_strdup(name);
+        }
     }
 
     // Move entities to tables, including AssetData components
@@ -155,15 +162,8 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
 
         uint componentId = 0;
 
-        void* data[ECS_MAX_ADD_REMOVE]{};
+        void* data[ECS_ID_CACHE_SIZE]{};
         bulkDesc.data = data;
-
-        {
-            bulkDesc.ids[componentId] = nameIdentifier;
-            bulkDesc.data[componentId] = entityNames.data() + table.entityFirst;
-            componentId++;
-        }
-
 
         for (auto& component : table.components) {
 
@@ -189,9 +189,15 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
             }
         }
 
+        {
+            bulkDesc.ids[componentId] = nameIdentifier;
+            bulkDesc.data[componentId] = entityNames.data() + table.entityFirst;
+            componentId++;
+        }
+
         ecs_bulk_init( world.c_ptr(), &bulkDesc );
 
-        for(auto i = 0; i < ECS_MAX_ADD_REMOVE; i++) {
+        for(auto i = 0; i < ECS_ID_CACHE_SIZE; i++) {
             if (bulkDesc.data[i] && bulkDesc.ids[i] != nameIdentifier) {
                 free(bulkDesc.data[i]);
             }

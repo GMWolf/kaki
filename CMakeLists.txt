@@ -94,12 +94,15 @@ compile_gltf(test-dh SOURCES DamagedHelmet/DamagedHelmet.gltf)
 compile_pipeline(vispipeline shaders/visibility.json)
 compile_pipeline(shadepipeline shaders/shade.json)
 compile_pipeline(materialpipeline shaders/materialPass.json)
-add_image(sponzaDiffuseIrradiance sponza/SponzaDiffuseIrradiance.ktx2)
-add_image(sponzaSpecular sponza/sponzaSpecular.ktx2)
+#add_image(sponzaDiffuseIrradiance sponza/SponzaDiffuseIrradiance.ktx2)
+#add_image(sponzaSpecular sponza/sponzaSpecular.ktx2)
+add_image(sponzaDiffuseIrradiance SunTemple/templeIrradiance.ktx2)
+add_image(sponzaSpecular SunTemple/templeSpec.ktx2)
 add_image(brdf_lut brdf_lut.ktx2)
+compile_gltf(suntemple SOURCES SunTemple/SunTemple.gltf)
 make_package(testpackage SOURCES
         SciFiHelmet/SciFiHelmet.gltf.json
-        sponza/Sponza.gltf.json
+        #sponza/Sponza.gltf.json
         DamagedHelmet/DamagedHelmet.gltf.json
         vispipeline.json
         shadepipeline.json
@@ -107,5 +110,6 @@ make_package(testpackage SOURCES
         sponzaDiffuseIrradiance.json
         sponzaSpecular.json
         brdf_lut.json
+        SunTemple/SunTemple.gltf.json
         )
 add_dependencies(test testpackage)

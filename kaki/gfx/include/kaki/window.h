@@ -22,6 +22,12 @@ namespace kaki {
         VkSurfaceKHR createSurface(VkInstance instance) const;
     };
 
+    namespace KEYS {
+        enum KEYS {
+            SPACE = 32
+        };
+    };
+
     struct Input {
         static const uint32_t keyCount = 349;
         uint64_t frame = 0;
@@ -34,6 +40,10 @@ namespace kaki {
 
         [[nodiscard]] inline bool keyUp(uint32_t keyCode) const {
             return !keyDown(keyCode);
+        }
+
+        [[nodiscard]] inline bool keyPressed(uint32_t keyCode) const {
+            return keyDown(keyCode) && keyPressedFrame[keyCode] == frame - 1;
         }
     };
 

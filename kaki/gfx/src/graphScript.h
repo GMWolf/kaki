@@ -102,10 +102,13 @@ namespace kaki {
 
                 auto transforms = it.term<const kaki::TransformGpuAddress>(3);
 
+
                 for(auto i : it) {
 
+                    auto& filter = it.is_owned(1) ? filters[i] : filters[0];
+
                     const kaki::internal::MeshInstance& mesh = meshInstances[i];
-                    auto material = flecs::entity(world, filters[i].material).get<kaki::Material>();
+                    auto material = flecs::entity(world, filter.material).get<kaki::Material>();
                     auto albedoImage = flecs::entity(world, material->albedo).get<kaki::Image>();
 
                     auto transformOffset = it.is_owned(3) ? transforms->offset + i : transforms->offset;
@@ -147,7 +150,7 @@ namespace kaki {
                             .transformOffset = static_cast<uint32_t>(transformOffset),
                             .indexOffset = mesh.indexOffset,
                             .vertexOffset = mesh.vertexOffset,
-                            .material = static_cast<uint32_t>(filters[i].material),
+                            .material = static_cast<uint32_t>(filter.material),
                     };
 
                     vkCmdPushConstants(cmd, pipeline->pipelineLayout,
@@ -252,7 +255,7 @@ namespace kaki {
             vkCmdPushConstants(cmd, pipeline->pipelineLayout,
                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
                                sizeof(Pc), &pc);
-            vkCmdDrawIndexed(cmd, 3, 1, 0, 0, 0);
+            vkCmdDraw(cmd, 3, 1, 0, 0);
         });
     }
 
@@ -290,7 +293,7 @@ namespace kaki {
                                     pipeline->descriptorSets[d].index, 1, &descriptorSets[d], 0, nullptr);
         }
 
-        vkCmdDrawIndexed(cmd, 3, 1, 0, 0, 0);
+        vkCmdDraw(cmd, 3, 1, 0, 0);
     }
 
     inline RenderGraph graphScript(VkGlobals& vk) {
@@ -308,7 +311,7 @@ namespace kaki {
 
         // Draw v buffer
         graph.pass(renderWorld)
-        .color(visbuffer)
+        .colorClear(visbuffer, VkClearColorValue{.uint32{UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX}})
         .depthClear(depthImage, {0.0f, 0});
 
         auto materialBuffer = graph.image({

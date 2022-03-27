@@ -46,7 +46,8 @@ namespace kaki {
 
         const char* fmt = entity.name().size() > 0 ? entity.name().c_str() : "%lu";
 
-        bool opened = ImGui::TreeNodeEx(entity.name().c_str() ,
+
+        bool opened = ImGui::TreeNodeEx( (void*)entity.id() ,
                                           ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick |
                                           (isSelected ? ImGuiTreeNodeFlags_Selected : 0) |
                                                   (hasChildren ? 0 : ImGuiTreeNodeFlags_Leaf), fmt, entity.id());

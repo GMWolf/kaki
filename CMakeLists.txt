@@ -81,11 +81,19 @@ add_library(vk_mini_libs INTERFACE
         external/vulkan-mini-libs-2/include/vk_value_serialization.hpp)
 target_include_directories(vk_mini_libs INTERFACE external/vulkan-mini-libs-2/include)
 
+set(USE_GRAPHICAL_BENCHMARK OFF)
+set(BUILD_CPU_DEMOS OFF)
+set(BUILD_OPENGL3_DEMOS OFF)
+set(BUILD_BULLET2_DEMOS OFF)
+set(BUILD_EXTRAS OFF)
+set(BUILD_UNIT_TESTS OFF)
+add_subdirectory(external/bullet3)
+
 add_subdirectory(kaki)
 add_subdirectory(tools)
 
 add_executable(test main.cpp)
-target_link_libraries(test PRIVATE kaki-gfx)
+target_link_libraries(test PRIVATE kaki-gfx kaki-physics)
 target_link_libraries(test PRIVATE flecs_static)
 
 compile_gltf(test-gltf SOURCES SciFiHelmet/SciFiHelmet.gltf)
@@ -100,16 +108,18 @@ add_image(sponzaDiffuseIrradiance SunTemple/templeIrradiance.ktx2)
 add_image(sponzaSpecular SunTemple/templeSpec.ktx2)
 add_image(brdf_lut brdf_lut.ktx2)
 compile_gltf(suntemple SOURCES SunTemple/SunTemple.gltf)
+compile_gltf(objects SOURCES physicsAssets/objects.gltf)
 make_package(testpackage SOURCES
-        SciFiHelmet/SciFiHelmet.gltf.json
+        #SciFiHelmet/SciFiHelmet.gltf.json
         #sponza/Sponza.gltf.json
-        DamagedHelmet/DamagedHelmet.gltf.json
+        #DamagedHelmet/DamagedHelmet.gltf.json
         vispipeline.json
         shadepipeline.json
         materialpipeline.json
         sponzaDiffuseIrradiance.json
         sponzaSpecular.json
         brdf_lut.json
-        SunTemple/SunTemple.gltf.json
+        #SunTemple/SunTemple.gltf.json
+        physicsAssets/objects.gltf.json
         )
 add_dependencies(test testpackage)

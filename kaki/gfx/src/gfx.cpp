@@ -399,12 +399,9 @@ static void UploadTransforms(kaki::VkGlobals& vk) {
 
     });
 
-    int count = 0;
-
     vk.transformUploadQuery.iter([&](flecs::iter iter, const kaki::Transform* transforms, const kaki::TransformGpuAddress* addresses) {
 
         if (iter.changed()) {
-            count++;
             const kaki::TransformGpuAddress &address = addresses[0];
 
             void *staging = vk.uploadBuffer[vk.currentFrame].alloc(iter.count() * sizeof(kaki::Transform),
@@ -438,8 +435,6 @@ static void UploadTransforms(kaki::VkGlobals& vk) {
 
     vkCmdPipelineBarrier(vk.cmd[vk.currentFrame], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
                          0, 0, nullptr, barriers.size(), barriers.data(), 0, nullptr);
-
-    printf("count: %d\n", count);
 }
 
 static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {

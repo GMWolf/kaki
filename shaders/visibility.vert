@@ -16,8 +16,7 @@ struct Transform {
 };
 
 struct DrawInfo {
-    Transform transform;
-
+    uint transformOffset;
     uint indexOffset;
     uint vertexOffset;
     uint material;
@@ -27,6 +26,10 @@ struct DrawInfo {
 layout(set = 0, binding = 4, std430) buffer DrawInfoBlock {
     DrawInfo data[];
 } drawInfoBuffer;
+
+layout(set = 0, binding = 5, std430) buffer TransformBlock {
+    Transform transform[];
+} transformBuffer;
 
 layout(push_constant) uniform constants {
     mat4 proj;
@@ -50,7 +53,7 @@ void main() {
     vec3 in_pos = vec3(positions.v[gl_VertexIndex * 3 + 0u], positions.v[gl_VertexIndex * 3 + 1u], positions.v[gl_VertexIndex * 3 + 2u]);
     vec2 in_uv = vec2(texcoords.v[gl_VertexIndex * 2 + 0u], texcoords.v[gl_VertexIndex * 2 + 1u]);
 
-    vec3 pos = applyTransform(in_pos, drawInfo.transform);
+    vec3 pos = applyTransform(in_pos, transformBuffer.transform[drawInfo.transformOffset]);
     gl_Position = proj * vec4(pos , 1.0);
     UV_OUT = in_uv;
 }

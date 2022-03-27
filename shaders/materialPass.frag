@@ -7,7 +7,7 @@ struct Transform {
 };
 
 struct DrawInfo {
-    Transform transform;
+    uint transformOffset;
 
     uint indexOffset;
     uint vertexOffset;

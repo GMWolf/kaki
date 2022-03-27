@@ -2,12 +2,6 @@
 
 layout(location = 0) in vec2 UV;
 
-struct Transform {
-    vec3 position;
-    float scale;
-    vec4 orientation;
-};
-
 
 layout(push_constant) uniform constants {
     mat4 proj;

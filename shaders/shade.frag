@@ -49,8 +49,7 @@ struct Transform {
 };
 
 struct DrawInfo {
-    Transform transform;
-
+    uint transformOffset;
     uint indexOffset;
     uint vertexOffset;
     uint material;
@@ -71,6 +70,10 @@ layout(set = 1, binding = 0) uniform usampler2D visbuffer;
 layout(set = 1, binding = 1, std430) buffer DrawInfoBlock {
     DrawInfo data[];
 } drawInfoBuffer;
+
+layout(set = 1, binding = 2, std430) buffer TransformBlock {
+    Transform transform[];
+} transformBuffer;
 
 layout(push_constant) uniform constants {
     mat4 proj;
@@ -256,9 +259,11 @@ void main() {
     vec3 inpos1 = vec3(positions.v[tri.y * 3 + 0], positions.v[tri.y * 3 + 1], positions.v[tri.y * 3 + 2]);
     vec3 inpos2 = vec3(positions.v[tri.z * 3 + 0], positions.v[tri.z * 3 + 1], positions.v[tri.z * 3 + 2]);
 
-    vec4 pos0 = vec4(applyTransform(inpos0, draw.transform), 1);
-    vec4 pos1 = vec4(applyTransform(inpos1, draw.transform), 1);
-    vec4 pos2 = vec4(applyTransform(inpos2, draw.transform), 1);
+    Transform transform = transformBuffer.transform[draw.transformOffset];
+
+    vec4 pos0 = vec4(applyTransform(inpos0, transform), 1);
+    vec4 pos1 = vec4(applyTransform(inpos1, transform), 1);
+    vec4 pos2 = vec4(applyTransform(inpos2, transform), 1);
 
     BarycentricDeriv bary = CalcFullBary(proj * pos0, proj * pos1, proj * pos2, screenPos);
 
@@ -283,7 +288,7 @@ void main() {
     vec3 normal = vec3(InterpolateWithDeriv(bary, normal0.x, normal1.x, normal2.x).x,
                        InterpolateWithDeriv(bary, normal0.y, normal1.y, normal2.y).x,
                        InterpolateWithDeriv(bary, normal0.z, normal1.z, normal2.z).x);
-    normal = rotate(normal, draw.transform.orientation);
+    normal = rotate(normal, transform.orientation);
 
     vec4 tangent0 = vec4(tangents.v[tri.x * 4 + 0], tangents.v[tri.x * 4 + 1], tangents.v[tri.x * 4 + 2], tangents.v[tri.x * 4 + 3]);
     vec4 tangent1 = vec4(tangents.v[tri.y * 4 + 0], tangents.v[tri.y * 4 + 1], tangents.v[tri.y * 4 + 2], tangents.v[tri.y * 4 + 3]);
@@ -291,7 +296,7 @@ void main() {
     vec3 tangent = vec3(InterpolateWithDeriv(bary, tangent0.x, tangent1.x, tangent2.x).x,
                         InterpolateWithDeriv(bary, tangent0.y, tangent1.y, tangent2.y).x,
                         InterpolateWithDeriv(bary, tangent0.z, tangent1.z, tangent2.z).x);
-    tangent = rotate(tangent, draw.transform.orientation);
+    tangent = rotate(tangent, transform.orientation);
 
     vec3 bitangent = tangent0.w * cross(normal, tangent);
 
@@ -316,13 +321,6 @@ void main() {
     c += pbrIrradiance(m, v);
 
     c += pbrSpecular(m,v);
-
-    //c = texture(specularMap, m.normal).rgb;
-
-
-    //vec3 F        = fresnelRoughness(max(dot(m.normal, v), 0.0), F0, m.roughness);
-
-    //c = F;
 
     c += m.emmisivity;
 

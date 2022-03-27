@@ -79,6 +79,7 @@ namespace kaki {
                     {"tangents", vk.geometry.tangentBuffer},
                     {"texcoords", vk.geometry.texcoordBuffer},
                     {"drawInfoBuffer", vk.drawInfoBuffer[vk.currentFrame]},
+                    {"transformBuffer", vk.transformBuffer},
             });
             descCtx.submit(vk);
 
@@ -94,20 +95,20 @@ namespace kaki {
 
             uint32_t drawIndex = 0;
 
-            world.filter_builder<kaki::MeshFilter, kaki::internal::MeshInstance>()
-                    .term<kaki::Transform>().set(flecs::Self | flecs::SuperSet, flecs::ChildOf)
+            world.filter_builder<const kaki::MeshFilter, const kaki::internal::MeshInstance>()
+                    .term<const kaki::TransformGpuAddress>().set(flecs::Self | flecs::SuperSet, flecs::ChildOf)
                     .instanced()
-                    .build().iter([&](flecs::iter& it, kaki::MeshFilter* filters, kaki::internal::MeshInstance* meshInstances) {
+                    .build().iter([&](flecs::iter& it, const kaki::MeshFilter* filters, const kaki::internal::MeshInstance* meshInstances) {
 
-                auto transforms = it.term<kaki::Transform>(3);
+                auto transforms = it.term<const kaki::TransformGpuAddress>(3);
 
                 for(auto i : it) {
 
-                    kaki::internal::MeshInstance& mesh = meshInstances[i];
+                    const kaki::internal::MeshInstance& mesh = meshInstances[i];
                     auto material = flecs::entity(world, filters[i].material).get<kaki::Material>();
                     auto albedoImage = flecs::entity(world, material->albedo).get<kaki::Image>();
-                    auto& transform = it.is_owned(3) ? transforms[i] : *transforms;
 
+                    auto transformOffset = it.is_owned(3) ? transforms->offset + i : transforms->offset;
 
                     {
                         auto dDesc = pipeline->getDescSet(1);
@@ -143,7 +144,7 @@ namespace kaki {
                     pc.drawIndex = drawIndex;
 
                     vk.drawInfos[vk.currentFrame][drawIndex] = {
-                            .transform = transform,
+                            .transformOffset = static_cast<uint32_t>(transformOffset),
                             .indexOffset = mesh.indexOffset,
                             .vertexOffset = mesh.vertexOffset,
                             .material = static_cast<uint32_t>(filters[i].material),
@@ -160,7 +161,10 @@ namespace kaki {
                 }
 
             });
+
         });
+
+
     }
 
     inline static void shade(flecs::world& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
@@ -182,6 +186,7 @@ namespace kaki {
             };
 
             ShaderInput globalInputs[]{
+                    {"transformBuffer", vk.transformBuffer},
                     {"drawInfoBuffer", vk.drawInfoBuffer[vk.currentFrame]},
                     {"visbuffer", ShaderInput::Image{images[0], vk.uintSampler}},
                     {"indices", vk.geometry.indexBuffer},

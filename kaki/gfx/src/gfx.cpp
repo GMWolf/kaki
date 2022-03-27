@@ -335,6 +335,30 @@ static bool createGlobals(flecs::world& world) {
         vmaMapMemory(vk.allocator, vk.drawInfoAlloc[i], (void**)&vk.drawInfos[i]);
     }
 
+    for(auto & i : vk.uploadBuffer) {
+        i.init(vk.allocator, vk.stagingBufferSize);
+    }
+
+    {
+        VkBufferCreateInfo bufferInfo {
+                .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                .size = sizeof(kaki::Transform) * vk.maxDrawCount,
+                .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        };
+
+        VmaAllocationCreateInfo vmaAllocInfo {
+                .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+                .requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        };
+
+        vmaCreateBuffer(vk.allocator, &bufferInfo, &vmaAllocInfo, &vk.transformBuffer, &vk.transformAlloc, nullptr);
+
+        VmaVirtualBlockCreateInfo blockCreateInfo = {};
+        blockCreateInfo.size = bufferInfo.size;
+
+        vmaCreateVirtualBlock(&blockCreateInfo, &vk.transformBlock);
+    }
+
 
     world.set<kaki::VkGlobals>(vk);
     return true;
@@ -346,6 +370,78 @@ void recreate_swapchain(kaki::VkGlobals& vk) {
 }
 
 
+static void UploadTransforms(kaki::VkGlobals& vk) {
+
+    std::vector<VkBufferMemoryBarrier> barriers;
+
+
+    vk.transformAllocQuery.iter([&](flecs::iter iter, kaki::TransformGpuAddress* address){
+
+        if (address->count < iter.count()) {
+            if (address->count != 0) {
+                vmaVirtualFree(vk.transformBlock, address->allocation);
+            }
+            VmaVirtualAllocationCreateInfo allocCreateInfo = {};
+            allocCreateInfo.size = sizeof(kaki::Transform) * iter.count();
+            allocCreateInfo.alignment = alignof(kaki::Transform);
+            size_t offset;
+            vmaVirtualAllocate(vk.transformBlock, &allocCreateInfo, &address->allocation, &offset);
+            address->offset = offset / sizeof(kaki::Transform);
+            address->count = iter.count();
+
+            for(int i = 1; i < iter.count(); i++) {
+                address[i].offset = address[0].offset + i;
+                address[i].count = address[0].count - i;
+            }
+        } else {
+            iter.skip();
+        }
+
+    });
+
+    int count = 0;
+
+    vk.transformUploadQuery.iter([&](flecs::iter iter, const kaki::Transform* transforms, const kaki::TransformGpuAddress* addresses) {
+
+        if (iter.changed()) {
+            count++;
+            const kaki::TransformGpuAddress &address = addresses[0];
+
+            void *staging = vk.uploadBuffer[vk.currentFrame].alloc(iter.count() * sizeof(kaki::Transform),
+                                                                     alignof(kaki::Transform));
+            memcpy(staging, transforms, sizeof(kaki::Transform) * iter.count());
+
+            VkBufferCopy region{
+                    .srcOffset = static_cast<VkDeviceSize>(std::distance(
+                            (std::byte *) vk.uploadBuffer[vk.currentFrame].map, (std::byte *) staging)),
+                    .dstOffset = address.offset * sizeof(kaki::Transform),
+                    .size = sizeof(kaki::Transform) * iter.count(),
+            };
+
+            vkCmdCopyBuffer(vk.cmd[vk.currentFrame], vk.uploadBuffer[vk.currentFrame].buffer, vk.transformBuffer, 1, &region);
+
+            VkBufferMemoryBarrier barrier{
+                    .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+                    .srcAccessMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    .dstAccessMask = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+                    .srcQueueFamilyIndex = vk.device.get_queue_index(vkb::QueueType::graphics).value(),
+                    .dstQueueFamilyIndex = vk.device.get_queue_index(vkb::QueueType::graphics).value(),
+                    .buffer = vk.transformBuffer,
+                    .offset = region.dstOffset,
+                    .size = region.size,
+            };
+
+            barriers.push_back(barrier);
+
+        }
+    });
+
+    vkCmdPipelineBarrier(vk.cmd[vk.currentFrame], VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+                         0, 0, nullptr, barriers.size(), barriers.data(), 0, nullptr);
+
+    printf("count: %d\n", count);
+}
+
 static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
     auto world = entity.world();
@@ -354,6 +450,8 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
     vkResetDescriptorPool(vk.device, vk.descriptorPools[vk.currentFrame], 0);
     vkResetCommandBuffer(vk.cmd[vk.currentFrame], 0);
+
+    vk.uploadBuffer[vk.currentFrame].reset();
 
     uint32_t imageIndex;
     auto acquire = vkAcquireNextImageKHR(vk.device, vk.swapchain, UINT64_MAX, vk.imageAvailableSemaphore[vk.currentFrame], nullptr, &imageIndex);
@@ -380,6 +478,8 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
     vkBeginCommandBuffer(vk.cmd[vk.currentFrame], &beginInfo);
+
+    UploadTransforms(vk);
 
     kaki::runGraph(world, vk.graph, imageIndex, vk.cmd[vk.currentFrame]);
     vkEndCommandBuffer(vk.cmd[vk.currentFrame]);
@@ -420,8 +520,6 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     vk.currentFrame = (vk.currentFrame + 1) % kaki::VkGlobals::framesInFlight;
 }
 
-
-
 static void UpdateMeshInstance(flecs::iter iter, kaki::MeshFilter* meshFilters) {
     for(auto i : iter) {
 
@@ -437,6 +535,7 @@ static void UpdateMeshInstance(flecs::iter iter, kaki::MeshFilter* meshFilters) 
         } );
     }
 }
+
 
 namespace kaki {
     Pipeline createPipeline(const VkGlobals &vk, flecs::entity scope, std::span<uint8_t> pipelineData);
@@ -538,6 +637,19 @@ kaki::gfx::gfx(flecs::world &world) {
             .member(ecs_id(ecs_entity_t), "material");
 
     createGlobals(world);
+
+    auto& vk = *world.get_mut<VkGlobals>();
+    vk.transformUploadQuery = world.query_builder<const Transform, const TransformGpuAddress>()
+            .instanced()
+            .arg(1).owned(true)
+            .arg(2).owned(true)
+            .build();
+
+    vk.transformAllocQuery = world.query_builder<TransformGpuAddress>()
+            .arg(1).owned(true)
+            .build();
+
+    world.component<Transform>().add(flecs::With, world.component<TransformGpuAddress>());
 
     world.system<VkGlobals>("Render system").kind(flecs::OnStore).each(render);
 

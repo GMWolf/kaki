@@ -11,8 +11,8 @@
 struct Control{};
 struct Rotate{};
 struct Foo{};
-int main() {
 
+int main() {
     flecs::world world;
 
     world.import<kaki::core>();

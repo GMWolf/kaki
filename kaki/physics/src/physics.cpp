@@ -109,10 +109,6 @@ namespace kaki {
             b.body->getMotionState()->getWorldTransform(t);
             auto o = t.getOrigin();
         });
-
-        //world.system<PhysicsBody, Transform>().kind(flecs::OnStore).each([](PhysicsBody& b, Transform& t) {
-        //    printf("%d %f %f %f\n", b.body->isActive(), t.position.x, t.position.y, t.position.z);
-        //});
     }
 
     void initPhysics(flecs::world &world) {

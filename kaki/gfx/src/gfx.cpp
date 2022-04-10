@@ -54,6 +54,7 @@ static bool createGlobals(flecs::world& world) {
     auto inst_ret = builder.set_app_name("Kaki application")
             .request_validation_layers()
             .use_default_debug_messenger()
+            .require_api_version(1, 3, 0)
             .build();
 
     if (!inst_ret) {
@@ -69,8 +70,11 @@ static bool createGlobals(flecs::world& world) {
     vkb::PhysicalDeviceSelector selector{ vkb_inst };
 
     auto phys_ret = selector.set_surface(surface)
-            .set_minimum_version(1,2)
+            .set_minimum_version(1,3)
             .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
+            .set_required_features_13(VkPhysicalDeviceVulkan13Features {
+                .inlineUniformBlock = VK_TRUE,
+            })
             .select();
 
     if (!phys_ret) {
@@ -84,8 +88,15 @@ static bool createGlobals(flecs::world& world) {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
         .nullDescriptor = VK_TRUE,
     };
-
     deviceBuilder.add_pNext(&rbfeatures);
+
+    //VkPhysicalDeviceInlineUniformBlockFeatures iubFeatures {
+    //        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INLINE_UNIFORM_BLOCK_FEATURES,
+    //        .inlineUniformBlock = VK_TRUE,
+    //        .descriptorBindingInlineUniformBlockUpdateAfterBind = VK_FALSE,
+    //};
+
+    //deviceBuilder.add_pNext(&iubFeatures);
 
     auto dev_ret = deviceBuilder.build();
 
@@ -95,6 +106,18 @@ static bool createGlobals(flecs::world& world) {
     }
 
     vkb::Device vkbDevice = dev_ret.value();
+
+    VkPhysicalDeviceVulkan13Properties props13 {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES,
+    };
+
+    VkPhysicalDeviceProperties2 props {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+        .pNext = &props13,
+    };
+
+    vkGetPhysicalDeviceProperties2(vkbDevice.physical_device, &props);
+
 
     auto graphics_queue_ret = vkbDevice.get_queue(vkb::QueueType::graphics);
 
@@ -190,6 +213,10 @@ static bool createGlobals(flecs::world& world) {
                 VkDescriptorPoolSize{
                         .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                         .descriptorCount = 1024,
+                },
+                VkDescriptorPoolSize {
+                    .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                    .descriptorCount = 1024,
                 },
         };
 

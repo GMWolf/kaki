@@ -280,7 +280,27 @@ void writeMaterials(kaki::Package& package, std::span<cgltf_material> materials,
             uint64_t aoEntity = aoImage ? firstImage + std::distance(cgltfData->images, aoImage) : 0;
             uint64_t emissiveEntity = emissiveImage ? firstImage + std::distance(cgltfData->images, emissiveImage) : 0;
 
+            struct {
+                uint useNormalMap;
+                uint useMetallicRoughnessTexture;
+                uint useAoTexture;
+                uint useEmissiveTexture;
+
+                glm::vec3 emissivity;
+                float metallicity;
+                float roughness;
+            } materialBuffer {
+                .useNormalMap = normalImage ? 1u : 0u,
+                .useMetallicRoughnessTexture = mrImage ? 1u : 0u,
+                .useAoTexture = aoImage ? 1u : 0u,
+                .useEmissiveTexture = emissiveImage ? 1u : 0u,
+                .emissivity = glm::vec3(material.emissive_factor[0], material.emissive_factor[1], material.emissive_factor[2]),
+                .metallicity = material.pbr_metallic_roughness.metallic_factor,
+                .roughness = material.pbr_metallic_roughness.roughness_factor,
+            };
+
             dataArchive(albedoEntity, normalEntity, mrEntity, aoEntity, emissiveEntity);
+            dataArchive(cereal::make_size_tag(sizeof(materialBuffer)), cereal::binary_data(&materialBuffer, sizeof(materialBuffer)));
 
             data.size = static_cast<uint64_t>(outData.tellp()) - data.offset;
         }

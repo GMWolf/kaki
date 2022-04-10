@@ -51,6 +51,11 @@ namespace kaki {
             uint64_t albedoRef, normalRef, mrRef, aoRef, emissiveRef;
             archive(albedoRef, normalRef, mrRef, aoRef, emissiveRef);
 
+            size_t matBufferSize;
+            archive(cereal::make_size_tag(matBufferSize));
+            auto* matBuffer = (uint8_t*)malloc(matBufferSize);
+            archive(cereal::binary_data(matBuffer, matBufferSize));
+
             materials[i].albedo = data->entityRefs[albedoRef];
             materials[i].normal = data->entityRefs[normalRef];
             materials[i].metallicRoughness = data->entityRefs[mrRef];
@@ -71,6 +76,7 @@ namespace kaki {
                     {"metallicRoughnessTexture", ShaderInput::Image{metallicRoughnessImage ? metallicRoughnessImage->view : VK_NULL_HANDLE, vk.sampler}},
                     {"aoTexture", ShaderInput::Image{aoImage ? aoImage->view : VK_NULL_HANDLE, vk.sampler}},
                     {"emissiveTexture", ShaderInput::Image{emissiveImage? emissiveImage->view : VK_NULL_HANDLE, vk.sampler}},
+                    {"material", std::span<uint8_t>(matBuffer, matBufferSize)},
             });
         }
 

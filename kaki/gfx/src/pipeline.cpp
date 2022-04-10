@@ -34,7 +34,6 @@ static VkPipelineLayout createPipelineLayout(VkDevice device, std::span<VkPushCo
 
         vkCreateDescriptorSetLayout(device, &descSetLayoutInfo, nullptr, &descSets[i].layout);
 
-
         descSetLayouts[i] = descSets[i].layout;
     }
 

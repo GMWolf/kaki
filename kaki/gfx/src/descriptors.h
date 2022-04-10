@@ -15,13 +15,14 @@ namespace kaki {
         };
 
         const char* name;
-        std::variant<Image, VkBuffer> view;
+        std::variant<Image, VkBuffer, std::span<uint8_t>> view;
     };
 
     struct DescSetWriteCtx {
         std::vector<VkWriteDescriptorSet> descSetWrites;
         std::vector<VkDescriptorImageInfo> imageInfos;
         std::vector<VkDescriptorBufferInfo> bufferInfos;
+        std::vector<VkWriteDescriptorSetInlineUniformBlock> inlineUniformBlock;
 
         void reserve(size_t count);
 

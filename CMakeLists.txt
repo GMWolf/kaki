@@ -110,9 +110,9 @@ add_image(brdf_lut brdf_lut.ktx2)
 compile_gltf(suntemple SOURCES SunTemple/SunTemple.gltf)
 compile_gltf(objects SOURCES physicsAssets/objects.gltf)
 make_package(testpackage SOURCES
-        #SciFiHelmet/SciFiHelmet.gltf.json
-        #sponza/Sponza.gltf.json
-        #DamagedHelmet/DamagedHelmet.gltf.json
+        SciFiHelmet/SciFiHelmet.gltf.json
+        sponza/Sponza.gltf.json
+        DamagedHelmet/DamagedHelmet.gltf.json
         vispipeline.json
         shadepipeline.json
         materialpipeline.json

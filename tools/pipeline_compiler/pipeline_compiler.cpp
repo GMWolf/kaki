@@ -101,7 +101,6 @@ int main(int argc, char* argv[]) {
         dataArchive(pushConstants, descSets);
         dataArchive(vertexModule->code);
         dataArchive(fragmentModule->code);
-
     }
 
     kaki::Package package {

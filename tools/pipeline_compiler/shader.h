@@ -42,8 +42,9 @@ struct ShaderModule {
 std::optional<ShaderModule> compileModule(const char* sourcePath, shaderc_shader_kind shaderKind, std::span<CompileDefinition> defs) {
     shaderc::Compiler compiler;
     shaderc::CompileOptions options;
-    options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
+    options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
     options.SetTargetSpirv(shaderc_spirv_version_1_0);
+
     auto source = readFile(sourcePath);
 
     for(auto& def : defs) {
@@ -88,12 +89,26 @@ std::optional<ShaderModule> compileModule(const char* sourcePath, shaderc_shader
             kakiDescSet.index = set->set;
             for(SpvReflectDescriptorBinding* binding : std::span(set->bindings, set->binding_count)) {
                 kakiDescSet.bindingNames.emplace_back(binding->name);
-                kakiDescSet.bindings.push_back(VkDescriptorSetLayoutBinding{
-                        .binding = binding->binding,
-                        .descriptorType = static_cast<VkDescriptorType>(binding->descriptor_type),
-                        .descriptorCount = binding->count,
-                        .stageFlags = module.shader_stage,
-                });
+
+                if (binding->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER && strstr(binding->type_description->type_name, "inline") != nullptr) {
+
+                    kakiDescSet.bindings.push_back(VkDescriptorSetLayoutBinding{
+                            .binding = binding->binding,
+                            .descriptorType = VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK,
+                            .descriptorCount = binding->count * binding->block.size,
+                            .stageFlags = module.shader_stage,
+                    });
+
+                } else {
+
+                    kakiDescSet.bindings.push_back(VkDescriptorSetLayoutBinding{
+                            .binding = binding->binding,
+                            .descriptorType = static_cast<VkDescriptorType>(binding->descriptor_type),
+                            .descriptorCount = binding->count,
+                            .stageFlags = module.shader_stage,
+                    });
+
+                }
             }
         }
 

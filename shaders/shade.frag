@@ -1,4 +1,5 @@
 #version 430
+#extension GL_EXT_scalar_block_layout : require
 
 layout(location = 0) in vec2 screenPos;
 
@@ -7,6 +8,17 @@ layout(set = 2, binding = 1) uniform sampler2D normalTexture;
 layout(set = 2, binding = 2) uniform sampler2D metallicRoughnessTexture;
 layout(set = 2, binding = 3) uniform sampler2D aoTexture;
 layout(set = 2, binding = 4) uniform sampler2D emissiveTexture;
+
+layout(set = 2, binding = 5, std430) uniform MaterialBlock_inline {
+    bool useNormalMap;
+    bool useMetallicRoughnessTexture;
+    bool useAoTexture;
+    bool useEmissiveTexture;
+
+    vec3 emissivity;
+    float metallicity;
+    float roughness;
+} material;
 
 
 layout(set = 0, binding = 0, std430) buffer PositionBlock {
@@ -80,7 +92,7 @@ layout(push_constant) uniform constants {
     vec3 viewPos; uint drawId;
     vec3 light; float pad1;
     vec2 winSize;
-    uint material;
+    uint materialIndex;
 };
 
 
@@ -131,7 +143,7 @@ vec3 InterpolateWithDeriv(BarycentricDeriv deriv, float v0, float v1, float v2)
     return ret;
 }
 
-    #define PI 3.14159265358979
+#define PI 3.14159265358979
 
 float D_GGX(vec3 N, vec3 H, float a) {
     float a2 = a*a;
@@ -173,7 +185,7 @@ vec3 fresnelRoughness(float cosTheta, vec3 F0, float roughness)
 
 struct PBRFragment {
     vec3 albedo;
-    float metalicity;
+    float metallicity;
     float roughness;
     vec3 emmisivity;
     vec3 normal;
@@ -189,7 +201,7 @@ vec3 pbrColor(PBRFragment f, LightFragment l, vec3 viewDirection) {
 
     vec3 H = normalize(l.lightDirection + viewDirection);
     vec3 F0 = vec3(0.04);
-    F0 = mix(F0, f.albedo, f.metalicity);
+    F0 = mix(F0, f.albedo, f.metallicity);
 
     vec3 F = fresnel(max(dot(H, viewDirection), 0.0), F0);
     float NDF = D_GGX(f.normal, H, f.roughness);
@@ -201,7 +213,7 @@ vec3 pbrColor(PBRFragment f, LightFragment l, vec3 viewDirection) {
 
     vec3 kS = F;
     vec3 kD = vec3(1.0) - kS;
-    kD *= 1.0 - f.metalicity;
+    kD *= 1.0 - f.metallicity;
 
     float NdotL = max(dot(f.normal, l.lightDirection), 0.0);
 
@@ -215,13 +227,13 @@ vec3 pbrColor(PBRFragment f, LightFragment l, vec3 viewDirection) {
 vec3 pbrIrradiance(PBRFragment f, vec3 viewDirection) {
 
     vec3 F0 = vec3(0.04);
-    F0 = mix(F0, f.albedo, f.metalicity);
+    F0 = mix(F0, f.albedo, f.metallicity);
 
     vec3 kS = fresnelRoughness(max(dot(f.normal, viewDirection), 0.0), F0, f.roughness);
     vec3 kD = 1.0 - kS;
     vec3 irradiance = textureLod(irradianceMap, f.normal, 0).rgb;
     vec3 diffuse = irradiance * f.albedo;
-    vec3 ambient = (kD * diffuse);// * f.ao;
+    vec3 ambient = (kD * diffuse) * f.ao;
 
     return ambient;
 }
@@ -234,13 +246,13 @@ vec3 pbrSpecular(PBRFragment f, vec3 viewDirection) {
     vec3 prefilteredColor = textureLod(specularMap, R,  f.roughness * MAX_REFLECTION_LOD).rgb;
 
     vec3 F0 = vec3(0.04);
-    F0 = mix(F0, f.albedo, f.metalicity);
+    F0 = mix(F0, f.albedo, f.metallicity);
 
     vec3 F        = fresnelRoughness(max(dot(f.normal, viewDirection), 0.0), F0, f.roughness);
     vec2 envBRDF  = texture(brdf_lut, vec2(max(dot(f.normal, viewDirection), 0.0), 1.0 - f.roughness)).rg;
     vec3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
 
-    return specular; // * f.ao;
+    return specular * f.ao;
 }
 
 layout(location = 0) out vec4 outColor;
@@ -290,26 +302,57 @@ void main() {
                        InterpolateWithDeriv(bary, normal0.z, normal1.z, normal2.z).x);
     normal = rotate(normal, transform.orientation);
 
-    vec4 tangent0 = vec4(tangents.v[tri.x * 4 + 0], tangents.v[tri.x * 4 + 1], tangents.v[tri.x * 4 + 2], tangents.v[tri.x * 4 + 3]);
-    vec4 tangent1 = vec4(tangents.v[tri.y * 4 + 0], tangents.v[tri.y * 4 + 1], tangents.v[tri.y * 4 + 2], tangents.v[tri.y * 4 + 3]);
-    vec4 tangent2 = vec4(tangents.v[tri.z * 4 + 0], tangents.v[tri.z * 4 + 1], tangents.v[tri.z * 4 + 2], tangents.v[tri.z * 4 + 3]);
-    vec3 tangent = vec3(InterpolateWithDeriv(bary, tangent0.x, tangent1.x, tangent2.x).x,
-                        InterpolateWithDeriv(bary, tangent0.y, tangent1.y, tangent2.y).x,
-                        InterpolateWithDeriv(bary, tangent0.z, tangent1.z, tangent2.z).x);
-    tangent = rotate(tangent, transform.orientation);
-
-    vec3 bitangent = tangent0.w * cross(normal, tangent);
-
-    vec3 t_normal = textureGrad(normalTexture, uv, duv_dx, duv_dy).xyz * 2.0 - 1.0;
-    t_normal.z = sqrt(1 - dot(t_normal.xy, t_normal.xy));
-
     PBRFragment m;
     m.albedo = textureGrad(albedoTexture, uv, duv_dx, duv_dy).rgb;
-    m.metalicity = textureGrad(metallicRoughnessTexture, uv, duv_dx, duv_dy).r;
-    m.roughness = textureGrad(metallicRoughnessTexture, uv, duv_dx, duv_dy).g;
-    m.emmisivity = textureGrad(emissiveTexture, uv, duv_dx, duv_dy).rgb;
-    m.normal = mat3(normalize(tangent), normalize(bitangent), normalize(normal)) * t_normal;
-    m.ao = textureGrad(aoTexture, uv, duv_dx, duv_dy).x;
+
+    vec3 fnormal = normal;
+    if (material.useNormalMap)
+    {
+        vec4 tangent0 = vec4(tangents.v[tri.x * 4 + 0], tangents.v[tri.x * 4 + 1], tangents.v[tri.x * 4 + 2], tangents.v[tri.x * 4 + 3]);
+        vec4 tangent1 = vec4(tangents.v[tri.y * 4 + 0], tangents.v[tri.y * 4 + 1], tangents.v[tri.y * 4 + 2], tangents.v[tri.y * 4 + 3]);
+        vec4 tangent2 = vec4(tangents.v[tri.z * 4 + 0], tangents.v[tri.z * 4 + 1], tangents.v[tri.z * 4 + 2], tangents.v[tri.z * 4 + 3]);
+        vec3 tangent = vec3(InterpolateWithDeriv(bary, tangent0.x, tangent1.x, tangent2.x).x,
+        InterpolateWithDeriv(bary, tangent0.y, tangent1.y, tangent2.y).x,
+        InterpolateWithDeriv(bary, tangent0.z, tangent1.z, tangent2.z).x);
+        tangent = rotate(tangent, transform.orientation);
+
+        vec3 bitangent = tangent0.w * cross(normal, tangent);
+
+        vec3 t_normal = textureGrad(normalTexture, uv, duv_dx, duv_dy).xyz * 2.0 - 1.0;
+        t_normal.z = sqrt(1 - dot(t_normal.xy, t_normal.xy));
+
+        m.normal = mat3(normalize(tangent), normalize(bitangent), normalize(normal)) * t_normal;
+    }
+
+    if (material.useMetallicRoughnessTexture)
+    {
+        vec2 metallicRougness = textureGrad(metallicRoughnessTexture, uv, duv_dx, duv_dy).rg;
+        m.metallicity = metallicRougness.r;
+        m.roughness = metallicRougness.g;
+    }
+    else
+    {
+        m.metallicity = material.metallicity;
+        m.roughness = material.roughness;
+    }
+
+    if (material.useEmissiveTexture)
+    {
+        m.emmisivity = textureGrad(emissiveTexture, uv, duv_dx, duv_dy).rgb;
+    }
+    else
+    {
+        m.emmisivity = material.emissivity;
+    }
+
+    if (material.useAoTexture)
+    {
+        m.ao = textureGrad(aoTexture, uv, duv_dx, duv_dy).x;
+    }
+    else
+    {
+        m.ao = 1.0;
+    }
 
     vec3 v = normalize(viewPos - position);
     LightFragment l;

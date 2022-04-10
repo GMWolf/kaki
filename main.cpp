@@ -33,13 +33,13 @@ int main() {
 
     auto package = kaki::loadPackage(world, "testpackage.json").add<Foo>();
 
-    //auto scene = world.entity("scene").is_a(package.lookup("SciFiHelmet::Scene")).add<Foo>();
-    //scene.lookup("Camera").add<Control>();
+    auto scene = world.entity("scene").is_a(package.lookup("SciFiHelmet::Scene")).add<Foo>();
+    scene.lookup("Camera").add<Control>();
     //auto sfh = scene.lookup("SciFiHelmet").add<Rotate>();
     //sfh.get_mut<kaki::Transform>()->position = {2, 1, 0};
     //sfh.get_mut<kaki::Transform>()->scale = 0.25;
 
-    //auto dhscene = world.entity("dhscene").is_a(package.lookup("DamagedHelmet::Scene")).add<Foo>();
+    auto dhscene = world.entity("dhscene").is_a(package.lookup("DamagedHelmet::Scene")).add<Foo>();
     ////dhscene.lookup("damagedHelmet").add<Rotate>();
     //dhscene.lookup("damagedHelmet").get_mut<kaki::Transform>()->position = {-2, 1, 0};
     //dhscene.lookup("damagedHelmet").get_mut<kaki::Transform>()->scale = 0.25;
@@ -49,42 +49,42 @@ int main() {
     //        .extent = glm::vec3(1,1,1),
     //});
 
-    //auto sponza = world.entity("sponza").is_a(package.lookup("Sponza::Sponza")).add<Foo>();
+    auto sponza = world.entity("sponza").is_a(package.lookup("Sponza::Sponza")).add<Foo>();
     //auto temple = world.entity("temple").is_a(package.lookup("SunTemple::Scene")).add<Foo>();
 
-    world.entity("Camera").set(kaki::Transform{
-        .position = glm::vec3(-5, 1.7, 0),
-        .scale = 1,
-        .orientation = glm::quatLookAt(glm::vec3(1, 0, 0), glm::vec3(0,1,0)),
-    }).set(kaki::Camera {
-        .fov = glm::radians(90.0f),
-    }).add<Control>().add<Shoot>();
+    //world.entity("Camera").set(kaki::Transform{
+    //    .position = glm::vec3(-5, 1.7, 0),
+    //    .scale = 1,
+    //    .orientation = glm::quatLookAt(glm::vec3(1, 0, 0), glm::vec3(0,1,0)),
+    //}).set(kaki::Camera {
+    //    .fov = glm::radians(90.0f),
+    //}).add<Control>().add<Shoot>();
 
-    world.entity("floor").is_a(package.lookup("objects::Scene::Plane")).set(kaki::RigidBody{
-            .mass = 0.0f,
-            .extent = glm::vec3(40, 1, 40),
-    }).get_mut<kaki::Transform>()->position.z = -0.5f;
-
-    auto cubePrefab = world.entity().add(flecs::Prefab).is_a(package.lookup("objects::Scene::Cube")).set(kaki::RigidBody{
-            .mass = 3.0f,
-            .extent = glm::vec3(0.5),
-    });
-
-    for(int n = 0; n < 3; n++ ) {
-
-        for (int y = 0; y < 3; y++) {
-            for (int x = 0; x < 3; x++) {
-                for (int i = 0; i < 8; i++) {
-
-                    world.entity().is_a(package.lookup("objects::Scene::Cube")).set(kaki::RigidBody{
-                            .mass = 3.0f,
-                            .extent = glm::vec3(0.5),
-                    }).get_mut<kaki::Transform>()->position = glm::vec3(0.51 * x + 8 * n, 0.1 + i * 0.51, 0.51 * y);
-
-                }
-            }
-        }
-    }
+    //world.entity("floor").is_a(package.lookup("objects::Scene::Plane")).set(kaki::RigidBody{
+    //        .mass = 0.0f,
+    //        .extent = glm::vec3(40, 1, 40),
+    //}).get_mut<kaki::Transform>()->position.z = -0.5f;
+//
+    //auto cubePrefab = world.entity().add(flecs::Prefab).is_a(package.lookup("objects::Scene::Cube")).set(kaki::RigidBody{
+    //        .mass = 3.0f,
+    //        .extent = glm::vec3(0.5),
+    //});
+//
+    //for(int n = 0; n < 3; n++ ) {
+//
+    //    for (int y = 0; y < 3; y++) {
+    //        for (int x = 0; x < 3; x++) {
+    //            for (int i = 0; i < 8; i++) {
+//
+    //                world.entity().is_a(package.lookup("objects::Scene::Cube")).set(kaki::RigidBody{
+    //                        .mass = 3.0f,
+    //                        .extent = glm::vec3(0.5),
+    //                }).get_mut<kaki::Transform>()->position = glm::vec3(0.51 * x + 8 * n, 0.1 + i * 0.51, 0.51 * y);
+//
+    //            }
+    //        }
+    //    }
+    //}
 
     //world.entity().is_a(cubePrefab).set<kaki::Transform>(kaki::Transform{
     //    .position = glm::vec3(0, 5, 0),

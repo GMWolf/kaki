@@ -8,6 +8,8 @@
 #include <kaki/transform.h>
 #include <kaki/core.h>
 #include <kaki/physics.h>
+#include <kaki/job.h>
+#include <atomic>
 
 struct Control{};
 struct Rotate{};
@@ -15,6 +17,38 @@ struct Foo{};
 struct Shoot{};
 
 int main() {
+
+    kaki::Scheduler sc;
+    sc.scheduleJob([&](kaki::JobCtx ctx){
+        printf("Hello");
+
+        std::atomic<uint64_t> jobAtomic = 0;
+
+        sc.scheduleJob([&jobAtomic](kaki::JobCtx ctx) {
+            ctx.wait(jobAtomic, 2);
+            printf("! ");
+            jobAtomic++;
+        });
+
+        sc.scheduleJob([&jobAtomic](kaki::JobCtx ctx) {
+            printf(", ");
+            jobAtomic++;
+        });
+
+        ctx.wait( jobAtomic, 1 );
+
+        printf("World");
+        jobAtomic++;
+
+        ctx.wait(jobAtomic, 3);
+
+        printf("\n");
+
+        sc.shutdownNow();
+    });
+
+    sc.run();
+
     flecs::world world;
 
     world.import<kaki::core>();

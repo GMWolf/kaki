@@ -89,13 +89,13 @@ set(BUILD_EXTRAS OFF)
 set(BUILD_UNIT_TESTS OFF)
 add_subdirectory(external/bullet3)
 
-add_subdirectory(external/context)
+add_subdirectory(external/boost)
 
 add_subdirectory(kaki)
 add_subdirectory(tools)
 
 add_executable(test main.cpp)
-target_link_libraries(test PRIVATE kaki-gfx kaki-physics)
+target_link_libraries(test PRIVATE kaki-gfx kaki-physics kaki-job)
 target_link_libraries(test PRIVATE flecs_static)
 
 compile_gltf(test-gltf SOURCES SciFiHelmet/SciFiHelmet.gltf)

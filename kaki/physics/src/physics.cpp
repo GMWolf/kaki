@@ -99,15 +99,9 @@ namespace kaki {
             e.destruct();
         });
 
-        world.system<PhysicsContext>().kind(flecs::OnUpdate)
+        world.system<PhysicsContext>("PhysicsStepSystem").kind(flecs::OnUpdate)
         .each([](flecs::entity e, PhysicsContext& ctx) {
             ctx.world->stepSimulation(e.world().delta_time());
-        });
-
-        world.system<PhysicsBody>().kind(flecs::OnStore).each([](PhysicsBody& b) {
-            btTransform t;
-            b.body->getMotionState()->getWorldTransform(t);
-            auto o = t.getOrigin();
         });
     }
 

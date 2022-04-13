@@ -71,7 +71,7 @@ namespace kaki {
             auto emissiveImage = flecs::entity(world, materials[i].emissive).get<kaki::Image>();
 
             descCtx.add(descSets[i], *descSet, {
-                    {"albedoTexture", ShaderInput::Image{albedoImage->view, vk.sampler}},
+                    {"albedoTexture", ShaderInput::Image{albedoImage ? albedoImage->view : VK_NULL_HANDLE, vk.sampler}},
                     {"normalTexture", ShaderInput::Image{normalImage ? normalImage->view : VK_NULL_HANDLE, vk.sampler}},
                     {"metallicRoughnessTexture", ShaderInput::Image{metallicRoughnessImage ? metallicRoughnessImage->view : VK_NULL_HANDLE, vk.sampler}},
                     {"aoTexture", ShaderInput::Image{aoImage ? aoImage->view : VK_NULL_HANDLE, vk.sampler}},

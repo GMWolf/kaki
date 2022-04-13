@@ -10,13 +10,16 @@ layout(set = 2, binding = 3) uniform sampler2D aoTexture;
 layout(set = 2, binding = 4) uniform sampler2D emissiveTexture;
 
 layout(set = 2, binding = 5, std430) uniform MaterialBlock_inline {
+    bool useAlbedoTexture;
     bool useNormalMap;
     bool useMetallicRoughnessTexture;
     bool useAoTexture;
     bool useEmissiveTexture;
+    bool pad0, pad1, pad2;
 
     vec3 emissivity;
     float metallicity;
+    vec3 albedo;
     float roughness;
 } material;
 

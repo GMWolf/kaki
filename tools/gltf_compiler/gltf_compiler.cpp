@@ -268,34 +268,39 @@ void writeMaterials(kaki::Package& package, std::span<cgltf_material> materials,
             auto& data = table.components[1].data.emplace_back();
             data.offset = static_cast<uint64_t>(outData.tellp());
 
-            auto albedoImage = material.pbr_metallic_roughness.base_color_texture.texture->image;
+            auto albedoImage = material.pbr_metallic_roughness.base_color_texture.texture ? material.pbr_metallic_roughness.base_color_texture.texture->image : nullptr;
             auto normalImage = material.normal_texture.texture ? material.normal_texture.texture->image : nullptr;
             auto mrImage = material.pbr_metallic_roughness.metallic_roughness_texture.texture ? material.pbr_metallic_roughness.metallic_roughness_texture.texture->image : nullptr;
             auto aoImage = material.occlusion_texture.texture ? material.occlusion_texture.texture->image : nullptr;
             auto emissiveImage = material.emissive_texture.texture ? material.emissive_texture.texture->image : nullptr;
 
-            uint64_t albedoEntity = firstImage + std::distance(cgltfData->images, albedoImage);
+            uint64_t albedoEntity = albedoImage ? firstImage + std::distance(cgltfData->images, albedoImage) : 0;
             uint64_t normalEntity = normalImage ? firstImage + std::distance(cgltfData->images, normalImage) : 0;
             uint64_t mrEntity = mrImage ? firstImage + std::distance(cgltfData->images, mrImage) : 0;
             uint64_t aoEntity = aoImage ? firstImage + std::distance(cgltfData->images, aoImage) : 0;
             uint64_t emissiveEntity = emissiveImage ? firstImage + std::distance(cgltfData->images, emissiveImage) : 0;
 
             struct {
+                uint useAlbedoTexture;
                 uint useNormalMap;
                 uint useMetallicRoughnessTexture;
                 uint useAoTexture;
                 uint useEmissiveTexture;
+                uint pad[3];
 
                 glm::vec3 emissivity;
                 float metallicity;
+                glm::vec3 albedo;
                 float roughness;
             } materialBuffer {
+                .useAlbedoTexture = albedoImage ? 1u : 0u,
                 .useNormalMap = normalImage ? 1u : 0u,
                 .useMetallicRoughnessTexture = mrImage ? 1u : 0u,
                 .useAoTexture = aoImage ? 1u : 0u,
                 .useEmissiveTexture = emissiveImage ? 1u : 0u,
                 .emissivity = glm::vec3(material.emissive_factor[0], material.emissive_factor[1], material.emissive_factor[2]),
                 .metallicity = material.pbr_metallic_roughness.metallic_factor,
+                .albedo = glm::vec3(material.pbr_metallic_roughness.base_color_factor[0], material.pbr_metallic_roughness.base_color_factor[1], material.pbr_metallic_roughness.base_color_factor[2]),
                 .roughness = material.pbr_metallic_roughness.roughness_factor,
             };
 
@@ -331,11 +336,6 @@ kaki::Package::Data writeMeshFilter(cgltf_mesh* mesh, cgltf_primitive& primitive
 
     md.offset = outData.tellp();
     uint64_t meshEntity = firstMesh + std::distance(cgltfData->meshes, mesh);
-    auto albedoImage = primitive.material->pbr_metallic_roughness.base_color_texture.texture->image;
-    auto normalImage = primitive.material->normal_texture.texture ? primitive.material->normal_texture.texture->image : nullptr;
-    auto mrImage = primitive.material->pbr_metallic_roughness.metallic_roughness_texture.texture ? primitive.material->pbr_metallic_roughness.metallic_roughness_texture.texture->image : nullptr;
-    auto aoImage = primitive.material->occlusion_texture.texture ? primitive.material->occlusion_texture.texture->image : nullptr;
-    auto emissiveImage = primitive.material->emissive_texture.texture ? primitive.material->emissive_texture.texture->image : nullptr;
 
     uint32_t primitiveIndex = std::distance(mesh->primitives, &primitive);
     uint64_t materialEntity = firstMaterial + std::distance(cgltfData->materials, primitive.material);

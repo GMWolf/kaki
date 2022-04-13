@@ -130,7 +130,7 @@ namespace kaki {
 
                             DescSetWriteCtx descCtx;
                             descCtx.add(set, *dDesc, {
-                                    {"albedoTexture", ShaderInput::Image{albedoImage->view, vk.sampler}},
+                                    {"albedoTexture", ShaderInput::Image{albedoImage ? albedoImage->view : VK_NULL_HANDLE, vk.sampler}},
                             });
                             descCtx.submit(vk);
 

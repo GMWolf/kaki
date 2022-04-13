@@ -16,6 +16,22 @@ struct Rotate{};
 struct Foo{};
 struct Shoot{};
 
+void runFrame(kaki::Scheduler* sc, kaki::JobCtx ctx, flecs::entity window, double& lastFrameTime, flecs::world& world) {
+    if (!window.get<kaki::Window>()->shouldClose()) {
+        double currentFrameTime = kaki::getTime();
+        double deltaTime = currentFrameTime - lastFrameTime;
+        lastFrameTime = currentFrameTime;
+        world.progress(static_cast<float>(deltaTime));
+        kaki::pollEvents();
+
+        sc->scheduleJob([sc, window, &lastFrameTime, &world](kaki::JobCtx ctx) {
+            runFrame(sc, ctx, window, lastFrameTime, world);
+        });
+    } else {
+        sc->shutdownNow();
+    }
+};
+
 int main() {
 
     kaki::Scheduler sc;
@@ -43,11 +59,7 @@ int main() {
         ctx.wait(jobAtomic, 3);
 
         printf("\n");
-
-        sc.shutdownNow();
     });
-
-    sc.run();
 
     flecs::world world;
 
@@ -216,15 +228,11 @@ int main() {
 
     double lastFrameTime = kaki::getTime();
 
-    while(!window.get<kaki::Window>()->shouldClose()) {
-        double currentFrameTime = kaki::getTime();
-        double deltaTime = currentFrameTime - lastFrameTime;
-        lastFrameTime = currentFrameTime;
+    sc.scheduleJob([&](kaki::JobCtx ctx) {
+        runFrame(&sc, ctx, window, lastFrameTime, world);
+    });
 
-        world.progress(static_cast<float>(deltaTime));
-
-        kaki::pollEvents();
-    }
+    sc.run();
 
     return 0;
 }

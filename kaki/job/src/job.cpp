@@ -36,8 +36,6 @@ namespace kaki {
         boost::context::fiber nextFiber();
     };
 
-
-
     void Scheduler::scheduleJob(JobFn &&job) {
         std::unique_lock lock(impl->jobQueueMutex);
         impl->jobQueue.emplace(std::forward<JobFn>(job));

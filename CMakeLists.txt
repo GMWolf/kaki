@@ -89,6 +89,8 @@ set(BUILD_EXTRAS OFF)
 set(BUILD_UNIT_TESTS OFF)
 add_subdirectory(external/bullet3)
 
+add_subdirectory(external/context)
+
 add_subdirectory(kaki)
 add_subdirectory(tools)
 

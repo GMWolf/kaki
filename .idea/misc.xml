@@ -5,12 +5,15 @@
     <sourceRoots>
       <file path="$PROJECT_DIR$/kaki/asset/include" />
       <file path="$PROJECT_DIR$/kaki/asset/src" />
+      <file path="$PROJECT_DIR$/kaki/common/include" />
       <file path="$PROJECT_DIR$/kaki/core/include" />
       <file path="$PROJECT_DIR$/kaki/core/src" />
       <file path="$PROJECT_DIR$/kaki/gfx/fbs" />
       <file path="$PROJECT_DIR$/kaki/gfx/include" />
       <file path="$PROJECT_DIR$/kaki/gfx/include/kaki" />
       <file path="$PROJECT_DIR$/kaki/gfx/src" />
+      <file path="$PROJECT_DIR$/kaki/job/include" />
+      <file path="$PROJECT_DIR$/kaki/job/src" />
       <file path="$PROJECT_DIR$/kaki/physics/include" />
       <file path="$PROJECT_DIR$/kaki/physics/src" />
     </sourceRoots>
@@ -20,9 +23,11 @@
       <file path="$PROJECT_DIR$/external/SPIRV-Reflect" />
       <file path="$PROJECT_DIR$/external/SPIRV-Tools" />
       <file path="$PROJECT_DIR$/external/VulkanMemoryAllocator" />
+      <file path="$PROJECT_DIR$/external/boost" />
       <file path="$PROJECT_DIR$/external/bullet3" />
       <file path="$PROJECT_DIR$/external/cereal" />
       <file path="$PROJECT_DIR$/external/cgltf" />
+      <file path="$PROJECT_DIR$/external/context" />
       <file path="$PROJECT_DIR$/external/flatbuffers" />
       <file path="$PROJECT_DIR$/external/flecs" />
       <file path="$PROJECT_DIR$/external/glfw" />

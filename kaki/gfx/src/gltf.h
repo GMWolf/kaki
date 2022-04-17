@@ -39,5 +39,5 @@ namespace kaki {
         archive(mesh.name, mesh.primitives);
     }
 
-    void loadGltfs(flecs::iter iter, AssetData* data, void* p_gltf);
+    void loadGltfs(JobCtx ctx, flecs::world& world, size_t count, AssetData* data, void* p_gltf);
 }

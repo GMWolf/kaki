@@ -43,14 +43,14 @@ namespace kaki {
     }
 
 
-    void loadGltfs(flecs::iter iter, AssetData* data, void* p_gltf) {
+    void loadGltfs(JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* p_gltf) {
 
-        VkGlobals& vk = *iter.world().get_mut<VkGlobals>();
+        VkGlobals& vk = *world.get_mut<VkGlobals>();
 
         GeometryBuffers& geomBuffer = vk.geometry;
 
         Gltf* gltfs = static_cast<Gltf*>(p_gltf);
-        for(auto i : iter) {
+        for(size_t i = 0; i < assetCount; i++) {
             membuf buf(data[i].data);
             std::istream bufStream(&buf);
             cereal::BinaryInputArchive archive(bufStream);

@@ -11,6 +11,7 @@
 #include "package.h"
 #include <membuf.h>
 #include <cereal/archives/binary.hpp>
+#include <kaki/job.h>
 
 namespace kaki {
 
@@ -19,7 +20,7 @@ namespace kaki {
         std::span<flecs::entity_t> entityRefs;
     };
 
-    typedef void (*asset_handle_fn)(flecs::iter, AssetData*, void*);
+    typedef void (*asset_handle_fn)(JobCtx, flecs::world& world, size_t assetCount, AssetData*, void*);
     struct DependsOn {};
     struct ComponentAssetHandler {
         asset_handle_fn load {};
@@ -28,9 +29,9 @@ namespace kaki {
     template<class T>
     ComponentAssetHandler serializeComponentAssetHandler() {
         return ComponentAssetHandler {
-            .load = [](flecs::iter iter, AssetData* data, void* pc) {
+            .load = [](kaki::JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* pc) {
                 auto* c = static_cast<T*>(pc);
-                for(auto i : iter) {
+                for(size_t i = 0; i < assetCount; i++) {
                     membuf buf(data[i].data);
                     std::istream bufStream(&buf);
                     cereal::BinaryInputArchive archive(bufStream);
@@ -40,7 +41,5 @@ namespace kaki {
         };
     };
 
-    flecs::entity loadPackage(flecs::world& world, const char* path);
-
-    flecs::entity instanciatePackage(flecs::world& world, const Package& package, std::span<uint8_t> data);
+    void loadPackage(flecs::world& world, const char* path, JobCtx ctx);
 }

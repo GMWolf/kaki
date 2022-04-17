@@ -21,6 +21,6 @@ namespace kaki {
     };
 
 
-    void loadMaterials(flecs::iter iter, AssetData* data, void* pmaterial);
+    void loadMaterials(JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* pmaterial);
 
 }

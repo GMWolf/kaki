@@ -6,18 +6,18 @@
 #include <ktxvulkan.h>
 #include "vk.h"
 
-void kaki::loadImages(flecs::iter iter, AssetData* data, void* pimages) {
+void kaki::loadImages(JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* pimages) {
 
 
     auto* images = static_cast<Image*>(pimages);
 
 
-    const VkGlobals* vk = iter.world().get<VkGlobals>();
+    const VkGlobals* vk = world.get<VkGlobals>();
 
     ktxVulkanDeviceInfo kvdi;
     ktxVulkanDeviceInfo_Construct(&kvdi, vk->device.physical_device, vk->device, vk->queue, vk->cmdPool, nullptr);
 
-    for(auto i : iter) {
+    for(size_t i = 0; i < assetCount; i++) {
         ktxTexture2* kTexture;
         KTX_error_code result = ktxTexture2_CreateFromMemory(data[i].data.data(), data[i].data.size(), KTX_TEXTURE_CREATE_NO_FLAGS, &kTexture);
         assert (result == KTX_SUCCESS);

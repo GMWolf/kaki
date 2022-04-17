@@ -85,7 +85,9 @@ static flecs::id_t resolveComponentType(flecs::world& world, std::span<flecs::en
 }
 
 
-void callAssetHandlers(flecs::entity root) {
+static void callAssetHandlers(flecs::entity root, kaki::JobCtx& ctx) {
+
+    std::atomic<uint64_t> jobCounter = 0;
 
     auto world = root.world();
 
@@ -114,19 +116,23 @@ void callAssetHandlers(flecs::entity root) {
         for(auto i : iter) {
             auto& handler = handlers[i];
 
-            iter.world().defer_begin();
-            assetFilter.iter([handler](flecs::iter iter){
+            assetFilter.iter([&jobCounter, &ctx, &world, handler](flecs::iter iter) {
+                jobCounter++;
                 kaki::AssetData* data = &iter.term<kaki::AssetData>(2)[0];
                 void* assets = iter.term(1)[0];
-                handler.load(iter, data, assets);
+                ctx.schedule([&jobCounter, &world, fn = handler.load, count = iter.count(), data, assets](kaki::JobCtx ctx){
+                    fn(ctx, world, count, data, assets);
+                    jobCounter--;
+                });
+                //handler.load(ctx, iter, data, assets);
             });
-            iter.world().defer_end();
         }
-
     });
+
+    ctx.wait(jobCounter, 0);
 }
 
-flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package &package, std::span<uint8_t> dataFile) {
+static flecs::entity instanciatePackage(flecs::world &world, const kaki::Package &package, std::span<uint8_t> dataFile, kaki::JobCtx& ctx) {
 
     std::vector<ecs_entity_t> entities;
     std::vector<flecs::Identifier> entityNames;
@@ -141,7 +147,6 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
         auto entitiesTmp = ecs_bulk_init(world.c_ptr(), &entitiesBulkDesc);
         entities.insert(entities.end(), entitiesTmp, entitiesTmp + entityCount);
     }
-
 
     entityNames.resize(package.entities.size());
     for(size_t i = 0; i < package.entities.size(); i++) {
@@ -176,8 +181,8 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
 
             if (!component.data.empty()) {
                 assert(component.data.size() == table.entityCount);
-                bulkDesc.ids[componentId] = world.pair(world.component<AssetData>(), e);
-                auto* assetData = static_cast<AssetData*>(malloc(sizeof(AssetData) * table.entityCount));
+                bulkDesc.ids[componentId] = world.pair(world.component<kaki::AssetData>(), e);
+                auto* assetData = static_cast<kaki::AssetData*>(malloc(sizeof(kaki::AssetData) * table.entityCount));
                 for(int i = 0; i < table.entityCount; i++) {
                     auto& cdata = component.data[i];
                     assetData[i].data = dataFile.subspan(cdata.offset, cdata.size);
@@ -212,16 +217,17 @@ flecs::entity kaki::instanciatePackage(flecs::world &world, const kaki::Package 
 
     // Call asset handles
     if (!entities.empty()) {
-        callAssetHandlers(flecs::entity(world, entities[0]));
+        callAssetHandlers(flecs::entity(world, entities[0]), ctx);
     }
 
     // Remove AssetData components
-    world.remove_all<AssetData>();
+    world.remove_all<kaki::AssetData>();
+
 
     return entities.empty() ? flecs::entity{} : flecs::entity(world, entities[0]);
 }
 
-flecs::entity kaki::loadPackage(flecs::world &world, const char *path) {
+void kaki::loadPackage(flecs::world &world, const char *path, JobCtx ctx) {
     std::ifstream input(path);
     cereal::JSONInputArchive archive(input);
 
@@ -229,7 +235,7 @@ flecs::entity kaki::loadPackage(flecs::world &world, const char *path) {
     archive(package);
 
     auto data = mapFile(package.dataFile.c_str());
-    auto pe = instanciatePackage(world, package, data);
-    unmapFile(data);
-    return pe;
+
+    auto pe = instanciatePackage(world, package, data, ctx);
+    //unmapFile(data);
 }

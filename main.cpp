@@ -17,49 +17,34 @@ struct Foo{};
 struct Shoot{};
 
 void runFrame(kaki::Scheduler* sc, kaki::JobCtx ctx, flecs::entity window, double& lastFrameTime, flecs::world& world) {
-    if (!window.get<kaki::Window>()->shouldClose()) {
-        double currentFrameTime = kaki::getTime();
-        double deltaTime = currentFrameTime - lastFrameTime;
-        lastFrameTime = currentFrameTime;
-        world.progress(static_cast<float>(deltaTime));
-        kaki::pollEvents();
 
+    double currentFrameTime = kaki::getTime();
+    double deltaTime = currentFrameTime - lastFrameTime;
+    lastFrameTime = currentFrameTime;
+
+    std::atomic<uint64_t> a = 0;
+
+    sc->scheduleJob([&](kaki::JobCtx ctx) {
+        world.progress(static_cast<float>(deltaTime));
+        a = 1;
+    });
+
+    ctx.wait(a, 1);
+
+    kaki::pollEvents();
+    if (window.get<kaki::Window>()->shouldClose()) {
+        sc->shutdownNow();
+    } else {
         sc->scheduleJob([sc, window, &lastFrameTime, &world](kaki::JobCtx ctx) {
             runFrame(sc, ctx, window, lastFrameTime, world);
         });
-    } else {
-        sc->shutdownNow();
     }
 };
 
 int main() {
 
+
     kaki::Scheduler sc;
-    sc.scheduleJob([&](kaki::JobCtx ctx){
-        printf("Hello");
-
-        std::atomic<uint64_t> jobAtomic = 0;
-
-        sc.scheduleJob([&jobAtomic](kaki::JobCtx ctx) {
-            ctx.wait(jobAtomic, 2);
-            printf("! ");
-            jobAtomic++;
-        });
-
-        sc.scheduleJob([&jobAtomic](kaki::JobCtx ctx) {
-            printf(", ");
-            jobAtomic++;
-        });
-
-        ctx.wait( jobAtomic, 1 );
-
-        printf("World");
-        jobAtomic++;
-
-        ctx.wait(jobAtomic, 3);
-
-        printf("\n");
-    });
 
     flecs::world world;
 
@@ -77,7 +62,34 @@ int main() {
 
     kaki::initPhysics(world);
 
-    auto package = kaki::loadPackage(world, "testpackage.json").add<Foo>();
+    std::atomic<uint64_t> loadingDone = 0;
+
+    sc.scheduleJob([&world, &loadingDone](kaki::JobCtx ctx) {
+        kaki::loadPackage(world, "testpackage.json", ctx);
+        loadingDone = 1;
+    });
+
+    sc.scheduleJob([&world, &loadingDone](kaki::JobCtx ctx) {
+
+        ctx.wait(loadingDone, 1);
+
+        auto package = world.lookup("testpackage");
+
+        world.entity("floor").is_a(package.lookup("objects::Scene::Plane")).set(kaki::RigidBody{
+                .mass = 0.0f,
+                .extent = glm::vec3(40, 1, 40),
+        }).get_mut<kaki::Transform>()->position.z = -0.5f;
+
+        world.entity("Camera").set(kaki::Transform{
+                .position = glm::vec3(-5, 1.7, 0),
+                .scale = 1,
+                .orientation = glm::quatLookAt(glm::vec3(1, 0, 0), glm::vec3(0,1,0)),
+        }).set(kaki::Camera {
+                .fov = glm::radians(90.0f),
+        }).add<Control>().add<Shoot>();
+    });
+
+    //auto package = kaki::loadPackage(world, "testpackage.json").add<Foo>();
 
     //auto scene = world.entity("scene").is_a(package.lookup("SciFiHelmet::Scene")).add<Foo>();
     //scene.lookup("Camera").add<Control>();
@@ -98,6 +110,7 @@ int main() {
     //auto sponza = world.entity("sponza").is_a(package.lookup("Sponza::Sponza")).add<Foo>();
     //auto temple = world.entity("temple").is_a(package.lookup("SunTemple::Scene")).add<Foo>();
 
+    /*
     world.entity("Camera").set(kaki::Transform{
         .position = glm::vec3(-5, 1.7, 0),
         .scale = 1,
@@ -154,7 +167,7 @@ int main() {
         }
     }
 
-
+ */
     //world.entity().is_a(cubePrefab).set<kaki::Transform>(kaki::Transform{
     //    .position = glm::vec3(0, 5, 0),
     //    .scale = 1,
@@ -198,27 +211,27 @@ int main() {
         transform.position += transform.orientation * d;
     });
 
-    world.system<kaki::Transform>().term<Shoot>().kind(flecs::OnUpdate).each([&](flecs::entity e, kaki::Transform& t) {
-        auto* input = window.get<kaki::Input>();
-
-        if (input->keyPressed(kaki::KEYS::SPACE)) {
-            auto b = e.world().entity().is_a(package.lookup("objects::Scene::Ball")).set(kaki::RigidBody{
-                    .mass = 3.0f,
-                    .sphere = true,
-                    .extent = glm::vec3(0.3f / 2.0f),
-            }).set(kaki::Transform{
-                .position = t.position + glm::vec3(0, -0.5, 0),
-                .scale = 1,
-                .orientation = t.orientation,
-            });
-
-            e.world().entity().set(kaki::Impulse{
-                .target = b,
-                .impulse = t.orientation * glm::vec3(0,0.1,1) * 50.0f,
-            });
-        }
-
-    });
+    //world.system<kaki::Transform>().term<Shoot>().kind(flecs::OnUpdate).each([&](flecs::entity e, kaki::Transform& t) {
+    //    auto* input = window.get<kaki::Input>();
+//
+    //    if (input->keyPressed(kaki::KEYS::SPACE)) {
+    //        auto b = e.world().entity().is_a(package.lookup("objects::Scene::Ball")).set(kaki::RigidBody{
+    //                .mass = 3.0f,
+    //                .sphere = true,
+    //                .extent = glm::vec3(0.3f / 2.0f),
+    //        }).set(kaki::Transform{
+    //            .position = t.position + glm::vec3(0, -0.5, 0),
+    //            .scale = 1,
+    //            .orientation = t.orientation,
+    //        });
+//
+    //        e.world().entity().set(kaki::Impulse{
+    //            .target = b,
+    //            .impulse = t.orientation * glm::vec3(0,0.1,1) * 50.0f,
+    //        });
+    //    }
+//
+    //});
 
     world.system<kaki::Transform>("Rotate system").term<Rotate>().each([&](flecs::entity entity, kaki::Transform& transform) {
         transform.orientation = glm::quat(glm::vec3(0, entity.delta_time() * 0.5, 0)) * transform.orientation;

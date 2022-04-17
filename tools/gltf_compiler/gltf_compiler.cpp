@@ -313,7 +313,6 @@ void writeMaterials(kaki::Package& package, std::span<cgltf_material> materials,
     }
 }
 
-
 kaki::Package::Data writeTransform(const cgltf_node* node, std::ostream& outData) {
 
     cereal::BinaryOutputArchive dataArchive(outData);
@@ -327,7 +326,6 @@ kaki::Package::Data writeTransform(const cgltf_node* node, std::ostream& outData
 
     return data;
 }
-
 
 kaki::Package::Data writeMeshFilter(cgltf_mesh* mesh, cgltf_primitive& primitive, uint64_t firstMesh, uint64_t firstMaterial, cgltf_data* cgltfData, std::ostream& outData)
 {

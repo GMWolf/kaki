@@ -8,11 +8,9 @@
 
 namespace kaki {
 
-    void loadMaterials(flecs::iter iter, AssetData *data, void *pmaterial) {
-        auto world = iter.world();
-
+    void loadMaterials(JobCtx ctx, flecs::world& world, size_t assetCount, AssetData *data, void *pmaterial) {
         auto materials = static_cast<Material*>(pmaterial);
-        auto& vk = *iter.world().get_mut<VkGlobals>();
+        auto& vk = *world.get_mut<VkGlobals>();
 
         auto pipeline = world.lookup("testpackage::shade").get<kaki::Pipeline>();
 
@@ -22,16 +20,16 @@ namespace kaki {
             return;
         }
 
-        std::vector<VkDescriptorSet> descSets(iter.count());
+        std::vector<VkDescriptorSet> descSets(assetCount);
 
         {
-            std::vector<VkDescriptorSetLayout> descSetLayouts(iter.count(), descSet->layout);
+            std::vector<VkDescriptorSetLayout> descSetLayouts(assetCount, descSet->layout);
 
             VkDescriptorSetAllocateInfo descAlloc{
                     .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
                     .pNext = nullptr,
                     .descriptorPool = vk.staticDescPool,
-                    .descriptorSetCount = static_cast<uint32_t>(iter.count()),
+                    .descriptorSetCount = static_cast<uint32_t>(assetCount),
                     .pSetLayouts = descSetLayouts.data(),
             };
 
@@ -40,9 +38,9 @@ namespace kaki {
 
 
         DescSetWriteCtx descCtx;
-        descCtx.reserve( iter.count() * descSet->bindings.size() );
+        descCtx.reserve( assetCount * descSet->bindings.size() );
 
-        for(auto i : iter) {
+        for(size_t i = 0; i < assetCount; i++) {
             membuf buf(data[i].data);
 
             std::istream bufStream(&buf);

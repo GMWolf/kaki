@@ -9,13 +9,16 @@
 
 namespace kaki {
 
+    struct JobCtx;
+    using JobFn = std::function<void(JobCtx)>;
+
     struct JobCtxI;
     struct JobCtx {
         JobCtxI* handle;
         void wait(std::atomic<uint64_t>& atomic, uint64_t value);
+        void schedule(JobFn&& function);
     };
 
-    using JobFn = std::function<void(JobCtx)>;
 
     struct Scheduler {
         struct Impl;

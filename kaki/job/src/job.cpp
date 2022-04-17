@@ -34,13 +34,18 @@ namespace kaki {
 
         JobFn popNextJob();
         boost::context::fiber nextFiber();
+        void scheduleJob(JobFn&& fn);
     };
 
-    void Scheduler::scheduleJob(JobFn &&job) {
-        std::unique_lock lock(impl->jobQueueMutex);
-        impl->jobQueue.emplace(std::forward<JobFn>(job));
+    void Scheduler::Impl::scheduleJob(JobFn &&fn) {
+        std::unique_lock lock(jobQueueMutex);
+        jobQueue.emplace(std::forward<JobFn>(fn));
         lock.unlock();
-        impl->jobQueueCondVar.notify_one();
+        jobQueueCondVar.notify_one();
+    }
+
+    void Scheduler::scheduleJob(JobFn &&job) {
+        impl->scheduleJob(std::forward<JobFn>(job));
     }
 
     Scheduler::Scheduler() {
@@ -54,6 +59,7 @@ namespace kaki {
     struct JobCtxI
     {
         boost::context::fiber fiber;
+        Scheduler::Impl* scheduler;
     };
 
     JobFn Scheduler::Impl::popNextJob() {
@@ -84,9 +90,10 @@ namespace kaki {
 
         // no ready waiting jobs, get next job in queue
         JobFn job = popNextJob();
-        boost::context::fiber fiber([job = std::move(job)](boost::context::fiber ctx) {
+        boost::context::fiber fiber([job = std::move(job), this](boost::context::fiber ctx) {
             JobCtxI ctxi {
                     .fiber = std::move(ctx),
+                    .scheduler = this,
             };
             job(JobCtx {
                     .handle = &ctxi,
@@ -124,5 +131,9 @@ namespace kaki {
         s_tl_waitOnPtr = &atomic;
         s_tl_waitOnValue = value;
         handle->fiber = std::move(handle->fiber).resume();
+    }
+
+    void JobCtx::schedule(JobFn &&function) {
+        handle->scheduler->scheduleJob(std::forward<JobFn>(function));
     }
 }

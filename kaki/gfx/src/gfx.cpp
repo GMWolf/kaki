@@ -560,7 +560,7 @@ static void UpdateMeshInstance(flecs::iter iter, kaki::MeshFilter* meshFilters) 
 
 
 namespace kaki {
-    Pipeline createPipeline(const VkGlobals &vk, flecs::entity scope, std::span<uint8_t> pipelineData);
+    Pipeline createPipeline(const VkGlobals &vk, std::span<uint8_t> pipelineData);
 }
 kaki::gfx::gfx(flecs::world &world) {
     auto This = world.module<gfx>();
@@ -578,14 +578,14 @@ kaki::gfx::gfx(flecs::world &world) {
 
     world.component<kaki::DependsOn>().add(flecs::Acyclic);
 
-    auto gltfLoader = world.entity("GltfLoader").set<ComponentAssetHandler, Gltf>({
+    auto gltfLoader = world.entity("GltfLoader").set<ComponentAssetHandler, Gltf>(ComponentAssetHandler{
         .load = loadGltfs,
     });
 
     world.entity("MeshLoader").set<ComponentAssetHandler, Mesh>({
-        .load = [](flecs::iter iter, AssetData* data, void* pmeshes) {
+        .load = [](JobCtx ctx, flecs::world& world, size_t count, AssetData* data, void* pmeshes) {
             auto* meshes = static_cast<Mesh*>(pmeshes);
-            for(auto i : iter) {
+            for(size_t i = 0; i < count; i++) {
                 membuf buf(data[i].data);
                 std::istream bufStream(&buf);
                 cereal::BinaryInputArchive archive(bufStream);
@@ -599,25 +599,22 @@ kaki::gfx::gfx(flecs::world &world) {
     });
 
     auto pipelineLoader = world.entity("PipelineLoader").set<ComponentAssetHandler, Pipeline>({
-        .load = [](flecs::iter iter, AssetData* data, void* ppipelines) {
+        .load = [](JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* ppipelines) {
 
-            const VkGlobals& vk = *iter.world().get<VkGlobals>();
-
+            const VkGlobals& vk = *world.get<VkGlobals>();
             auto pipelines = static_cast<Pipeline*>(ppipelines);
 
-            for(auto i : iter) {
-                auto parent = iter.entity(i).get_object(flecs::ChildOf);
-                pipelines[i] = kaki::createPipeline(vk, parent, data[i].data);
+            for(size_t i = 0 ; i < assetCount; i++) {
+                pipelines[i] = kaki::createPipeline(vk, data[i].data);
             }
-
         }
     });
 
     world.entity("MeshFilterLoader").set<ComponentAssetHandler, MeshFilter>({
-        .load = [](flecs::iter iter, AssetData* data, void* pfilters) {
+        .load = [](JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* pfilters) {
             auto filters = static_cast<MeshFilter*>(pfilters);
 
-            for(auto i : iter) {
+            for(size_t i = 0 ; i < assetCount; i++) {
                 membuf buf(data[i].data);
                 std::istream bufStream(&buf);
                 cereal::BinaryInputArchive archive(bufStream);
@@ -639,10 +636,10 @@ kaki::gfx::gfx(flecs::world &world) {
     }).add<DependsOn>(imageLoader).add<DependsOn>(pipelineLoader);
 
     world.entity("CameraLoader").set<ComponentAssetHandler, Camera>({
-        .load = [](flecs::iter iter, AssetData* data, void* pfilters) {
+        .load = [](JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* pfilters) {
             auto cameras = static_cast<Camera*>(pfilters);
 
-            for(auto i : iter) {
+            for(size_t i = 0; i < assetCount; i++) {
                 membuf buf(data[i].data);
                 std::istream bufStream(&buf);
                 cereal::BinaryInputArchive archive(bufStream);

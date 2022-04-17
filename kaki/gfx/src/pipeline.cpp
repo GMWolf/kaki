@@ -68,7 +68,7 @@ namespace kaki {
         return shader_module;
     }
 
-    Pipeline createPipeline(const VkGlobals &vk, flecs::entity scope, std::span<uint8_t> pipelineData) {
+    Pipeline createPipeline(const VkGlobals &vk, std::span<uint8_t> pipelineData) {
 
         Pipeline pipeline;
 

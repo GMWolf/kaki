@@ -223,7 +223,6 @@ static flecs::entity instanciatePackage(flecs::world &world, const kaki::Package
     // Remove AssetData components
     world.remove_all<kaki::AssetData>();
 
-
     return entities.empty() ? flecs::entity{} : flecs::entity(world, entities[0]);
 }
 

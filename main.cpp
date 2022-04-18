@@ -16,11 +16,20 @@ struct Rotate{};
 struct Foo{};
 struct Shoot{};
 
+std::atomic<bool> stageExists = false;
+flecs::world s_stage;
+
 void runFrame(kaki::Scheduler* sc, kaki::JobCtx ctx, flecs::entity window, double& lastFrameTime, flecs::world& world) {
 
     double currentFrameTime = kaki::getTime();
     double deltaTime = currentFrameTime - lastFrameTime;
     lastFrameTime = currentFrameTime;
+
+    if (stageExists)
+    {
+        //s_stage.merge();
+        //stageExists = false;
+    }
 
     std::atomic<uint64_t> a = 0;
 
@@ -43,10 +52,10 @@ void runFrame(kaki::Scheduler* sc, kaki::JobCtx ctx, flecs::entity window, doubl
 
 int main() {
 
-
     kaki::Scheduler sc;
 
     flecs::world world;
+    world.set_automerge(false);
 
     world.import<kaki::core>();
     world.import<kaki::windowing>();
@@ -64,21 +73,25 @@ int main() {
 
     std::atomic<uint64_t> loadingDone = 0;
 
-    sc.scheduleJob([&world, &loadingDone](kaki::JobCtx ctx) {
+    s_stage = world.async_stage();
+
+    sc.scheduleJob([&world = s_stage, &loadingDone](kaki::JobCtx ctx) {
         kaki::loadPackage(world, "testpackage.json", ctx);
         loadingDone = 1;
     });
 
-    sc.scheduleJob([&world, &loadingDone](kaki::JobCtx ctx) {
+    sc.scheduleJob([&world = s_stage, &loadingDone](kaki::JobCtx ctx) {
 
         ctx.wait(loadingDone, 1);
 
         auto package = world.lookup("testpackage");
 
-        world.entity("floor").is_a(package.lookup("objects::Scene::Plane")).set(kaki::RigidBody{
-                .mass = 0.0f,
-                .extent = glm::vec3(40, 1, 40),
-        }).get_mut<kaki::Transform>()->position.z = -0.5f;
+        //world.entity("floor").is_a(package.lookup("objects::Scene::Plane")).set(kaki::RigidBody{
+        //        .mass = 0.0f,
+        //        .extent = glm::vec3(40, 1, 40),
+        //}).get_mut<kaki::Transform>()->position.z = -0.5f;
+
+        auto sponza = world.entity("sponza").is_a(package.lookup("Sponza::Sponza")).add<Foo>();
 
         world.entity("Camera").set(kaki::Transform{
                 .position = glm::vec3(-5, 1.7, 0),
@@ -87,6 +100,8 @@ int main() {
         }).set(kaki::Camera {
                 .fov = glm::radians(90.0f),
         }).add<Control>().add<Shoot>();
+
+        stageExists = true;
     });
 
     //auto package = kaki::loadPackage(world, "testpackage.json").add<Foo>();
@@ -174,6 +189,7 @@ int main() {
     //    .orientation = glm::quat(glm::vec3(0,0,0)),
     //});
 
+    world.get_world()
 
     world.system<kaki::Transform>("Control system").term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
         auto* input = window.get<kaki::Input>();
@@ -240,6 +256,7 @@ int main() {
     world.set(flecs::rest::Rest{});
 
     double lastFrameTime = kaki::getTime();
+
 
     sc.scheduleJob([&](kaki::JobCtx ctx) {
         runFrame(&sc, ctx, window, lastFrameTime, world);

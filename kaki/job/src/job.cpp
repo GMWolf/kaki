@@ -14,6 +14,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <atomic>
+#include <thread>
 
 namespace kaki {
 
@@ -23,17 +24,27 @@ namespace kaki {
         uint64_t value;
     };
 
+    struct JobWorker {
+        std::vector<JobWait> waitJobs;
+        Scheduler::Impl* sc;
+
+        boost::context::fiber nextFiber();
+
+        void run();
+    };
+
+
     struct Scheduler::Impl {
+        std::vector<JobWorker> workers;
+        std::vector<std::thread> threads;
+
         std::mutex jobQueueMutex;
         std::condition_variable jobQueueCondVar;
         std::queue<JobFn> jobQueue;
 
-        std::vector<JobWait> waitJobs;
-
         std::atomic<bool> shutdown;
 
         JobFn popNextJob();
-        boost::context::fiber nextFiber();
         void scheduleJob(JobFn&& fn);
     };
 
@@ -78,7 +89,10 @@ namespace kaki {
     static thread_local std::atomic<uint64_t>* s_tl_waitOnPtr = nullptr;
     static thread_local uint64_t s_tl_waitOnValue = 0;
 
-    boost::context::fiber Scheduler::Impl::nextFiber() {
+
+
+    boost::context::fiber JobWorker::nextFiber() {
+
         for(size_t i = 0; i < waitJobs.size(); i++)
         {
             if (waitJobs[i].waitOn->load() == waitJobs[i].value) {
@@ -89,11 +103,11 @@ namespace kaki {
         }
 
         // no ready waiting jobs, get next job in queue
-        JobFn job = popNextJob();
+        JobFn job = sc->popNextJob();
         boost::context::fiber fiber([job = std::move(job), this](boost::context::fiber ctx) {
             JobCtxI ctxi {
                     .fiber = std::move(ctx),
-                    .scheduler = this,
+                    .scheduler = sc,
             };
             job(JobCtx {
                     .handle = &ctxi,
@@ -104,27 +118,31 @@ namespace kaki {
         return fiber;
     }
 
-    void Scheduler::run() {
-        while(!impl->shutdown) {
+    void JobWorker::run() {
+        while(!sc->shutdown) {
 
-            auto fiber = impl->nextFiber();
+            auto fiber = nextFiber();
 
             fiber = std::move(fiber).resume();
 
             if ( s_tl_waitOnPtr )
             {
-                impl->waitJobs.push_back( JobWait{
-                    .fiber = std::move(fiber),
-                    .waitOn = s_tl_waitOnPtr,
-                    .value = s_tl_waitOnValue,
+                waitJobs.push_back( JobWait{
+                        .fiber = std::move(fiber),
+                        .waitOn = s_tl_waitOnPtr,
+                        .value = s_tl_waitOnValue,
                 });
             }
             s_tl_waitOnPtr = nullptr;
         }
-    }
+    };
 
     void Scheduler::shutdownNow() {
         impl->shutdown = true;
+        for(int i = 1; i < impl->threads.size(); i++)
+        {
+            impl->threads[i].join();
+        }
     }
 
     void JobCtx::wait(std::atomic<uint64_t> &atomic, uint64_t value) {
@@ -135,5 +153,18 @@ namespace kaki {
 
     void JobCtx::schedule(JobFn &&function) {
         handle->scheduler->scheduleJob(std::forward<JobFn>(function));
+    }
+
+    void Scheduler::run() {
+
+        size_t numThreads = 2;
+        impl->workers.resize(numThreads);
+        for(int i = 0; i < numThreads; i++) {
+            impl->workers[i].sc = impl;
+            if (i != 0) impl->threads.emplace_back(&JobWorker::run, &impl->workers.back());
+        }
+
+        impl->workers[0].run();
+
     }
 }

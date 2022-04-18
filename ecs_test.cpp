@@ -17,10 +17,10 @@ int main() {
     auto tag = registry.create({});
 
     auto b = registry.create({idA, idInt});
-    registry.get<A>(b, idA)->a = 42;
+    registry.get<A>(b)->a = 42;
 
     auto c = registry.create({idA, idInt, kaki::ecs::relation(tag, b)});
-    registry.get<A>(c, idA)->a = 43;
+    registry.get<A>(c)->a = 43;
 
     for(auto chunk : kaki::ecs::query(registry, kaki::ecs::Query {
         .components = {idA, idInt, kaki::ecs::relation(tag, b)},
@@ -34,11 +34,11 @@ int main() {
     fprintf(stdout, "\n");
 
     for(auto chunk : kaki::ecs::query(registry, kaki::ecs::Query {
-            .components = {0, kaki::ecs::identifierId},
+            .components = {kaki::ecs::identifierId},
     })) {
-        for(auto[c, iden] : kaki::ecs::ChunkView<kaki::ecs::ComponentInfo, kaki::ecs::Identifier>(chunk, 0, kaki::ecs::identifierId))
+        for(auto[iden] : kaki::ecs::ChunkView<kaki::ecs::Identifier>(chunk))
         {
-            printf("%s, %zu\n", iden.name.c_str(), c.size);
+            printf("%s\n", iden.name.c_str());
         }
     };
 

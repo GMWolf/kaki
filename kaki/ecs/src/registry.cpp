@@ -88,6 +88,7 @@ namespace kaki::ecs {
         Type type = inType;
         if(!name.empty()) {
             type.components.push_back(identifierId);
+            std::sort(type.components.begin(), type.components.end());
         }
 
         Archetype &archetype = getArchetype(*this, type);
@@ -95,11 +96,12 @@ namespace kaki::ecs {
 
         id_t entityId = 0;
         id_t generation = 0;
+        size_t row = chunk->size++;
         if (freeIds.empty()) {
             generation = 1;
-            records.push_back(EntityRecord{
+            records.push_back(EntityRecord {
                     .chunk = chunk,
-                    .row = chunk->size,
+                    .row = row,
                     .generation = static_cast<uint32_t>(generation),
             });
             entityId = records.size() - 1;
@@ -108,11 +110,21 @@ namespace kaki::ecs {
             freeIds.pop_back();
 
             records[entityId].chunk = chunk;
-            records[entityId].row = chunk->size;
+            records[entityId].row = row;
             generation = records[entityId].generation;
         }
 
-        chunk->size += 1;
+        // construct components
+        {
+            for( uint i = 0; i < chunk->type.components.size(); i++ )
+            {
+                id_t t = chunk->type.components[i];
+                auto *component = static_cast<ComponentInfo *>(getComponent(*this, idComponent(t), componentId, sizeof(ComponentInfo)));
+                if (component) {
+                    component->constructFn(((std::byte*)chunk->components[i]) + component->size * row, 1);
+                }
+            }
+        }
 
         id_t entity = entityId | (generation << 32ull);
 
@@ -123,6 +135,20 @@ namespace kaki::ecs {
     }
 
     void Registry::destroy(id_t id) {
+
+        auto record = records[id];
+
+        // destruct components
+        {
+            for( id_t t : record.chunk->type.components )
+            {
+                auto *component = static_cast<ComponentInfo *>(getComponent(*this, idComponent(t), componentId, sizeof(ComponentInfo)));
+                if ( component ) {
+                    component->destructFn(&record.chunk->components[record.row], 1);
+                }
+            }
+        }
+
         freeIds.push_back(idEntity(id));
         records[idEntity(id)].chunk = nullptr;
         records[idEntity(id)].row = 0;
@@ -170,12 +196,12 @@ namespace kaki::ecs {
             id = create({componentId, identifierId});
         }
 
-        void *a = getComponent(*this, id, componentId, sizeof(ComponentInfo));
-        new (a) ComponentInfo(component);
+        ComponentInfo* componentInfo = get<ComponentInfo>(id, componentId);
+        *componentInfo = component;
 
         if (!name.empty()) {
-            void *i = getComponent(*this, id, identifierId, sizeof(Identifier));
-            new (i) Identifier{.name = std::string(name)};
+            Identifier *i = get<Identifier>(id, identifierId);
+            i->name = name;
         }
 
         return id;

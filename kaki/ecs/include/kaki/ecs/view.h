@@ -58,12 +58,16 @@ namespace kaki::ecs {
         ChunkIterator<T...> beginIterator;
         ChunkIterator<T...> endIterator;
 
+
         explicit ChunkView(Chunk& chunk, type_identity_unpacker_t<id_t, T>... ids) {
             std::tuple<T*...> ptrs(static_cast<T*>(chunkFindPtr(chunk, ids))...);
             beginIterator.ptr = ptrs;
             beginIterator.idx = 0;
             endIterator.ptr = ptrs;
             endIterator.idx = chunk.size;
+        }
+
+        explicit ChunkView(Chunk& chunk) : ChunkView(chunk, ComponentTrait<T>::id...) {
         }
 
         ChunkIterator<T...> begin() {

@@ -8,6 +8,8 @@
       <file path="$PROJECT_DIR$/kaki/common/include" />
       <file path="$PROJECT_DIR$/kaki/core/include" />
       <file path="$PROJECT_DIR$/kaki/core/src" />
+      <file path="$PROJECT_DIR$/kaki/ecs/include" />
+      <file path="$PROJECT_DIR$/kaki/ecs/src" />
       <file path="$PROJECT_DIR$/kaki/gfx/fbs" />
       <file path="$PROJECT_DIR$/kaki/gfx/include" />
       <file path="$PROJECT_DIR$/kaki/gfx/include/kaki" />

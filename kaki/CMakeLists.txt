@@ -1,5 +1,6 @@
 add_subdirectory(common)
 add_subdirectory(job)
+add_subdirectory(ecs)
 add_subdirectory(core)
 add_subdirectory(asset)
 add_subdirectory(gfx)

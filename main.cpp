@@ -189,7 +189,6 @@ int main() {
     //    .orientation = glm::quat(glm::vec3(0,0,0)),
     //});
 
-    world.get_world()
 
     world.system<kaki::Transform>("Control system").term<Control>().each([&](flecs::entity entity, kaki::Transform& transform) {
         auto* input = window.get<kaki::Input>();

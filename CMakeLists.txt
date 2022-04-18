@@ -127,3 +127,6 @@ make_package(testpackage SOURCES
         plants/plants.gltf.json
         )
 add_dependencies(test testpackage)
+
+add_executable(ecs_test ecs_test.cpp)
+target_link_libraries(ecs_test kaki-ecs)

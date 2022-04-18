@@ -42,13 +42,16 @@ namespace kaki::ecs {
         void* get(id_t entity, id_t component, size_t size);
 
         template<class T>
-        T& get(id_t entity, id_t component) {
-            return *static_cast<T*>(get(entity, component, sizeof(T)));
+        T* get(id_t entity, id_t component = ComponentTrait<T>::id) {
+            return static_cast<T*>(get(entity, component, sizeof(T)));
         }
 
         template<class T>
         id_t registerComponent(const std::string_view name = {}) {
-            return registerComponent(componentInfo<T>(), name);
+            assert(ComponentTrait<T>::id == 0);
+            id_t id = registerComponent(componentInfo<T>(), name);
+            ComponentTrait<T>::id = id;
+            return id;
         }
 
         Registry();

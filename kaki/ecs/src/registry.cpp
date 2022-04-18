@@ -42,6 +42,7 @@ namespace kaki::ecs {
     static void *getComponent(Registry &registry, id_t entity, id_t component, size_t componentSize) {
         id_t entityIndex = idEntity(entity);
         auto record = registry.records[entityIndex];
+
         auto index = typeGetComponentIndex(record.chunk->type, component);
         if (index < 0) {
             return nullptr;
@@ -84,7 +85,6 @@ namespace kaki::ecs {
     }
 
     id_t Registry::create(const Type &inType,  std::string_view name) {
-
         Type type = inType;
         if(!name.empty()) {
             type.components.push_back(identifierId);
@@ -117,7 +117,7 @@ namespace kaki::ecs {
         id_t entity = entityId | (generation << 32ull);
 
         if (!name.empty()) {
-            get<Identifier>(entity, identifierId).name = name;
+            get<Identifier>(entity, identifierId)->name = name;
         }
         return entity;
     }
@@ -130,7 +130,7 @@ namespace kaki::ecs {
     }
 
     static void bootstrap(Registry &registry) {
-        componentId = 0;
+        componentId = 0ull | (1ull << 32ull);
         Type componentType{componentId};
 
         auto archetype = registry.archetypes.emplace_back(Archetype{
@@ -182,6 +182,14 @@ namespace kaki::ecs {
     }
 
     void *Registry::get(id_t entity, id_t component, size_t size) {
+        assert(entity != 0);
+        assert(component != 0);
+
+        if (records[idEntity(entity)].generation != idGeneration(entity))
+        {
+            return nullptr;
+        }
+
         return getComponent(*this, entity, component, size);
     }
 

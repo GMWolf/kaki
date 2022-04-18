@@ -25,8 +25,7 @@ namespace kaki::ecs {
     };
 
     template<class T>
-    ComponentInfo componentInfo()
-     {
+    ComponentInfo componentInfo() {
         return ComponentInfo{
             .size = sizeof(T),
             .align = sizeof(T),
@@ -45,4 +44,11 @@ namespace kaki::ecs {
         };
     }
 
+    template<class T>
+    struct ComponentTrait {
+        static id_t id;
+    };
+
+    template<class T>
+    id_t ComponentTrait<T>::id = 0;
 }

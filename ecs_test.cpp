@@ -16,16 +16,14 @@ int main() {
     auto idInt = registry.registerComponent<int>("int");
     auto tag = registry.create({});
 
-    fprintf(stdout, "%lu\n", idA);
-
     auto b = registry.create({idA, idInt});
-    registry.get<A>(b, idA).a = 42;
+    registry.get<A>(b, idA)->a = 42;
 
-    b = registry.create({idA, idInt, tag});
-    registry.get<A>(b, idA).a = 43;
+    auto c = registry.create({idA, idInt, kaki::ecs::relation(tag, b)});
+    registry.get<A>(c, idA)->a = 43;
 
     for(auto chunk : kaki::ecs::query(registry, kaki::ecs::Query {
-        .components = {idA, idInt, tag},
+        .components = {idA, idInt, kaki::ecs::relation(tag, b)},
     })) {
         for(auto[a] : kaki::ecs::ChunkView<A>(chunk, idA))
         {

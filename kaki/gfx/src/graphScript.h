@@ -50,7 +50,11 @@ namespace kaki {
 
         auto& vk = *world.get_mut<VkGlobals>();
         auto& geometry = vk.geometry;
-        auto pipeline = world.lookup("testpackage::visibility").get<kaki::Pipeline>();
+        auto pipelineEntity = world.lookup("testpackage::visibility");
+        if (!pipelineEntity)
+            return;
+
+        auto pipeline = pipelineEntity.get<kaki::Pipeline>();
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
 
@@ -175,7 +179,11 @@ namespace kaki {
         auto& vk = *world.get_mut<VkGlobals>();
         auto& geometry = vk.geometry;
 
-        auto pipeline = world.lookup("testpackage::shade").get<kaki::Pipeline>();
+        auto pipelineEntity = world.lookup("testpackage::shade");
+        if (!pipelineEntity)
+            return;
+
+        auto pipeline = pipelineEntity.get<kaki::Pipeline>();
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
 
         // Set global and geometry inputs
@@ -263,7 +271,12 @@ namespace kaki {
     inline static void materialPass(flecs::world& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
         auto& vk = *world.get_mut<VkGlobals>();
 
-        auto pipeline = world.lookup("testpackage::materialPass").get<kaki::Pipeline>();
+        auto pipelineEntity = world.lookup("testpackage::materialPass");
+
+        if (!pipelineEntity)
+            return;
+
+        auto pipeline = pipelineEntity.get<kaki::Pipeline>();
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
 

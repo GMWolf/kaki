@@ -114,7 +114,7 @@ compile_gltf(objects SOURCES physicsAssets/objects.gltf)
 compile_gltf(plants SOURCES plants/plants.gltf)
 make_package(testpackage SOURCES
         #SciFiHelmet/SciFiHelmet.gltf.json
-        #sponza/Sponza.gltf.json
+        sponza/Sponza.gltf.json
         #DamagedHelmet/DamagedHelmet.gltf.json
         vispipeline.json
         shadepipeline.json

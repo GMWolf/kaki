@@ -5,7 +5,9 @@ add_library(kaki-ecs
         src/registry.cpp
         include/kaki/ecs/type.h
         include/kaki/ecs/query.h
-        src/query.cpp include/kaki/ecs/view.h include/kaki/ecs/identifier.h)
+        src/query.cpp
+        include/kaki/ecs/view.h
+        include/kaki/ecs/identifier.h src/lookup.cpp include/kaki/ecs/childof.h)
 
 target_include_directories(kaki-ecs
         PUBLIC include

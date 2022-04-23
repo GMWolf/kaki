@@ -22,6 +22,8 @@ namespace kaki::ecs {
         DefaultConstructFn* constructFn = nullptr;
         DestructFn* destructFn = nullptr;
         MoveFn* moveUninitFn = nullptr;
+        MoveFn* moveAssignFn = nullptr;
+        MoveFn* moveAssignAndDestructFn = nullptr;
         CopyFn* copyUninitFn = nullptr;
     };
 
@@ -39,6 +41,13 @@ namespace kaki::ecs {
             .moveUninitFn = [](void* to, void* from, size_t count) {
               std::uninitialized_move_n(static_cast<T*>(from), count, static_cast<T*>(to));
             },
+            .moveAssignFn = [](void* to, void* from, size_t count) {
+                std::move(static_cast<T*>(from), static_cast<T*>(from) + count, static_cast<T*>(to));
+            },
+            .moveAssignAndDestructFn = [](void* to, void* from, size_t count) {
+                std::move(static_cast<T*>(from), static_cast<T*>(from) + count, static_cast<T*>(to));
+                std::destroy_n(static_cast<T*>(from), count);
+            },
             .copyUninitFn = [](void* to, void* from, size_t count) {
                 std::uninitialized_copy_n(static_cast<T*>(from), count, static_cast<T*>(to));
             }
@@ -47,9 +56,9 @@ namespace kaki::ecs {
 
     template<class T>
     struct ComponentTrait {
-        static id_t id;
+        static ComponentType id;
     };
 
     template<class T>
-    id_t ComponentTrait<T>::id = 0;
+    ComponentType ComponentTrait<T>::id = ComponentType{0};
 }

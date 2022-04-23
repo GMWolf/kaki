@@ -37,9 +37,9 @@ namespace kaki::ecs {
     };
 
 
-    void* chunkFindPtr(Chunk& chunk, id_t id) {
+    inline void* chunkFindPtr(Chunk& chunk, ComponentType c) {
         for(size_t index = 0; index < chunk.type.components.size(); index++) {
-            if (chunk.type.components[index] == id) {
+            if (chunk.type.components[index] == c) {
                 return chunk.components[index];
             }
         }
@@ -59,7 +59,7 @@ namespace kaki::ecs {
         ChunkIterator<T...> endIterator;
 
 
-        explicit ChunkView(Chunk& chunk, type_identity_unpacker_t<id_t, T>... ids) {
+        explicit ChunkView(Chunk& chunk, type_identity_unpacker_t<ComponentType, T>... ids) {
             std::tuple<T*...> ptrs(static_cast<T*>(chunkFindPtr(chunk, ids))...);
             beginIterator.ptr = ptrs;
             beginIterator.idx = 0;

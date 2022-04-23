@@ -13,6 +13,4 @@ namespace kaki::ecs {
         std::string name;
     };
 
-    extern id_t identifierId;
-
 }

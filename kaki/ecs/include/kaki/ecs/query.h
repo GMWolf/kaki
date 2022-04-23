@@ -11,8 +11,34 @@
 namespace kaki::ecs {
 
     struct Query {
-        std::vector<id_t> components;
+        std::vector<ComponentType> components;
+        std::vector<ComponentType> exclude;
+
+        template<class...T>
+        Query& all();
+
+        Query& all(ComponentType id);
+
+        template<class...T>
+        Query& none();
     };
+
+    template<class...T>
+    Query& Query::all() {
+        components.insert(components.end(), {ComponentType(ComponentTrait<T>::id)...});
+        return *this;
+    }
+
+    template<class...T>
+    Query& Query::none() {
+        exclude.insert(exclude.end(), {ComponentType(ComponentTrait<T>::id)...});
+        return *this;
+    }
+
+    inline Query &Query::all(ComponentType id) {
+        components.push_back(id);
+        return *this;
+    }
 
     bool queryMatch(const Query& query, const Type& type);
 

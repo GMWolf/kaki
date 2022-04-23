@@ -6,9 +6,19 @@
 #include <algorithm>
 
 namespace kaki::ecs {
+
+    static bool componentMatch(ComponentType a, ComponentType b) {
+        return (a.component == b.component)
+        && ((a.relationObject == b.relationObject) || (a.relationObject == 0) || (b.relationObject == 0));
+    }
+
     bool queryMatch(const Query &query, const Type &type) {
-        return std::ranges::all_of(query.components, [&type](id_t c) {
-            return std::ranges::find(type.components, c) != type.components.end();
+        return std::ranges::all_of(query.components, [&type](ComponentType c) {
+            return std::ranges::find_if(type.components, [c](ComponentType a){ return componentMatch(a, c); } ) != type.components.end();
+        })
+        &&
+        std::ranges::none_of(query.exclude, [&type](ComponentType c) {
+            return std::ranges::find_if(type.components, [c](ComponentType a){ return componentMatch(a, c); } ) != type.components.end();
         });
     }
 

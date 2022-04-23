@@ -16,6 +16,7 @@ namespace kaki::ecs {
         size_t capacity;
         size_t size;
         std::vector<void*> components;
+        std::vector<id_t> ids;
     };
 
     struct Archetype {
@@ -32,27 +33,36 @@ namespace kaki::ecs {
 
     struct Registry {
         std::vector<Archetype> archetypes;
-        std::vector<uint32_t> freeIds;
+        std::vector<id_t> freeIds;
         std::vector<EntityRecord> records;
 
-        id_t create(const Type& type, std::string_view name = {});
-        void destroy(id_t id);
-        id_t registerComponent(const ComponentInfo& component, std::string_view name = {});
+        EntityId create(const Type& type, std::string_view name = {});
+        void destroy(EntityId id);
+        EntityId registerComponent(const ComponentInfo& component, std::string_view name = {});
 
-        void* get(id_t entity, id_t component, size_t size);
+        void add(EntityId entity, ComponentType component, void* ptr = nullptr);
 
         template<class T>
-        T* get(id_t entity, id_t component = ComponentTrait<T>::id) {
+        void add(EntityId entity) {
+            add(entity, ComponentTrait<T>::id);
+        }
+
+        void* get(EntityId entity, ComponentType component, size_t size);
+
+        template<class T>
+        T* get(EntityId entity, ComponentType component = ComponentTrait<T>::id) {
             return static_cast<T*>(get(entity, component, sizeof(T)));
         }
 
         template<class T>
-        id_t registerComponent(const std::string_view name = {}) {
-            assert(ComponentTrait<T>::id == 0);
-            id_t id = registerComponent(componentInfo<T>(), name);
-            ComponentTrait<T>::id = id;
+        EntityId registerComponent(const std::string_view name = {}) {
+            assert(ComponentTrait<T>::id.component == 0);
+            EntityId id = registerComponent(componentInfo<T>(), name);
+            ComponentTrait<T>::id.component = id.id;
             return id;
         }
+
+        EntityId lookup(const char* string, EntityId root = {0, 0});
 
         Registry();
     };

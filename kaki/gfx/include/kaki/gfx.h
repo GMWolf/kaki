@@ -7,6 +7,7 @@
 
 #include <flecs.h>
 #include <vector>
+#include <kaki/ecs/registry.h>
 
 namespace kaki {
 
@@ -31,6 +32,12 @@ namespace kaki {
     struct gfx {
         explicit gfx(flecs::world& world);
     };
+
+    void registerGfxModule( kaki::ecs::Registry& registry );
+
+    void initRenderEntity( kaki::ecs::Registry& registry, kaki::ecs::EntityId entityId);
+
+    void render(kaki::ecs::Registry& registry, kaki::ecs::EntityId renderEntity);
 
 }
 

@@ -56,7 +56,7 @@ static void createWindow(flecs::entity e, kaki::Window& window) {
     }
 
     window.handle = handle;
-    glfwSetWindowUserPointer(handle, new WindowWorldRef{
+    glfwSetWindowUserPointer(handle, new WindowWorldRef {
         .world = e.world().c_ptr(),
         .e = e.id(),
     });
@@ -99,4 +99,36 @@ void kaki::pollEvents() {
 
 double kaki::getTime() {
     return glfwGetTime();
+}
+
+void kaki::registerWindowingModule( kaki::ecs::Registry& registry ) {
+
+    glfwSetErrorCallback([](int error, const char *description) {
+        fprintf(stderr, "GLFW error: %s\n", description);
+    });
+
+    if (!glfwInit()) {
+        fprintf(stderr, "Failed to initialize glfw.\n");
+        exit(1);
+    }
+
+    auto module = registry.create({}, "windowing");
+
+    registry.registerComponent<kaki::Window>("Window", module);
+    registry.registerComponent<kaki::Input>("Input", module);
+}
+
+void kaki::initWindow( Window* window )
+{
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    GLFWwindow* handle = glfwCreateWindow(window->width, window->height, window->title, nullptr, nullptr);
+
+    if (!handle) {
+        fprintf(stderr, "Failed to create glfw window.\n");
+        exit(1);
+    }
+
+    window->handle = handle;
+
+    glfwSetKeyCallback(handle, key_callback);
 }

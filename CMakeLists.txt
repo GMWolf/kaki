@@ -98,6 +98,9 @@ add_executable(test main.cpp)
 target_link_libraries(test PRIVATE kaki-gfx kaki-physics kaki-job)
 target_link_libraries(test PRIVATE flecs_static)
 
+add_executable(test2 main2.cpp)
+target_link_libraries(test2 PRIVATE kaki-job kaki-ecs kaki-gfx)
+
 compile_gltf(test-gltf SOURCES SciFiHelmet/SciFiHelmet.gltf)
 compile_gltf(test-sponza SOURCES sponza/Sponza.gltf)
 compile_gltf(test-dh SOURCES DamagedHelmet/DamagedHelmet.gltf)

@@ -7,6 +7,7 @@
 
 #include <vulkan/vulkan.h>
 #include "flecs.h"
+#include <kaki/ecs/registry.h>
 
 namespace kaki {
 
@@ -15,7 +16,6 @@ namespace kaki {
         int height {};
 
         const char* title;
-
         void* handle{};
 
         [[nodiscard]] bool shouldClose() const;
@@ -53,6 +53,10 @@ namespace kaki {
     struct windowing {
         explicit windowing(flecs::world& world);
     };
+
+    void registerWindowingModule( kaki::ecs::Registry& registry );
+
+    void initWindow( Window* window );
 
 }
 #endif //KAKI_WINDOW_H

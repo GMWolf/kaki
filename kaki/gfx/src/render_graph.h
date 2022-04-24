@@ -13,6 +13,7 @@
 #include <flecs.h>
 #include <vk_mem_alloc.h>
 #include <span>
+#include <kaki/ecs.h>
 
 namespace kaki {
 
@@ -36,7 +37,7 @@ namespace kaki {
             VkRenderPassBeginInfo beginInfo[maxSwapchainSize];
             std::vector<VkImageView> images;
 
-            std::function<void(flecs::world&, VkCommandBuffer, std::span<VkImageView> images)> callback;
+            std::function<void(kaki::ecs::Registry&, VkCommandBuffer, std::span<VkImageView> images)> callback;
         };
 
         std::vector<Image> images;
@@ -68,7 +69,7 @@ namespace kaki {
             Pass& depthClear(uint32_t image, const VkClearDepthStencilValue& clearValue);
             Pass& imageRead(uint32_t image);
 
-            std::function<void(flecs::world&, VkCommandBuffer, std::span<VkImageView> images)> callback;
+            std::function<void(ecs::Registry&, VkCommandBuffer, std::span<VkImageView> images)> callback;
         };
 
         std::vector<Pass> passes;
@@ -76,14 +77,14 @@ namespace kaki {
 
         uint32_t image(Image image);
 
-        Pass& pass(std::function<void(flecs::world&, VkCommandBuffer, std::span<VkImageView> images)>&& callback);
+        Pass& pass(std::function<void(ecs::Registry&, VkCommandBuffer, std::span<VkImageView> images)>&& callback);
 
         RenderGraph build(VkGlobals& vk) const;
     };
 
     void destroyGraph(kaki::VkGlobals& vk, RenderGraph& graph);
 
-    void runGraph(flecs::world& world, RenderGraph& graph, uint32_t swapchainIndex, VkCommandBuffer cmd);
+    void runGraph(kaki::ecs::Registry& registry, kaki::ecs::EntityId renderer, RenderGraph& graph, uint32_t swapchainIndex, VkCommandBuffer cmd);
 
     using GraphScript = RenderGraph(*)(VkGlobals& vk);
 }

@@ -28,7 +28,7 @@ namespace kaki::ecs {
 
             entity.id = 0;
             entity.generation = 0;
-            for(auto chunk : query(*this, q)) {
+            for(auto& chunk : query(*this, q)) {
                 for (const auto& [id, iden] : ChunkView<EntityId, Identifier>( chunk )) {
                     if (iden.name == token) {
                         entity = id;

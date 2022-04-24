@@ -28,7 +28,7 @@ namespace kaki::ecs {
         begin.archetypeIterator = registry.archetypes.begin();
         begin.archetypeEnd = registry.archetypes.end();
 
-        while(begin.archetypeIterator != begin.archetypeEnd && !queryMatch(query, begin.archetypeIterator->type)) {
+        while(begin.archetypeIterator != begin.archetypeEnd && (begin.archetypeIterator->chunks.empty() || !queryMatch(query, begin.archetypeIterator->type))) {
             begin.archetypeIterator++;
         }
 

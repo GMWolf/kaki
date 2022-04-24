@@ -46,8 +46,8 @@ namespace kaki {
     }
 
 
-    inline void renderWorld(flecs::world& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
-
+    inline void renderWorld(ecs::Registry& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
+        /*
         auto& vk = *world.get_mut<VkGlobals>();
         auto& geometry = vk.geometry;
         auto pipelineEntity = world.lookup("testpackage::visibility");
@@ -170,12 +170,11 @@ namespace kaki {
             });
 
         });
-
-
+        */
     }
 
-    inline static void shade(flecs::world& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
-
+    inline static void shade(ecs::Registry& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
+        /*
         auto& vk = *world.get_mut<VkGlobals>();
         auto& geometry = vk.geometry;
 
@@ -265,10 +264,12 @@ namespace kaki {
                                sizeof(Pc), &pc);
             vkCmdDraw(cmd, 3, 1, 0, 0);
         });
+         */
     }
 
 
-    inline static void materialPass(flecs::world& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
+    inline static void materialPass(ecs::Registry& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
+        /*
         auto& vk = *world.get_mut<VkGlobals>();
 
         auto pipelineEntity = world.lookup("testpackage::materialPass");
@@ -307,48 +308,61 @@ namespace kaki {
         }
 
         vkCmdDraw(cmd, 3, 1, 0, 0);
+         */
     }
 
     inline RenderGraph graphScript(VkGlobals& vk) {
         RenderGraphBuilder graph;
 
-        auto depthImage = graph.image({
-            .size = vk.swapchain.extent,
-            .format = VK_FORMAT_D32_SFLOAT,
-        });
+        bool justImGUi = true;
 
-        auto visbuffer = graph.image({
-            .size = vk.swapchain.extent,
-            .format = VK_FORMAT_R32G32_UINT,
-        });
+        if (!justImGUi) {
+            auto depthImage = graph.image({
+                                                  .size = vk.swapchain.extent,
+                                                  .format = VK_FORMAT_D32_SFLOAT,
+                                          });
 
-        // Draw v buffer
-        graph.pass(renderWorld)
-        .colorClear(visbuffer, VkClearColorValue{.uint32{UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX}})
-        .depthClear(depthImage, {0.0f, 0});
+            auto visbuffer = graph.image({
+                                                 .size = vk.swapchain.extent,
+                                                 .format = VK_FORMAT_R32G32_UINT,
+                                         });
 
-        auto materialBuffer = graph.image({
-            .size = vk.swapchain.extent,
-            .format = VK_FORMAT_D16_UNORM,
-        });
+            // Draw v buffer
+            graph.pass(renderWorld)
+                    .colorClear(visbuffer, VkClearColorValue{.uint32{UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX}})
+                    .depthClear(depthImage, {0.0f, 0});
 
-        // Material depth buffer pass
-        graph.pass(materialPass)
-        .depth(materialBuffer)
-        .imageRead(visbuffer);
+            auto materialBuffer = graph.image({
+                                                      .size = vk.swapchain.extent,
+                                                      .format = VK_FORMAT_D16_UNORM,
+                                              });
 
-        // Shade
-        graph.pass(shade)
-        .colorClear(DISPLAY_IMAGE_INDEX, VkClearColorValue{.uint32 = {0, 0, 0, 0}})
-        .depth(materialBuffer)
-        .imageRead(visbuffer);
+            // Material depth buffer pass
+            graph.pass(materialPass)
+                    .depth(materialBuffer)
+                    .imageRead(visbuffer);
 
-        //Draw Imgui
-        graph.pass([](flecs::world& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
-            auto& vk = *world.get_mut<VkGlobals>();
-            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
-        })
-        .color(DISPLAY_IMAGE_INDEX);
+            // Shade
+            graph.pass(shade)
+                    .colorClear(DISPLAY_IMAGE_INDEX, VkClearColorValue{.uint32 = {0, 0, 0, 0}})
+                    .depth(materialBuffer)
+                    .imageRead(visbuffer);
+
+            //Draw Imgui
+            graph.pass([](ecs::Registry& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
+                        //auto& vk = *world.get_mut<VkGlobals>();
+                        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+                    })
+                    .color(DISPLAY_IMAGE_INDEX);
+        } else {
+            //Draw Imgui
+            graph.pass([](ecs::Registry& world, VkCommandBuffer cmd, std::span<VkImageView> images) {
+                        //auto& vk = *world.get_mut<VkGlobals>();
+                        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+                    })
+                    .colorClear( DISPLAY_IMAGE_INDEX, {0.0f, 0.0f, 0.0f, 1.0f} );
+        }
+
 
         return graph.build(vk);
     }

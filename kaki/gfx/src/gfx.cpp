@@ -49,7 +49,7 @@ static bool createSwapChain(kaki::VkGlobals& vk) {
     return true;
 }
 
-static bool createGlobals(flecs::world& world) {
+static bool createGlobals(kaki::ecs::Registry& registry, kaki::ecs::EntityId renderEntity) {
     vkb::InstanceBuilder builder;
     auto inst_ret = builder.set_app_name("Kaki application")
             .request_validation_layers()
@@ -64,7 +64,7 @@ static bool createGlobals(flecs::world& world) {
 
     vkb::Instance vkb_inst = inst_ret.value();
 
-    auto window = world.lookup("window").get<kaki::Window>();
+    auto window = registry.get<kaki::Window>(registry.lookup("window"));
     VkSurfaceKHR surface = window->createSurface(vkb_inst);
 
     vkb::PhysicalDeviceSelector selector{ vkb_inst };
@@ -387,7 +387,10 @@ static bool createGlobals(flecs::world& world) {
     }
 
 
-    world.set<kaki::VkGlobals>(vk);
+
+    registry.add(renderEntity, vk);
+
+    //world.set<kaki::VkGlobals>(vk);
     return true;
 }
 
@@ -464,9 +467,9 @@ static void UploadTransforms(kaki::VkGlobals& vk) {
                          0, 0, nullptr, barriers.size(), barriers.data(), 0, nullptr);
 }
 
-static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
+void kaki::render(kaki::ecs::Registry& registry, kaki::ecs::EntityId renderEntity) {
 
-    auto world = entity.world();
+    kaki::VkGlobals& vk = *registry.get<kaki::VkGlobals>( renderEntity );
 
     vkWaitForFences(vk.device, 1, &vk.cmdBufFence[vk.currentFrame], true, UINT64_MAX);
 
@@ -492,7 +495,7 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    kaki::entityTree(world);
+    kaki::entityTree(registry);
     ImGui::Render();
 
     VkCommandBufferBeginInfo beginInfo = {};
@@ -501,9 +504,9 @@ static void render(const flecs::entity& entity, kaki::VkGlobals& vk) {
 
     vkBeginCommandBuffer(vk.cmd[vk.currentFrame], &beginInfo);
 
-    UploadTransforms(vk);
+    // UploadTransforms(vk);
 
-    kaki::runGraph(world, vk.graph, imageIndex, vk.cmd[vk.currentFrame]);
+    kaki::runGraph(registry, renderEntity, vk.graph, imageIndex, vk.cmd[vk.currentFrame]);
     vkEndCommandBuffer(vk.cmd[vk.currentFrame]);
 
     VkPipelineStageFlags waitStages[] = {
@@ -655,7 +658,7 @@ kaki::gfx::gfx(flecs::world &world) {
             .member<uint32_t>("index")
             .member(ecs_id(ecs_entity_t), "material");
 
-    createGlobals(world);
+    //createGlobals(world);
 
     auto& vk = *world.get_mut<VkGlobals>();
     vk.transformUploadQuery = world.query_builder<const Transform, const TransformGpuAddress>()
@@ -670,7 +673,17 @@ kaki::gfx::gfx(flecs::world &world) {
 
     world.component<Transform>().add(flecs::With, world.component<TransformGpuAddress>());
 
-    world.system<VkGlobals>("Render system").kind(flecs::OnStore).each(render);
+    //world.system<VkGlobals>("Render system").kind(flecs::OnStore).each(render);
 
     world.trigger<MeshFilter>().event(flecs::OnSet).iter(UpdateMeshInstance);
+}
+
+void kaki::registerGfxModule( kaki::ecs::Registry& registry )
+{
+    registry.registerComponent<kaki::VkGlobals>("VkGlobals");
+}
+
+void kaki::initRenderEntity( kaki::ecs::Registry& registry, kaki::ecs::EntityId entityId)
+{
+    createGlobals( registry, entityId );
 }

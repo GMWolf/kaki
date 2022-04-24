@@ -38,13 +38,13 @@ namespace kaki::ecs {
 
         EntityId create(const Type& type, std::string_view name = {});
         void destroy(EntityId id);
-        EntityId registerComponent(const ComponentInfo& component, std::string_view name = {});
+        EntityId registerComponent(const ComponentInfo& component, std::string_view name = {}, EntityId parent = {});
 
-        void add(EntityId entity, ComponentType component, void* ptr = nullptr);
+        void add(EntityId entity, ComponentType component, const void* ptr = nullptr);
 
         template<class T>
-        void add(EntityId entity) {
-            add(entity, ComponentTrait<T>::id);
+        void add(EntityId entity, const T& t) {
+            add(entity, ComponentTrait<T>::id, static_cast<const void*>(&t));
         }
 
         void* get(EntityId entity, ComponentType component, size_t size);
@@ -55,9 +55,9 @@ namespace kaki::ecs {
         }
 
         template<class T>
-        EntityId registerComponent(const std::string_view name = {}) {
+        EntityId registerComponent(const std::string_view name = {}, EntityId parent = {}) {
             assert(ComponentTrait<T>::id.component == 0);
-            EntityId id = registerComponent(componentInfo<T>(), name);
+            EntityId id = registerComponent(componentInfo<T>(), name, parent);
             ComponentTrait<T>::id.component = id.id;
             return id;
         }

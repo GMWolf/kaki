@@ -6,6 +6,8 @@
 
 #include <flecs.h>
 #include <imgui.h>
+#include <kaki/ecs.h>
+#include <kaki/ecs/childof.h>
 
 namespace kaki {
 
@@ -62,17 +64,60 @@ namespace kaki {
         };
     }
 
-    void entityTree(flecs::world& world) {
+    void printEntity(ecs::Registry& registry, ecs::EntityId entity) {
+        auto* iden = registry.get<ecs::Identifier>( entity );
+        const char* name;
+        if (iden) {
+            name = iden->name.c_str();
+        } else {
+            name = "<%d>";
+        }
+
+        bool isSelected = false;
+        bool hasChildren = true;
+
+        bool opened = ImGui::TreeNodeEx( (void*)entity.id ,
+                                         ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick |
+                                         (isSelected ? ImGuiTreeNodeFlags_Selected : 0) |
+                                         (hasChildren ? 0 : ImGuiTreeNodeFlags_Leaf), name, entity.id);
+
+        if (opened)
+        {
+            for(auto& chunk : ecs::query(registry, ecs::Query().all(ecs::ComponentType(ecs::ComponentTrait<ecs::ChildOf>::id, entity))))
+            {
+                for (const auto& [id] : ecs::ChunkView<ecs::EntityId>( chunk )) {
+                    printEntity(registry, id);
+                }
+            }
+
+            //entity.children(printEntity);
+            ImGui::TreePop();
+        };
+    }
+
+    void entityTree(ecs::Registry& registry) {
 
         ImGui::Begin("Hierarchy");
 
-        world.filter_builder()
-            .term(flecs::ChildOf, flecs::Wildcard).oper(flecs::Not)
-            .build().each(printEntity);
+        //world.filter_builder()
+        //    .term(flecs::ChildOf, flecs::Wildcard).oper(flecs::Not)
+        //    .build().each(printEntity);
+
+        //auto q = ecs::Query().none<kaki::ecs::ChildOf>();
+        auto q = ecs::Query().none<kaki::ecs::ChildOf>();
+        auto qr = ecs::query(registry, q);
+
+        for(auto& chunk : qr)
+        {
+            for (const auto& [id] : ecs::ChunkView<ecs::EntityId>( chunk )) {
+                printEntity(registry, id);
+            }
+        }
+
 
         ImGui::End();
 
-        world.each(guiSelectedEntity);
+        //world.each(guiSelectedEntity);
     }
 
 }

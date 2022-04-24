@@ -145,7 +145,7 @@ namespace kaki::ecs {
     }
 
     static void chunkDeleteEntry(Registry& registry, Chunk& chunk, size_t row ) {
-        assert( row > chunk.size );
+        assert( row < chunk.size );
 
         // Move last entity component to row, destruct last entity components
         for( size_t i = 0; i < chunk.type.components.size(); i++ )
@@ -241,13 +241,19 @@ namespace kaki::ecs {
         identifierType = ComponentType(registerComponent<Identifier>());
     }
 
-    EntityId Registry::registerComponent(const ComponentInfo &component, const std::string_view name) {
+    EntityId Registry::registerComponent(const ComponentInfo &component, const std::string_view name, EntityId parent) {
         EntityId id;
-        if (name.empty()) {
-            id = create({ComponentType(componentType)});
-        } else {
-            id = create({componentType, ComponentTrait<Identifier>::id});
+
+        Type type {ComponentType(componentType)};
+        if (!name.empty()) {
+            type.components.push_back(ComponentTrait<Identifier>::id);
         }
+        if (!parent.isNull()) {
+            type.components.push_back(ComponentType(ComponentTrait<ChildOf>::id, parent));
+        }
+        std::sort(type.components.begin(), type.components.end());
+
+        id = create( type );
 
         ComponentInfo* componentInfo = get<ComponentInfo>(id, componentType);
         *componentInfo = component;
@@ -272,7 +278,7 @@ namespace kaki::ecs {
         return getComponent(*this, entity.id, component, size);
     }
 
-    void Registry::add(EntityId entity, ComponentType component, void* ptr) {
+    void Registry::add(EntityId entity, ComponentType component, const void* ptr) {
 
         auto& record = records[entity.id];
 
@@ -301,29 +307,11 @@ namespace kaki::ecs {
                 } else {
                     auto from = ((std::byte *) record.chunk->components[i]) + info->size * record.row;
                     info->moveUninitFn( to, from, 1);
-                    info->destructFn( from, 1);
                 }
             }
         }
 
-        for(size_t i = 0; i < record.chunk->components.size(); i++) {
-            ComponentType t = record.chunk->type.components[i];
-            auto *info = static_cast<ComponentInfo *>(getComponent(*this, t.component, componentType,
-                                                                   sizeof(ComponentInfo)));
-
-            if (info) {
-                auto from = ((std::byte *) record.chunk->components[i]) + info->size * record.chunk->size - 1;
-                auto to = ((std::byte *) record.chunk->components[i]) + info->size * record.row;
-                info->moveUninitFn( to, from, 1);
-            }
-        }
-
-        id_t oldId = record.chunk->ids[record.chunk->size - 1];
-
-        records[oldId].row = record.row;
-        record.chunk->ids[record.row] = record.chunk->ids[record.chunk->size - 1];
-
-        record.chunk->size--;
+        chunkDeleteEntry(*this, *record.chunk, record.row);
 
         record.chunk = newChunk;
         record.row = newRow;

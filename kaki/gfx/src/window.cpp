@@ -112,7 +112,7 @@ void kaki::registerWindowingModule( kaki::ecs::Registry& registry ) {
         exit(1);
     }
 
-    auto module = registry.create({}, "windowing");
+    auto module = registry.create({}, "Windowing");
 
     registry.registerComponent<kaki::Window>("Window", module);
     registry.registerComponent<kaki::Input>("Input", module);

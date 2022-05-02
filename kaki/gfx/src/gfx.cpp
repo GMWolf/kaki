@@ -680,7 +680,8 @@ kaki::gfx::gfx(flecs::world &world) {
 
 void kaki::registerGfxModule( kaki::ecs::Registry& registry )
 {
-    registry.registerComponent<kaki::VkGlobals>("VkGlobals");
+    auto module = registry.create({}, "Gfx");
+    registry.registerComponent<kaki::VkGlobals>("VkGlobals", module);
 }
 
 void kaki::initRenderEntity( kaki::ecs::Registry& registry, kaki::ecs::EntityId entityId)

@@ -74,7 +74,10 @@ namespace kaki {
         }
 
         bool isSelected = false;
-        bool hasChildren = true;
+
+        auto children = ecs::query(registry, ecs::Query().all(ecs::ComponentType(ecs::ComponentTrait<ecs::ChildOf>::id, entity)));
+
+        bool hasChildren = children.begin() != children.end();
 
         bool opened = ImGui::TreeNodeEx( (void*)entity.id ,
                                          ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick |
@@ -83,7 +86,7 @@ namespace kaki {
 
         if (opened)
         {
-            for(auto& chunk : ecs::query(registry, ecs::Query().all(ecs::ComponentType(ecs::ComponentTrait<ecs::ChildOf>::id, entity))))
+            for(auto& chunk : children)
             {
                 for (const auto& [id] : ecs::ChunkView<ecs::EntityId>( chunk )) {
                     printEntity(registry, id);

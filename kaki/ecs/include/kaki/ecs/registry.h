@@ -54,6 +54,8 @@ namespace kaki::ecs {
             return static_cast<T*>(get(entity, component, sizeof(T)));
         }
 
+        Chunk* createChunk(const Type& type, size_t entityCount);
+
         template<class T>
         EntityId registerComponent(const std::string_view name = {}, EntityId parent = {}) {
             assert(ComponentTrait<T>::id.component == 0);

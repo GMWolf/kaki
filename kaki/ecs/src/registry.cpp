@@ -4,6 +4,7 @@
 #include <registry.h>
 #include <identifier.h>
 #include "childof.h"
+#include <span>
 
 namespace kaki::ecs {
 
@@ -85,6 +86,21 @@ namespace kaki::ecs {
         return archetype.chunks.emplace_back(createChunk(registry, type, capacity));
     }
 
+    static id_t createEntityRecord(Registry& registry) {
+
+        id_t id = 0;
+        if (registry.freeIds.empty()) {
+            auto& r = registry.records.emplace_back();
+            r.generation = 1;
+            id = registry.records.size() - 1;
+        } else {
+            id = registry.freeIds.back();
+            registry.freeIds.pop_back();
+        }
+
+        return id;
+    }
+
     EntityId Registry::create(const Type &inType,  std::string_view name) {
         Type type = inType;
         type.components.push_back(ComponentTrait<EntityId>::id);
@@ -95,26 +111,13 @@ namespace kaki::ecs {
 
         Archetype &archetype = getArchetype(*this, type);
         Chunk *chunk = getFreeChunk(*this, archetype, type);
-
-        id_t entityId = 0;
-        id_t generation = 0;
         size_t row = chunk->size++;
-        if (freeIds.empty()) {
-            generation = 1;
-            records.push_back(EntityRecord {
-                    .chunk = chunk,
-                    .row = row,
-                    .generation = static_cast<uint32_t>(generation),
-            });
-            entityId = records.size() - 1;
-        } else {
-            entityId = freeIds.back();
-            freeIds.pop_back();
 
-            records[entityId].chunk = chunk;
-            records[entityId].row = row;
-            generation = records[entityId].generation;
-        }
+        id_t entityId = createEntityRecord(*this);
+        EntityRecord& record = records[entityId];
+        id_t generation = record.generation;
+        record.chunk = chunk;
+        record.row = row;
 
         EntityId entity {
             .id = entityId,
@@ -249,9 +252,9 @@ namespace kaki::ecs {
             type.components.push_back(ComponentTrait<Identifier>::id);
         }
         if (!parent.isNull()) {
-            type.components.push_back(ComponentType(ComponentTrait<ChildOf>::id, parent));
+            type.components.emplace_back(ComponentTrait<ChildOf>::id, parent);
         }
-        std::sort(type.components.begin(), type.components.end());
+        std::sort( type.components.begin(), type.components.end() );
 
         id = create( type );
 
@@ -315,6 +318,45 @@ namespace kaki::ecs {
 
         record.chunk = newChunk;
         record.row = newRow;
+    }
+
+    Chunk *Registry::createChunk(const Type &type, size_t entityCount) {
+        auto chunk = ecs::createChunk(*this, type, entityCount);
+        chunk->size = entityCount;
+
+        for(size_t i = 0; i < entityCount; i++)
+        {
+            id_t id = createEntityRecord(*this);
+            EntityRecord& record = records[id];
+            record.chunk = chunk;
+            record.row = i;
+
+            chunk->ids[i] = id;
+        }
+
+        // construct components
+        {
+            for( uint i = 0; i < chunk->type.components.size(); i++ )
+            {
+                ComponentType t = chunk->type.components[i];
+                auto *component = static_cast<ComponentInfo *>(getComponent(*this, t.component, componentType, sizeof(ComponentInfo)));
+                if (component) {
+                    component->constructFn(chunk->components[i], entityCount);
+                }
+                if (t == ComponentTrait<EntityId>::id) {
+                    id_t id = chunk->ids[i];
+                    EntityId entity {
+                        .id = id,
+                        .generation = records[id].generation,
+                    };
+                    *(static_cast<EntityId*>(chunk->components[i])) = entity;
+                }
+            }
+        }
+
+
+        return chunk;
+
     }
 
 }

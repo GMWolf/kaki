@@ -320,13 +320,29 @@ namespace kaki::ecs {
         record.row = newRow;
     }
 
-    Chunk *Registry::createChunk(const Type &type, size_t entityCount) {
+    void Registry::createEntityRecords(std::span<EntityId> entities) {
+        for(auto& e : entities) {
+            id_t id = createEntityRecord(*this);
+            e.id = id;
+            e.generation = records[id].generation;
+        }
+    }
+
+    Chunk* Registry::createChunk(const Type& inType, std::span<EntityId> entityRecords)
+    {
+        Type type = inType;
+        type.components.push_back(ComponentTrait<EntityId>::id);
+
+        Archetype &archetype = getArchetype(*this, type);
+
+        size_t entityCount = entityRecords.size();
         auto chunk = ecs::createChunk(*this, type, entityCount);
+        archetype.chunks.push_back(chunk);
         chunk->size = entityCount;
 
         for(size_t i = 0; i < entityCount; i++)
         {
-            id_t id = createEntityRecord(*this);
+            id_t id = entityRecords[i].id;
             EntityRecord& record = records[id];
             record.chunk = chunk;
             record.row = i;
@@ -344,19 +360,19 @@ namespace kaki::ecs {
                     component->constructFn(chunk->components[i], entityCount);
                 }
                 if (t == ComponentTrait<EntityId>::id) {
-                    id_t id = chunk->ids[i];
-                    EntityId entity {
-                        .id = id,
-                        .generation = records[id].generation,
-                    };
-                    *(static_cast<EntityId*>(chunk->components[i])) = entity;
+                    for(uint e = 0; e < chunk->size; e++) {
+                        id_t id = chunk->ids[e];
+                        EntityId entity{
+                                .id = id,
+                                .generation = records[id].generation,
+                        };
+                        static_cast<EntityId *>(chunk->components[i])[e] = entity;
+                    }
                 }
             }
         }
 
-
         return chunk;
-
     }
 
 }

@@ -358,16 +358,16 @@ void writeSinglePrimitiveMeshNodes(kaki::Package& package, uint64_t parentEntity
             .entityCount = nodeCount,
             .referenceOffset = 0,
             .components = {
-                    kaki::Package::Component{.type = {"flecs::core::Prefab"}},
+                    //kaki::Package::Component{.type = {"flecs::core::Prefab"}},
                     kaki::Package::Component{.type = {kaki::Package::TypeId::ChildOf, parentEntity}},
                     kaki::Package::Component{.type = {"kaki::core::Transform", {}}},
-                    kaki::Package::Component{.type = {"kaki::core::Transform", {}, true}},
+                    //kaki::Package::Component{.type = {"kaki::core::Transform", {}, true}},
                     kaki::Package::Component{.type = {"kaki::gfx::MeshFilter", {}}},
             },
     };
 
-    auto& transformData = table.components[2].data;
-    auto& meshData = table.components[4].data;
+    auto& transformData = table.components[1].data;
+    auto& meshData = table.components[2].data;
 
     for(cgltf_node* node : nodes) {
         package.entities.push_back({node->name});
@@ -387,13 +387,13 @@ void writeMultiPrimitiveMeshNodesPrimitives(kaki::Package& package, uint64_t par
             .entityCount = mesh->primitives_count,
             .referenceOffset = 0,
             .components = {
-                    kaki::Package::Component{.type = {"flecs::core::Prefab"}},
+                    //kaki::Package::Component{.type = {"flecs::core::Prefab"}},
                     kaki::Package::Component{.type = {kaki::Package::TypeId::ChildOf, parentEntity}},
                     kaki::Package::Component{.type = {"kaki::gfx::MeshFilter", {}}},
             },
     };
 
-    auto& meshData = table.components[2].data;
+    auto& meshData = table.components[1].data;
 
     for(cgltf_primitive& primitive : std::span(mesh->primitives, mesh->primitives_count)) {
         package.entities.push_back({""});
@@ -418,15 +418,15 @@ void writeMultiPrimitiveMeshNodes(kaki::Package& package, uint64_t parentEntity,
             .entityCount = nodeCount,
             .referenceOffset = 0,
             .components = {
-                    kaki::Package::Component{.type = {"flecs::core::Prefab"}},
+                    //kaki::Package::Component{.type = {"flecs::core::Prefab"}},
                     kaki::Package::Component{.type = {kaki::Package::TypeId::ChildOf, parentEntity}},
                     kaki::Package::Component{.type = {"kaki::core::Transform", {}}},
-                    kaki::Package::Component{.type = {"kaki::core::Transform", {}, true}},
+                    //kaki::Package::Component{.type = {"kaki::core::Transform", {}, true}},
             },
     };
 
 
-    auto& transformData = table.components[2].data;
+    auto& transformData = table.components[1].data;
 
     for(cgltf_node* node : nodes) {
         package.entities.push_back({node->name ? node->name : ""});
@@ -474,16 +474,16 @@ void writeCameraNodes(kaki::Package& package, uint64_t parentEntity, Range&& nod
             .entityCount = nodeCount,
             .referenceOffset = 0,
             .components = {
-                    kaki::Package::Component{.type = {"flecs::core::Prefab"}},
+                    //kaki::Package::Component{.type = {"flecs::core::Prefab"}},
                     kaki::Package::Component{.type = {kaki::Package::TypeId::ChildOf, parentEntity}},
                     kaki::Package::Component{.type = {"kaki::core::Transform", {}}},
-                    kaki::Package::Component{.type = {"kaki::core::Transform", {}, true}},
+                    //kaki::Package::Component{.type = {"kaki::core::Transform", {}, true}},
                     kaki::Package::Component{.type = {"kaki::gfx::Camera", {}}},
             },
     };
 
-    auto& transformData = table.components[2].data;
-    auto& cameraData = table.components[4].data;
+    auto& transformData = table.components[1].data;
+    auto& cameraData = table.components[2].data;
 
     for(cgltf_node* node : nodes) {
         package.entities.push_back({node->name});
@@ -534,7 +534,7 @@ void writeScene(kaki::Package& package, uint64_t firstMesh, uint64_t firstMateri
             .referenceOffset = 0,
             .components = {
                     kaki::Package::Component{.type = {kaki::Package::TypeId::ChildOf, 0u}},
-                    kaki::Package::Component{.type = {"flecs::core::Prefab"}},
+                    //kaki::Package::Component{.type = {"flecs::core::Prefab"}},
             },
     };
 

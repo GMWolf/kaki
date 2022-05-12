@@ -680,8 +680,15 @@ kaki::gfx::gfx(flecs::world &world) {
 
 void kaki::registerGfxModule( kaki::ecs::Registry& registry )
 {
-    auto module = registry.create({}, "Gfx");
+    auto kaki = registry.lookup("kaki");
+    auto module = registry.create({ ecs::ComponentType(kaki::ecs::ComponentTrait<kaki::ecs::ChildOf>::id, kaki)}, "gfx");
     registry.registerComponent<kaki::VkGlobals>("VkGlobals", module);
+    registry.registerComponent<kaki::Gltf>("Gltf", module);
+    registry.registerComponent<kaki::Mesh>("Mesh", module);
+    registry.registerComponent<kaki::Image>("Image", module);
+    registry.registerComponent<kaki::Pipeline>("Pipeline", module);
+    registry.registerComponent<kaki::MeshFilter>("MeshFilter", module);
+    registry.registerComponent<kaki::Material>("Material", module);
 }
 
 void kaki::initRenderEntity( kaki::ecs::Registry& registry, kaki::ecs::EntityId entityId)

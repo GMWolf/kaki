@@ -8,6 +8,7 @@
 #include <cstdint>
 #include "component.h"
 #include "type.h"
+#include <span>
 
 namespace kaki::ecs {
 
@@ -54,7 +55,10 @@ namespace kaki::ecs {
             return static_cast<T*>(get(entity, component, sizeof(T)));
         }
 
-        Chunk* createChunk(const Type& type, size_t entityCount);
+        void createEntityRecords(std::span<EntityId> entities);
+
+        Chunk* createChunk(const Type& type, std::span<EntityId> entityRecords);
+
 
         template<class T>
         EntityId registerComponent(const std::string_view name = {}, EntityId parent = {}) {

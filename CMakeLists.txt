@@ -99,7 +99,7 @@ target_link_libraries(test PRIVATE kaki-gfx kaki-physics kaki-job)
 target_link_libraries(test PRIVATE flecs_static)
 
 add_executable(test2 main2.cpp)
-target_link_libraries(test2 PRIVATE kaki-job kaki-ecs kaki-gfx)
+target_link_libraries(test2 PRIVATE kaki-job kaki-ecs kaki-gfx kaki-core)
 
 compile_gltf(test-gltf SOURCES SciFiHelmet/SciFiHelmet.gltf)
 compile_gltf(test-sponza SOURCES sponza/Sponza.gltf)
@@ -130,6 +130,7 @@ make_package(testpackage SOURCES
         plants/plants.gltf.json
         )
 add_dependencies(test testpackage)
+add_dependencies(test2 testpackage)
 
 add_executable(ecs_test ecs_test.cpp)
 target_link_libraries(ecs_test kaki-ecs)

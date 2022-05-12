@@ -12,6 +12,7 @@
 #include <membuf.h>
 #include <cereal/archives/binary.hpp>
 #include <kaki/job.h>
+#include <kaki/ecs.h>
 
 namespace kaki {
 
@@ -42,4 +43,5 @@ namespace kaki {
     };
 
     void loadPackage(flecs::world& world, const char* path, JobCtx ctx);
+    void loadPackage(kaki::ecs::Registry& registry, const char* path);
 }

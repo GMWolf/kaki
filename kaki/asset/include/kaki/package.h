@@ -16,6 +16,7 @@
 #include <cereal/types/variant.hpp>
 #include <cereal/external/base64.hpp>
 
+
 namespace kaki {
 
     struct Package {

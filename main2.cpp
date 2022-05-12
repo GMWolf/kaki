@@ -5,13 +5,19 @@
 #include <kaki/ecs.h>
 #include <kaki/window.h>
 #include <kaki/gfx.h>
+#include <kaki/asset.h>
+#include <kaki/package.h>
+#include <kaki/core.h>
 
 int main() {
 
     kaki::ecs::Registry registry;
 
+    registry.create({},"kaki");
+
     kaki::registerWindowingModule(registry);
     kaki::registerGfxModule(registry);
+    kaki::registerCoreModule(registry);
 
     auto windowEntity = registry.create({}, "window");
 
@@ -26,6 +32,8 @@ int main() {
     auto renderer = registry.create({}, "Renderer");
 
     kaki::initRenderEntity(registry, renderer);
+
+    kaki::loadPackage(registry, "testpackage.json");
 
     while( !registry.get<kaki::Window>( windowEntity )->shouldClose() )
     {

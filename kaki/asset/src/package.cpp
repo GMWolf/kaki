@@ -17,6 +17,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <kaki/ecs/childof.h>
+#include <kaki/ecs/view.h>
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 #define alloca _malloca
@@ -84,6 +86,43 @@ static flecs::id_t resolveComponentType(flecs::world& world, std::span<flecs::en
     }
 }
 
+static kaki::ecs::id_t resolveEntity(kaki::ecs::Registry& registry, std::span<kaki::ecs::EntityId> entities, const kaki::Package::EntityRef& ref) {
+
+    return std::visit(overloaded{
+        [](const kaki::Package::TypeId& id) {
+            switch(id) {
+                case kaki::Package::TypeId::ChildOf:
+                    return kaki::ecs::ComponentTrait<kaki::ecs::ChildOf>::id.component;
+                    break;
+            };
+            return id_t{0u};
+        },
+        [&entities](const uint64_t& index) {
+            return entities[index].id;
+        },
+        [&registry](const std::string& str) {
+            return registry.lookup(str.c_str()).id;
+        },
+    }, ref);
+}
+
+static kaki::ecs::ComponentType resolveComponentType(kaki::ecs::Registry& registry, std::span<kaki::ecs::EntityId> entities, const kaki::Package::Type& type) {
+
+    auto r = resolveEntity(registry, entities, type.typeId);
+
+    if (type.override) {
+        /// aaaa!
+    }
+
+    if (type.object) {
+        auto o = resolveEntity(registry, entities, type.object.value());
+        return {r, o};
+    } else {
+        return kaki::ecs::ComponentType(r);
+    }
+
+}
+
 
 static void callAssetHandlers(flecs::entity root, kaki::JobCtx& ctx) {
 
@@ -132,6 +171,38 @@ static void callAssetHandlers(flecs::entity root, kaki::JobCtx& ctx) {
     ctx.wait(jobCounter, 0);
 }
 
+static kaki::ecs::EntityId instanciatePackage(kaki::ecs::Registry& registry, const kaki::Package &package, std::span<uint8_t> dataFile) {
+
+    std::vector<kaki::ecs::EntityId> entityRecords(package.entities.size());
+    registry.createEntityRecords(entityRecords);
+    auto entitySpan = std::span(entityRecords);
+
+
+    for(auto& table : package.tables) {
+
+        kaki::ecs::Type tableType {};
+        tableType.components.push_back(kaki::ecs::ComponentTrait<kaki::ecs::Identifier>::id);
+        for(auto& component : table.components) {
+            tableType.components.push_back(resolveComponentType(registry, entitySpan, component.type));
+        }
+
+        kaki::ecs::Chunk* chunk = registry.createChunk(tableType, entitySpan.subspan(table.entityFirst, table.entityCount));
+
+        kaki::ecs::Identifier* iden = static_cast<kaki::ecs::Identifier*>( kaki::ecs::chunkFindPtr(*chunk, kaki::ecs::ComponentTrait<kaki::ecs::Identifier>::id) );
+
+        for(uint i = 0; i < table.entityCount; i++)
+        {
+            iden[i].name = std::move( package.entities[table.entityFirst + i].name );
+        }
+
+
+        // fill in the chunk
+
+    }
+    
+    return {0,0};
+}
+
 static flecs::entity instanciatePackage(flecs::world &world, const kaki::Package &package, std::span<uint8_t> dataFile, kaki::JobCtx& ctx) {
 
     std::vector<ecs_entity_t> entities;
@@ -158,7 +229,7 @@ static flecs::entity instanciatePackage(flecs::world &world, const kaki::Package
             entityNames[i].value = ecs_os_strdup(name);
         }
     }
-
+    
     // Move entities to tables, including AssetData components
     for(auto& table : package.tables) {
         ecs_bulk_desc_t bulkDesc{};
@@ -237,4 +308,18 @@ void kaki::loadPackage(flecs::world &world, const char *path, JobCtx ctx) {
 
     auto pe = instanciatePackage(world, package, data, ctx);
     //unmapFile(data);
+}
+
+
+void kaki::loadPackage(kaki::ecs::Registry& registry, const char* path)
+{
+    std::ifstream input(path);
+    cereal::JSONInputArchive archive(input);
+
+    Package package;
+    archive(package);
+
+    auto data = mapFile(package.dataFile.c_str());
+
+    auto pe = instanciatePackage(registry, package, data);
 }

@@ -9,6 +9,7 @@
 #include <kaki/asset.h>
 #include <kaki/vec_cereal.h>
 #include <optional>
+#include <kaki/ecs/childof.h>
 
 template <class T>
 using optionalColumn = std::optional<flecs::column<T>>;
@@ -66,3 +67,9 @@ kaki::core::core(flecs::world &world) {
 
 }
 
+void kaki::registerCoreModule(kaki::ecs::Registry& registry)
+{
+    auto kaki = registry.lookup("kaki");
+    auto module = registry.create({ ecs::ComponentType(kaki::ecs::ComponentTrait<kaki::ecs::ChildOf>::id, kaki)}, "core");
+    registry.registerComponent<kaki::Transform>("Transform", module);
+}

@@ -14,6 +14,7 @@ namespace kaki::ecs {
     using id_t = uint32_t;
 
     struct EntityId {
+
         id_t id {};
         uint32_t generation{};
 
@@ -28,10 +29,11 @@ namespace kaki::ecs {
 
         ComponentType() = default;
         inline explicit ComponentType(id_t id) : component(id) {};
-        inline explicit ComponentType(const EntityId& component, const EntityId& object) : component(component.id), relationObject(object.id) {};
-        inline explicit ComponentType(const ComponentType& component, const EntityId& object) : component(component.component), relationObject(object.id) {};
-        inline explicit ComponentType(const EntityId& e) : component(e.id) {
-        }
+        inline explicit ComponentType(const EntityId& e) : component(e.id) {}
+        inline ComponentType(id_t component, id_t object) : component(component), relationObject(object){};
+        inline ComponentType(const EntityId& component, const EntityId& object) : component(component.id), relationObject(object.id) {};
+        inline ComponentType(const ComponentType& component, const EntityId& object) : component(component.component), relationObject(object.id) {};
+
     };
 
     inline bool operator==(const ComponentType& a, const ComponentType& b) {

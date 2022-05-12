@@ -5,7 +5,7 @@ target_include_directories(kaki-asset-interface INTERFACE include)
 
 add_library(kaki-asset src/package.cpp)
 
-target_link_libraries(kaki-asset PUBLIC kaki-asset-interface flecs_static kaki-common kaki-job)
+target_link_libraries(kaki-asset PUBLIC kaki-asset-interface flecs_static kaki-common kaki-job kaki-ecs)
 target_link_libraries(kaki-asset PRIVATE rapidjson cereal)
 
 target_include_directories(kaki-asset

@@ -41,6 +41,8 @@ namespace kaki::ecs {
         void destroy(EntityId id);
         EntityId registerComponent(const ComponentInfo& component, std::string_view name = {}, EntityId parent = {});
 
+        EntityId getEntity(id_t id);
+
         void add(EntityId entity, ComponentType component, const void* ptr = nullptr);
 
         template<class T>
@@ -58,7 +60,6 @@ namespace kaki::ecs {
         void createEntityRecords(std::span<EntityId> entities);
 
         Chunk* createChunk(const Type& type, std::span<EntityId> entityRecords);
-
 
         template<class T>
         EntityId registerComponent(const std::string_view name = {}, EntityId parent = {}) {

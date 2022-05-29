@@ -8,11 +8,12 @@
 
 namespace kaki {
 
-    void loadMaterials(JobCtx ctx, flecs::world& world, size_t assetCount, AssetData *data, void *pmaterial) {
+    void loadMaterials(kaki::ecs::Registry& registry, size_t assetCount, AssetData *data, void *pmaterial) {
         auto materials = static_cast<Material*>(pmaterial);
-        auto& vk = *world.get_mut<VkGlobals>();
 
-        auto pipeline = world.lookup("testpackage::shade").get<kaki::Pipeline>();
+        auto& vk = *registry.get<VkGlobals>(registry.lookup("Renderer"));
+
+        auto pipeline = registry.get<kaki::Pipeline>(registry.lookup("testpackage::shade"));
 
         auto descSet = pipeline->getDescSet(2);
 
@@ -62,11 +63,11 @@ namespace kaki {
 
             materials[i].descriptorSet = descSets[i];
 
-            auto albedoImage = flecs::entity(world, materials[i].albedo).get<kaki::Image>();
-            auto normalImage = flecs::entity(world, materials[i].normal).get<kaki::Image>();
-            auto metallicRoughnessImage = flecs::entity(world, materials[i].metallicRoughness).get<kaki::Image>();
-            auto aoImage = flecs::entity(world, materials[i].ao).get<kaki::Image>();
-            auto emissiveImage = flecs::entity(world, materials[i].emissive).get<kaki::Image>();
+            auto albedoImage = registry.get<kaki::Image>(materials[i].albedo);  // flecs::entity(world, materials[i].albedo).get<kaki::Image>();
+            auto normalImage = registry.get<kaki::Image>(materials[i].normal); // flecs::entity(world, materials[i].normal).get<kaki::Image>();
+            auto metallicRoughnessImage = registry.get<kaki::Image>(materials[i].metallicRoughness); //  flecs::entity(world, materials[i].metallicRoughness).get<kaki::Image>();
+            auto aoImage = registry.get<kaki::Image>(materials[i].ao); // flecs::entity(world, materials[i].ao).get<kaki::Image>();
+            auto emissiveImage = registry.get<kaki::Image>(materials[i].emissive); // flecs::entity(world, materials[i].emissive).get<kaki::Image>();
 
             descCtx.add(descSets[i], *descSet, {
                     {"albedoTexture", ShaderInput::Image{albedoImage ? albedoImage->view : VK_NULL_HANDLE, vk.sampler}},

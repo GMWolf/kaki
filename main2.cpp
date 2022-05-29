@@ -15,6 +15,7 @@ int main() {
 
     registry.create({},"kaki");
 
+    kaki::registerAssetComponents(registry);
     kaki::registerWindowingModule(registry);
     kaki::registerGfxModule(registry);
     kaki::registerCoreModule(registry);

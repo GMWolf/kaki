@@ -6,13 +6,13 @@
 #include <ktxvulkan.h>
 #include "vk.h"
 
-void kaki::loadImages(JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* pimages) {
+void kaki::loadImages( kaki::ecs::Registry& registry , size_t assetCount, AssetData* data, void* pimages) {
 
 
     auto* images = static_cast<Image*>(pimages);
 
 
-    const VkGlobals* vk = world.get<VkGlobals>();
+    const VkGlobals* vk = registry.get<VkGlobals>(registry.lookup("Renderer"));
 
     ktxVulkanDeviceInfo kvdi;
     ktxVulkanDeviceInfo_Construct(&kvdi, vk->device.physical_device, vk->device, vk->queue, vk->cmdPool, nullptr);
@@ -66,7 +66,6 @@ void kaki::loadImages(JobCtx ctx, flecs::world& world, size_t assetCount, AssetD
                 .view = view
         };
     }
-
 
     ktxVulkanDeviceInfo_Destruct(&kvdi);
 }

@@ -160,7 +160,7 @@ static void callAssetHandlers(flecs::entity root, kaki::JobCtx& ctx) {
                 kaki::AssetData* data = &iter.term<kaki::AssetData>(2)[0];
                 void* assets = iter.term(1)[0];
                 ctx.schedule([&jobCounter, &world, fn = handler.load, count = iter.count(), data, assets](kaki::JobCtx ctx){
-                    fn(ctx, world, count, data, assets);
+                    //fn(ctx, world, count, data, assets);
                     jobCounter--;
                 });
                 //handler.load(ctx, iter, data, assets);
@@ -188,13 +188,30 @@ static kaki::ecs::EntityId instanciatePackage(kaki::ecs::Registry& registry, con
 
         kaki::ecs::Chunk* chunk = registry.createChunk(tableType, entitySpan.subspan(table.entityFirst, table.entityCount));
 
-        kaki::ecs::Identifier* iden = static_cast<kaki::ecs::Identifier*>( kaki::ecs::chunkFindPtr(*chunk, kaki::ecs::ComponentTrait<kaki::ecs::Identifier>::id) );
-
+        kaki::ecs::Identifier* iden = static_cast<kaki::ecs::Identifier*>( chunk->components[0] );
         for(uint i = 0; i < table.entityCount; i++)
         {
-            iden[i].name = std::move( package.entities[table.entityFirst + i].name );
+            iden[i].name = package.entities[table.entityFirst + i].name;
         }
 
+        for( uint t = 1; t < tableType.components.size(); t++)
+        {
+            auto componentType = tableType.components[t];
+
+            auto* handler = registry.get<kaki::ComponentAssetHandler>(registry.getEntity(componentType.component));
+            if (handler)
+            {
+                kaki::AssetData* assetData = new kaki::AssetData[table.entityCount];
+                for(uint i = 0; i < table.entityCount; i++)
+                {
+                    assetData[i].data = dataFile.subspan(table.components[t - 1].data[i].offset, table.components[t-1].data[i].size);
+                    assetData[i].entityRefs = entitySpan.subspan(table.entityFirst);
+                }
+
+                handler->load( registry, table.entityCount, assetData, chunk->components[t] );
+                delete[] assetData;
+            }
+        }
 
         // fill in the chunk
 
@@ -257,7 +274,7 @@ static flecs::entity instanciatePackage(flecs::world &world, const kaki::Package
                 for(int i = 0; i < table.entityCount; i++) {
                     auto& cdata = component.data[i];
                     assetData[i].data = dataFile.subspan(cdata.offset, cdata.size);
-                    assetData[i].entityRefs = std::span(entities).subspan(table.referenceOffset);
+                   //assetData[i].entityRefs = std::span(entities).subspan(table.referenceOffset);
                 }
                 bulkDesc.data[componentId] = assetData;
 
@@ -311,8 +328,7 @@ void kaki::loadPackage(flecs::world &world, const char *path, JobCtx ctx) {
 }
 
 
-void kaki::loadPackage(kaki::ecs::Registry& registry, const char* path)
-{
+void kaki::loadPackage(kaki::ecs::Registry& registry, const char* path) {
     std::ifstream input(path);
     cereal::JSONInputArchive archive(input);
 
@@ -322,4 +338,11 @@ void kaki::loadPackage(kaki::ecs::Registry& registry, const char* path)
     auto data = mapFile(package.dataFile.c_str());
 
     auto pe = instanciatePackage(registry, package, data);
+}
+
+
+void kaki::registerAssetComponents(kaki::ecs::Registry& registry) {
+    auto module = registry.create({}, "Assets");
+
+    registry.registerComponent<kaki::ComponentAssetHandler>("ComponentAssetHandler", module);
 }

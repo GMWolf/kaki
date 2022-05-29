@@ -20,5 +20,5 @@ namespace kaki {
     };
 
 
-    void loadImages(JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* pimages);
+    void loadImages( kaki::ecs::Registry& world, size_t assetCount, AssetData* data, void* pimages);
 }

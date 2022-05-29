@@ -11,11 +11,11 @@
 namespace kaki {
 
     struct Material {
-        flecs::entity_t albedo;
-        flecs::entity_t normal;
-        flecs::entity_t metallicRoughness;
-        flecs::entity_t ao;
-        flecs::entity_t emissive;
+        kaki::ecs::EntityId albedo;
+        kaki::ecs::EntityId normal;
+        kaki::ecs::EntityId metallicRoughness;
+        kaki::ecs::EntityId ao;
+        kaki::ecs::EntityId emissive;
 
         VkDescriptorSet descriptorSet;
     };

@@ -150,6 +150,9 @@ namespace kaki::ecs {
     static void chunkDeleteEntry(Registry& registry, Chunk& chunk, size_t row ) {
         assert( row < chunk.size );
 
+
+        chunk.size--;
+
         // Move last entity component to row, destruct last entity components
         for( size_t i = 0; i < chunk.type.components.size(); i++ )
         {
@@ -161,11 +164,9 @@ namespace kaki::ecs {
             }
         }
 
-        id_t lastId = chunk.ids[chunk.size - 1];
+        id_t lastId = chunk.ids[chunk.size];
         chunk.ids[row] = lastId;
         registry.records[lastId].row = row;
-
-        chunk.size--;
     }
 
     void Registry::destroy(EntityId id) {
@@ -220,7 +221,6 @@ namespace kaki::ecs {
         ComponentTrait<ComponentInfo>::id.component = 1;
         ComponentTrait<ComponentInfo>::id.relationObject = 0;
 
-
         // Add entity component entity
         ComponentType entityComponentType;
         entityComponentType.component = 2;
@@ -247,7 +247,7 @@ namespace kaki::ecs {
     EntityId Registry::registerComponent(const ComponentInfo &component, const std::string_view name, EntityId parent) {
         EntityId id;
 
-        Type type {ComponentType(componentType)};
+        Type type {ComponentType(componentType), ComponentTrait<EntityId>::id};
         if (!name.empty()) {
             type.components.push_back(ComponentTrait<Identifier>::id);
         }
@@ -260,6 +260,8 @@ namespace kaki::ecs {
 
         ComponentInfo* componentInfo = get<ComponentInfo>(id, componentType);
         *componentInfo = component;
+
+        *get<EntityId>(id) = id;
 
         if (!name.empty()) {
             Identifier *i = get<Identifier>(id, ComponentTrait<Identifier>::id);
@@ -287,7 +289,7 @@ namespace kaki::ecs {
 
         Type newType = record.chunk->type;
         newType.components.push_back(component);
-        std::sort(newType.components.begin(), newType.components.end());
+        //std::sort(newType.components.begin(), newType.components.end());
 
         Archetype& archetype = getArchetype(*this, newType);
 
@@ -373,6 +375,10 @@ namespace kaki::ecs {
         }
 
         return chunk;
+    }
+
+    EntityId Registry::getEntity(id_t id) {
+        return {id, records[id].generation};
     }
 
 }

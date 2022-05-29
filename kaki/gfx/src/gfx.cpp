@@ -581,77 +581,77 @@ kaki::gfx::gfx(flecs::world &world) {
 
     world.component<kaki::DependsOn>().add(flecs::Acyclic);
 
-    auto gltfLoader = world.entity("GltfLoader").set<ComponentAssetHandler, Gltf>(ComponentAssetHandler{
-        .load = loadGltfs,
-    });
+    //auto gltfLoader = world.entity("GltfLoader").set<ComponentAssetHandler, Gltf>(ComponentAssetHandler{
+    //    .load = loadGltfs,
+    //});
 
-    world.entity("MeshLoader").set<ComponentAssetHandler, Mesh>({
-        .load = [](JobCtx ctx, flecs::world& world, size_t count, AssetData* data, void* pmeshes) {
-            auto* meshes = static_cast<Mesh*>(pmeshes);
-            for(size_t i = 0; i < count; i++) {
-                membuf buf(data[i].data);
-                std::istream bufStream(&buf);
-                cereal::BinaryInputArchive archive(bufStream);
-                archive(meshes[i]);
-            }
-        }
-    }).add<DependsOn>(gltfLoader);
-
-    auto imageLoader = world.entity("ImageLoader").set<ComponentAssetHandler, Image>({
-        .load = loadImages,
-    });
-
-    auto pipelineLoader = world.entity("PipelineLoader").set<ComponentAssetHandler, Pipeline>({
-        .load = [](JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* ppipelines) {
-
-            const VkGlobals& vk = *world.get<VkGlobals>();
-            auto pipelines = static_cast<Pipeline*>(ppipelines);
-
-            for(size_t i = 0 ; i < assetCount; i++) {
-                pipelines[i] = kaki::createPipeline(vk, data[i].data);
-            }
-        }
-    });
-
-    world.entity("MeshFilterLoader").set<ComponentAssetHandler, MeshFilter>({
-        .load = [](JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* pfilters) {
-            auto filters = static_cast<MeshFilter*>(pfilters);
-
-            for(size_t i = 0 ; i < assetCount; i++) {
-                membuf buf(data[i].data);
-                std::istream bufStream(&buf);
-                cereal::BinaryInputArchive archive(bufStream);
-
-                uint32_t primitiveIndex;
-                uint64_t meshRef, materialRef;
-                archive(meshRef, primitiveIndex, materialRef);
-
-                filters[i].mesh = data->entityRefs[meshRef];
-                filters[i].primitiveIndex = primitiveIndex;
-                filters[i].material = data->entityRefs[materialRef];
-            }
-
-        }
-    });
-
-    world.entity("MaterialLoader").set<ComponentAssetHandler, Material>({
-        .load = kaki::loadMaterials,
-    }).add<DependsOn>(imageLoader).add<DependsOn>(pipelineLoader);
-
-    world.entity("CameraLoader").set<ComponentAssetHandler, Camera>({
-        .load = [](JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* pfilters) {
-            auto cameras = static_cast<Camera*>(pfilters);
-
-            for(size_t i = 0; i < assetCount; i++) {
-                membuf buf(data[i].data);
-                std::istream bufStream(&buf);
-                cereal::BinaryInputArchive archive(bufStream);
-
-                archive(cameras[i].fov);
-            }
-
-        }
-    });
+    //world.entity("MeshLoader").set<ComponentAssetHandler, Mesh>({
+    //    .load = [](flecs::world& world, size_t count, AssetData* data, void* pmeshes) {
+    //        auto* meshes = static_cast<Mesh*>(pmeshes);
+    //        for(size_t i = 0; i < count; i++) {
+    //            membuf buf(data[i].data);
+    //            std::istream bufStream(&buf);
+    //            cereal::BinaryInputArchive archive(bufStream);
+    //            archive(meshes[i]);
+    //        }
+    //    }
+    //}).add<DependsOn>(gltfLoader);
+//
+    //auto imageLoader = world.entity("ImageLoader").set<ComponentAssetHandler, Image>({
+    //    .load = loadImages,
+    //});
+//
+    //auto pipelineLoader = world.entity("PipelineLoader").set<ComponentAssetHandler, Pipeline>({
+    //    .load = [](JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* ppipelines) {
+//
+    //        const VkGlobals& vk = *world.get<VkGlobals>();
+    //        auto pipelines = static_cast<Pipeline*>(ppipelines);
+//
+    //        for(size_t i = 0 ; i < assetCount; i++) {
+    //            pipelines[i] = kaki::createPipeline(vk, data[i].data);
+    //        }
+    //    }
+    //});
+//
+    //world.entity("MeshFilterLoader").set<ComponentAssetHandler, MeshFilter>({
+    //    .load = [](JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* pfilters) {
+    //        auto filters = static_cast<MeshFilter*>(pfilters);
+//
+    //        for(size_t i = 0 ; i < assetCount; i++) {
+    //            membuf buf(data[i].data);
+    //            std::istream bufStream(&buf);
+    //            cereal::BinaryInputArchive archive(bufStream);
+//
+    //            uint32_t primitiveIndex;
+    //            uint64_t meshRef, materialRef;
+    //            archive(meshRef, primitiveIndex, materialRef);
+//
+    //            filters[i].mesh = data->entityRefs[meshRef];
+    //            filters[i].primitiveIndex = primitiveIndex;
+    //            filters[i].material = data->entityRefs[materialRef];
+    //        }
+//
+    //    }
+    //});
+//
+    //world.entity("MaterialLoader").set<ComponentAssetHandler, Material>({
+    //    .load = kaki::loadMaterials,
+    //}).add<DependsOn>(imageLoader).add<DependsOn>(pipelineLoader);
+//
+    //world.entity("CameraLoader").set<ComponentAssetHandler, Camera>({
+    //    .load = [](JobCtx ctx, flecs::world& world, size_t assetCount, AssetData* data, void* pfilters) {
+    //        auto cameras = static_cast<Camera*>(pfilters);
+//
+    //        for(size_t i = 0; i < assetCount; i++) {
+    //            membuf buf(data[i].data);
+    //            std::istream bufStream(&buf);
+    //            cereal::BinaryInputArchive archive(bufStream);
+//
+    //            archive(cameras[i].fov);
+    //        }
+//
+    //    }
+    //});
 
     world.component<MeshFilter>()
             .member(ecs_id(ecs_entity_t), "mesh")
@@ -685,10 +685,15 @@ void kaki::registerGfxModule( kaki::ecs::Registry& registry )
     registry.registerComponent<kaki::VkGlobals>("VkGlobals", module);
     registry.registerComponent<kaki::Gltf>("Gltf", module);
     registry.registerComponent<kaki::Mesh>("Mesh", module);
-    registry.registerComponent<kaki::Image>("Image", module);
+    auto imageComponent = registry.registerComponent<kaki::Image>("Image", module);
     registry.registerComponent<kaki::Pipeline>("Pipeline", module);
     registry.registerComponent<kaki::MeshFilter>("MeshFilter", module);
     registry.registerComponent<kaki::Material>("Material", module);
+
+
+    registry.add(imageComponent, ComponentAssetHandler{
+        .load  = loadImages,
+    });
 }
 
 void kaki::initRenderEntity( kaki::ecs::Registry& registry, kaki::ecs::EntityId entityId)
